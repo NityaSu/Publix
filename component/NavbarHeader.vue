@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Menu, X } from 'lucide-vue-next';
+import { useNavigationStore } from '~/stores/navigationStore';
 
 interface NavLink {
   label: string;
   to: string;
+  /** True for in-page anchor links whose active state is driven by scroll position, not route. */
+  isAnchor?: boolean;
 }
 
 const navLinks: NavLink[] = [
-  { label: 'about', to: '/about' },
+  { label: 'about', to: '/#about', isAnchor: true },
   { label: 'projects', to: '/projects' },
   { label: 'thesis', to: '/thesis' },
   { label: 'contact', to: '/contact' },
 ];
+
+const navigationStore = useNavigationStore();
 
 const isMobileMenuOpen = ref(false);
 
@@ -22,6 +27,13 @@ const toggleMobileMenu = () => {
 
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false;
+};
+
+const linkColorClass = (link: NavLink): string => {
+  if (link.isAnchor && navigationStore.isAboutInView) {
+    return 'text-accent';
+  }
+  return 'text-muted hover:text-accent';
 };
 </script>
 
@@ -42,8 +54,9 @@ const closeMobileMenu = () => {
             v-for="link in navLinks"
             :key="link.to"
             :to="link.to"
-            class="text-sm lowercase tracking-wide text-muted hover:text-accent transition-colors"
-            active-class="text-accent"
+            class="text-sm lowercase tracking-wide transition-colors"
+            :class="linkColorClass(link)"
+            :active-class="link.isAnchor ? '' : 'text-accent'"
           >
             {{ link.label }}
           </NuxtLink>
@@ -68,8 +81,9 @@ const closeMobileMenu = () => {
           v-for="link in navLinks"
           :key="link.to"
           :to="link.to"
-          class="text-sm lowercase tracking-wide text-muted hover:text-accent transition-colors"
-          active-class="text-accent"
+          class="text-sm lowercase tracking-wide transition-colors"
+          :class="linkColorClass(link)"
+          :active-class="link.isAnchor ? '' : 'text-accent'"
           @click="closeMobileMenu"
         >
           {{ link.label }}

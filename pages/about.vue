@@ -1,18 +1,9 @@
 <script setup lang="ts">
-useHead({
-  title: 'About',
-});
+// The About content now lives as an in-page section on the home page (#about).
+// Redirect any direct visits/bookmarks here to that section instead of showing a stale stub.
+await navigateTo('/#about');
 </script>
 
 <template>
-  <main class="min-h-[70vh] flex items-center justify-center px-6">
-    <div class="text-center">
-      <h1 class="font-display font-extrabold uppercase text-4xl md:text-6xl text-white">
-        About
-      </h1>
-      <p class="mt-4 text-sm md:text-base tracking-[0.3em] uppercase text-muted">
-        Coming soon
-      </p>
-    </div>
-  </main>
+  <main />
 </template>

@@ -15,7 +15,7 @@ module.exports = {
           background: '#111111',
           surface: '#1a1a1a',
           accent: '#4A9EFF',
-          muted: '#8a8a8a',
+          muted: '#888888',
         },
         fontFamily: {
           'sans': ['Inter', 'Helvetica Neue', 'Arial', 'sans-serif'],
