@@ -1,25 +1,42 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Menu, X } from 'lucide-vue-next';
-import { useNavigationStore } from '~/stores/navigationStore';
+import { ref, nextTick } from 'vue';
+import { useRoute } from 'vue-router';
+import { Menu, X, ChevronDown, Film, Image as ImageIcon } from 'lucide-vue-next';
+import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
+
+interface DropdownChild {
+  label: string;
+  filter: MediaFilter;
+  icon: typeof Film;
+}
 
 interface NavLink {
   label: string;
-  to: string;
-  /** True for in-page anchor links whose active state is driven by scroll position, not route. */
-  isAnchor?: boolean;
+  type: 'route' | 'anchor' | 'dropdown';
+  to?: string;
+  children?: DropdownChild[];
 }
 
 const navLinks: NavLink[] = [
-  { label: 'about', to: '/#about', isAnchor: true },
-  { label: 'projects', to: '/projects' },
-  { label: 'thesis', to: '/thesis' },
-  { label: 'contact', to: '/contact' },
+  { label: 'about', type: 'anchor', to: '/#about' },
+  {
+    label: 'media',
+    type: 'dropdown',
+    children: [
+      { label: 'Video', filter: 'video', icon: Film },
+      { label: 'Photo', filter: 'photo', icon: ImageIcon },
+    ],
+  },
+  { label: 'projects', type: 'route', to: '/projects' },
+  { label: 'thesis', type: 'route', to: '/thesis' },
+  { label: 'contact', type: 'route', to: '/contact' },
 ];
 
+const route = useRoute();
 const navigationStore = useNavigationStore();
 
 const isMobileMenuOpen = ref(false);
+const isMobileMediaOpen = ref(false);
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value;
@@ -27,13 +44,28 @@ const toggleMobileMenu = () => {
 
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false;
+  isMobileMediaOpen.value = false;
 };
 
-const linkColorClass = (link: NavLink): string => {
-  if (link.isAnchor && navigationStore.isAboutInView) {
+const anchorLinkClass = (link: NavLink): string => {
+  if (link.type === 'anchor' && navigationStore.isAboutInView) {
     return 'text-accent';
   }
   return 'text-muted hover:text-accent';
+};
+
+const scrollToMedia = async () => {
+  if (route.path !== '/') {
+    await navigateTo('/');
+    await nextTick();
+  }
+  document.getElementById('media')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const selectMediaFilter = (filter: MediaFilter) => {
+  navigationStore.setMediaFilter(filter);
+  closeMobileMenu();
+  scrollToMedia();
 };
 </script>
 
@@ -50,16 +82,46 @@ const linkColorClass = (link: NavLink): string => {
         </NuxtLink>
 
         <div class="hidden md:flex items-center gap-8">
-          <NuxtLink
-            v-for="link in navLinks"
-            :key="link.to"
-            :to="link.to"
-            class="text-sm lowercase tracking-wide transition-colors"
-            :class="linkColorClass(link)"
-            :active-class="link.isAnchor ? '' : 'text-accent'"
-          >
-            {{ link.label }}
-          </NuxtLink>
+          <template v-for="link in navLinks" :key="link.label">
+            <NuxtLink
+              v-if="link.type !== 'dropdown'"
+              :to="link.to!"
+              class="text-sm lowercase tracking-wide transition-colors"
+              :class="anchorLinkClass(link)"
+              :active-class="link.type === 'anchor' ? '' : 'text-accent'"
+            >
+              {{ link.label }}
+            </NuxtLink>
+
+            <div v-else class="relative group">
+              <button
+                type="button"
+                class="flex items-center gap-1 text-sm lowercase tracking-wide transition-colors"
+                :class="navigationStore.isMediaInView ? 'text-accent' : 'text-muted group-hover:text-accent'"
+                @click="selectMediaFilter('all')"
+              >
+                {{ link.label }}
+                <ChevronDown :size="14" class="transition-transform duration-200 group-hover:rotate-180" />
+              </button>
+
+              <div
+                class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-2 min-w-[140px]"
+              >
+                <div class="rounded-lg border border-white/10 bg-surface py-2 shadow-glow-sm">
+                  <button
+                    v-for="child in link.children"
+                    :key="child.filter"
+                    type="button"
+                    class="flex w-full items-center gap-2 px-4 py-2 text-sm lowercase text-muted hover:text-accent hover:bg-white/5 transition-colors"
+                    @click="selectMediaFilter(child.filter)"
+                  >
+                    <component :is="child.icon" :size="14" />
+                    {{ child.label }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
 
         <button
@@ -77,17 +139,47 @@ const linkColorClass = (link: NavLink): string => {
         v-if="isMobileMenuOpen"
         class="md:hidden flex flex-col gap-4 pb-6 border-t border-white/10 pt-4"
       >
-        <NuxtLink
-          v-for="link in navLinks"
-          :key="link.to"
-          :to="link.to"
-          class="text-sm lowercase tracking-wide transition-colors"
-          :class="linkColorClass(link)"
-          :active-class="link.isAnchor ? '' : 'text-accent'"
-          @click="closeMobileMenu"
-        >
-          {{ link.label }}
-        </NuxtLink>
+        <template v-for="link in navLinks" :key="link.label">
+          <NuxtLink
+            v-if="link.type !== 'dropdown'"
+            :to="link.to!"
+            class="text-sm lowercase tracking-wide transition-colors"
+            :class="anchorLinkClass(link)"
+            :active-class="link.type === 'anchor' ? '' : 'text-accent'"
+            @click="closeMobileMenu"
+          >
+            {{ link.label }}
+          </NuxtLink>
+
+          <div v-else>
+            <button
+              type="button"
+              class="flex items-center justify-between w-full text-sm lowercase tracking-wide transition-colors"
+              :class="navigationStore.isMediaInView ? 'text-accent' : 'text-muted hover:text-accent'"
+              @click="isMobileMediaOpen = !isMobileMediaOpen"
+            >
+              <span>{{ link.label }}</span>
+              <ChevronDown
+                :size="14"
+                class="transition-transform duration-200"
+                :class="isMobileMediaOpen ? 'rotate-180' : ''"
+              />
+            </button>
+
+            <div v-show="isMobileMediaOpen" class="mt-3 ml-4 flex flex-col gap-3">
+              <button
+                v-for="child in link.children"
+                :key="child.filter"
+                type="button"
+                class="flex items-center gap-2 text-sm lowercase text-muted hover:text-accent transition-colors"
+                @click="selectMediaFilter(child.filter)"
+              >
+                <component :is="child.icon" :size="14" />
+                {{ child.label }}
+              </button>
+            </div>
+          </div>
+        </template>
       </div>
     </nav>
   </header>
