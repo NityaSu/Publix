@@ -11,6 +11,12 @@ module.exports = {
   ],
     theme: {
       extend: {
+        colors: {
+          background: '#111111',
+          surface: '#1a1a1a',
+          accent: '#4A9EFF',
+          muted: '#8a8a8a',
+        },
         fontFamily: {
           'sans': ['Inter', 'Helvetica Neue', 'Arial', 'sans-serif'],
           'display': ['Montserrat', 'Gotham', 'sans-serif'],
@@ -22,6 +28,10 @@ module.exports = {
           'semibold': '600',
           'bold': '700',
           'extrabold': '800'
+        },
+        boxShadow: {
+          'glow': '0 0 40px rgba(74, 158, 255, 0.35)',
+          'glow-sm': '0 0 20px rgba(74, 158, 255, 0.25)',
         }
       }
     }

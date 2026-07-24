@@ -1,7 +1,12 @@
+<script setup lang="ts">
+import NavbarHeader from '~/component/NavbarHeader.vue';
+</script>
+
 <template>
-  <NavbarDesktop />
-  <NuxtLayout>
-    <NuxtPage />
-  </NuxtLayout>
-  <VitePwaManifest />
+  <div class="min-h-screen bg-background">
+    <NavbarHeader />
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </div>
 </template>

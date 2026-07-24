@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import NavbarHeader from '~/component/NavbarHeader.vue';
+import HeroSection from '~/component/HeroSection.vue';
 
+useHead({
+  title: 'Home',
+});
 </script>
 
 <template>
-  <NavbarHeader />
-  </template>
+  <main class="min-h-screen bg-background">
+    <HeroSection />
+  </main>
+</template>

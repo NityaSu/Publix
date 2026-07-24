@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'Home',
-      titleTemplate: '%s - Publixware',
+      titleTemplate: '%s - SUONNITYA',
       meta: [
         { charset: 'utf-8' },
         {
@@ -17,10 +17,9 @@ export default defineNuxtConfig({
         },
         {
           name: 'description',
-          content: 'Publicware Platform - Your trusted fashion platform',
+          content: 'Personal portfolio of SUONNITYA — Bronze Medalist, National Math Olympiad. Building systems that solve real problems.',
         },
-        { name: 'theme-color', content: '#ffffff' },
-        { name: 'robots', content: 'noindex, nofollow' },
+        { name: 'theme-color', content: '#111111' },
       ],
       link: [
         {
