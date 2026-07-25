@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'Home',
-      titleTemplate: 'SUON NITYA',
+      titleTemplate: 'Nitya Suon | Software Engineer',
       meta: [
         { charset: 'utf-8' },
         {
@@ -17,7 +17,7 @@ export default defineNuxtConfig({
         },
         {
           name: 'description',
-          content: 'Personal portfolio of SUONNITYA — Bronze Medalist, National Math Olympiad. Building systems that solve real problems.',
+          content: 'Personal portfolio of SUON NITYA — Bronze Medalist, National Math Olympiad. Building systems that solve real problems.',
         },
         { name: 'theme-color', content: '#111111' },
       ],

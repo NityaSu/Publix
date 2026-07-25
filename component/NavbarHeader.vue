@@ -78,7 +78,7 @@ const selectMediaFilter = (filter: MediaFilter) => {
           class="font-display font-extrabold tracking-tight text-lg md:text-xl text-white hover:text-accent transition-colors"
           @click="closeMobileMenu"
         >
-          SUONNITYA
+          NITYA SUON
         </NuxtLink>
 
         <div class="hidden md:flex items-center gap-8">
