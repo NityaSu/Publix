@@ -123,9 +123,11 @@ const fieldClass =
             aria-label="START FROM ZERO"
           >
             START FROM ZER<span
-              class="inline-block align-middle mx-[0.04em] w-[0.72em] h-[0.72em] rounded-full border-[0.14em] border-accent"
+              class="relative inline-block text-transparent select-none"
               aria-hidden="true"
-            ></span><sup class="text-[0.45em] font-bold tracking-normal relative -top-[0.7em]">™</sup>
+            >O<span
+              class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[0.78em] h-[0.78em] rounded-full border-[0.135em] border-accent box-border"
+            ></span></span><sup class="text-[0.45em] font-bold tracking-normal relative -top-[0.7em]">™</sup>
           </p>
           <p class="mt-3 text-xs sm:text-sm text-muted">
             © 2026 Nitya Suon
