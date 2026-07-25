@@ -32,7 +32,7 @@ interface HeightMatchedWord {
  */
 const fluidSize = (text: string, floorPx: number, ceilPx: number, fill: number, factor = 0.72): string => {
   const cqw = (100 * fill) / (text.length * factor);
-  return `font-size: clamp(${floorPx}px, ${cqw.toFixed(2)}cqw, ${ceilPx}px); line-height: 0.86;`;
+  return `font-size: clamp(${floorPx}px, ${cqw.toFixed(2)}cqw, ${ceilPx}px); line-height: 0.95;`;
 };
 
 const CORE_WORDS = new Set([
@@ -50,7 +50,7 @@ const CORE_WORDS = new Set([
 // around them, rather than each scaling to its own character count.
 const MUTED_TRIO = new Set(['INNOVATION', 'CURIOSITY', 'TECHNOLOGY']);
 const MUTED_TRIO_TONE = 'text-white/20 font-bold';
-const MUTED_TRIO_STYLE = 'font-size: clamp(30px, 9cqw, 58px); line-height: 0.86;';
+const MUTED_TRIO_STYLE = 'font-size: clamp(30px, 9.2cqw, 58px); line-height: 0.95;';
 
 // Words that should visually match another word's size (computed from that
 // other word's character count, not their own) and color/weight.
@@ -77,14 +77,14 @@ const wordCloud: WordCloudItem[] = [
     return {
       text,
       class: `${MATCHED_TONE} font-display transition-colors duration-300 hover:text-accent`,
-      style: fluidSize(SIZE_MATCHES[text], 30, 68, 0.95),
+      style: fluidSize(SIZE_MATCHES[text], 30, 68, 0.94),
     };
   }
   const isCore = CORE_WORDS.has(text);
   return {
     text,
     class: `${tone} font-display transition-colors duration-300 hover:text-accent`,
-    style: isCore ? fluidSize(text, 30, 68, 0.95) : fluidSize(text, 14, 32, 0.55),
+    style: isCore ? fluidSize(text, 30, 68, 0.94) : fluidSize(text, 14, 32, 0.55),
   };
 });
 
@@ -166,7 +166,7 @@ useIntersectionObserver(
 
           <div
             ref="wordCloudRef"
-            class="flex-1 flex flex-col justify-start min-w-0"
+            class="flex-1 flex flex-col justify-start gap-0 md:gap-0.5 min-w-0"
             style="container-type: inline-size"
           >
             <span
