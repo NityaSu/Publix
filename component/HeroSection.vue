@@ -50,7 +50,7 @@ const CORE_WORDS = new Set([
 // around them, rather than each scaling to its own character count.
 const MUTED_TRIO = new Set(['INNOVATION', 'CURIOSITY', 'TECHNOLOGY']);
 const MUTED_TRIO_TONE = 'text-white/20 font-bold';
-const MUTED_TRIO_STYLE = 'font-size: clamp(30px, 9.2cqw, 58px); line-height: 0.95;';
+const MUTED_TRIO_STYLE = 'font-size: clamp(22px, 7.5cqw, 42px); line-height: 0.95;';
 
 // Words that should visually match another word's size (computed from that
 // other word's character count, not their own) and color/weight.
@@ -77,14 +77,14 @@ const wordCloud: WordCloudItem[] = [
     return {
       text,
       class: `${MATCHED_TONE} font-display transition-colors duration-300 hover:text-accent`,
-      style: fluidSize(SIZE_MATCHES[text], 30, 68, 0.94),
+      style: fluidSize(SIZE_MATCHES[text], 24, 52, 0.85),
     };
   }
   const isCore = CORE_WORDS.has(text);
   return {
     text,
     class: `${tone} font-display transition-colors duration-300 hover:text-accent`,
-    style: isCore ? fluidSize(text, 30, 68, 0.94) : fluidSize(text, 14, 32, 0.55),
+    style: isCore ? fluidSize(text, 24, 52, 0.85) : fluidSize(text, 11, 24, 0.48),
   };
 });
 
@@ -98,7 +98,7 @@ const resilienceWord: HeightMatchedWord = { text: 'RESILIENCE', tone: 'text-whit
 
 const entrepreneurshipWord: VerticalWordItem = {
   text: 'ENTREPRENEURSHIP',
-  class: 'text-lg md:text-2xl text-white/30 font-semibold',
+  class: 'text-base md:text-xl text-white/30 font-semibold',
 };
 
 const wordCloudRef = ref<HTMLElement | null>(null);
@@ -118,8 +118,20 @@ const verticalMatchStyle = (
   return `font-size: ${clamped.toFixed(1)}px; line-height: 0.86;`;
 };
 
-const leftVerticalStyle = computed(() => verticalMatchStyle(leftVerticalWord.text, 18, 56));
-const resilienceStyle = computed(() => verticalMatchStyle(resilienceWord.text, 18, 56));
+const leftVerticalStyle = computed(() => verticalMatchStyle(leftVerticalWord.text, 14, 42));
+const resilienceStyle = computed(() => verticalMatchStyle(resilienceWord.text, 14, 42));
+
+// Caps the whole word-cloud "rectangle" (both vertical columns + the
+// horizontal block) to a bit more than the measured width of the
+// "Software Engineer" headline above it, instead of stretching to fill
+// the entire column — this is what shrinks the block and keeps it
+// visually tied to the headline's width rather than the page width.
+const headlineRef = ref<HTMLElement | null>(null);
+const { width: headlineWidth } = useElementSize(headlineRef);
+const wordCloudRowStyle = computed(() => {
+  if (!headlineWidth.value) return {};
+  return { width: `${Math.round(headlineWidth.value * 1.12)}px`, maxWidth: '100%' };
+});
 
 const heroRef = ref<HTMLElement | null>(null);
 const isVisible = ref(false);
@@ -146,7 +158,7 @@ useIntersectionObserver(
     >
       <div class="min-w-0">
         <h1 class="font-display font-extrabold uppercase leading-[0.95] tracking-tight">
-          <span class="block text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl">Software Engineer</span>
+          <span ref="headlineRef" class="block text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl">Software Engineer</span>
           <span class="block text-accent mt-2 md:mt-3 text-lg sm:text-xl md:text-2xl lg:text-3xl tracking-wide">
             Bronze Medalist &middot; National Math Olympiad
           </span>
@@ -154,7 +166,10 @@ useIntersectionObserver(
 
         <div class="mt-6 h-1 w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
 
-        <div class="mt-10 md:mt-14 flex items-start gap-3 md:gap-6 select-none">
+        <div
+          class="mt-10 md:mt-14 flex items-start gap-3 md:gap-6 select-none"
+          :style="wordCloudRowStyle"
+        >
           <div class="hidden sm:flex flex-col items-center pt-1">
             <span
               class="font-display uppercase tracking-[0.15em] rotate-180 transition-colors duration-300 hover:text-accent"
@@ -182,7 +197,7 @@ useIntersectionObserver(
             </span>
           </div>
 
-          <div class="hidden sm:flex items-start gap-2 md:gap-3 md:-ml-10 lg:-ml-20">
+          <div class="hidden sm:flex items-start gap-3 md:gap-6">
             <div class="flex flex-col items-center pt-1">
               <span
                 class="font-display uppercase tracking-[0.15em] transition-colors duration-300 hover:text-accent"
