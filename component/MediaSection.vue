@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Film, Image as ImageIcon, Play } from 'lucide-vue-next';
-import { useIntersectionObserver } from '@vueuse/core';
+import { Film, Image as ImageIcon, Play, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { useIntersectionObserver, useSwipe } from '@vueuse/core';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 
 interface FilterOption {
@@ -23,6 +23,12 @@ interface QuoteLine {
 type StoryBlock =
   | { type: 'text'; html: string }
   | { type: 'quote'; lines: QuoteLine[] };
+
+interface PhotoSlide {
+  src: string;
+  alt: string;
+  caption: string;
+}
 
 const storyBlocks: StoryBlock[] = [
   {
@@ -70,10 +76,50 @@ const showVideo = computed(
 
 // Bound dynamically (not literal template strings) so Vite treats these as
 // runtime public-folder URLs instead of trying to statically resolve/bundle them.
-const photoSrc = ref('/assets/images/meituan-robot.jpg');
-const videoSrc = ref('/assets/videos/meituan-reel.mp4');
+const photos: PhotoSlide[] = [
+  {
+    src: '/assets/images/meituan-robot.jpg',
+    alt: 'Standing with the Meituan autonomous delivery robot, BJUT campus, 2022',
+    caption: 'Standing with the Meituan autonomous delivery robot, BJUT campus, 2022',
+  },
+  {
+    src: '/assets/images/meituan-robot2.jpg',
+    alt: 'Meituan autonomous delivery robot up close, BJUT campus, 2022',
+    caption: 'Up close with the Meituan delivery robot, BJUT campus, 2022',
+  },
+];
 
+const photoIndex = ref(0);
+const currentPhoto = computed(() => photos[photoIndex.value]!);
 const photoFailed = ref(false);
+
+const photoSwipeRef = ref<HTMLElement | null>(null);
+
+const nextPhoto = () => {
+  photoFailed.value = false;
+  photoIndex.value = (photoIndex.value + 1) % photos.length;
+};
+
+const prevPhoto = () => {
+  photoFailed.value = false;
+  photoIndex.value = (photoIndex.value - 1 + photos.length) % photos.length;
+};
+
+const goToPhoto = (index: number) => {
+  if (index === photoIndex.value) return;
+  photoFailed.value = false;
+  photoIndex.value = index;
+};
+
+useSwipe(photoSwipeRef, {
+  threshold: 40,
+  onSwipeEnd(_e, direction) {
+    if (direction === 'left') nextPhoto();
+    if (direction === 'right') prevPhoto();
+  },
+});
+
+const videoSrc = ref('/assets/videos/meituan-reel.mp4');
 const videoFailed = ref(false);
 
 const videoRef = ref<HTMLVideoElement | null>(null);
@@ -157,12 +203,20 @@ useIntersectionObserver(
 
         <div class="flex flex-col gap-8">
           <div v-if="showPhoto">
-            <div class="group relative rounded-xl overflow-hidden border border-white/10 hover:border-accent/50 transition-colors duration-300 bg-surface">
+            <div
+              ref="photoSwipeRef"
+              class="group relative rounded-xl overflow-hidden border border-white/10 hover:border-accent/50 transition-colors duration-300 bg-surface touch-pan-y select-none"
+              role="region"
+              aria-roledescription="carousel"
+              aria-label="Meituan robot photos"
+            >
               <img
                 v-if="!photoFailed"
-                :src="photoSrc"
-                alt="Standing with the Meituan autonomous delivery robot, BJUT campus, 2022"
-                class="w-full h-auto max-h-[520px] object-contain"
+                :key="currentPhoto.src"
+                :src="currentPhoto.src"
+                :alt="currentPhoto.alt"
+                class="w-full h-auto max-h-[520px] object-contain transition-opacity duration-300"
+                draggable="false"
                 @error="photoFailed = true"
               />
               <div
@@ -172,9 +226,39 @@ useIntersectionObserver(
                 <ImageIcon :size="32" class="text-accent/60" />
                 <span class="text-xs uppercase tracking-widest text-muted">Photo</span>
               </div>
+
+              <button
+                type="button"
+                aria-label="Previous photo"
+                class="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
+                @click="prevPhoto"
+              >
+                <ChevronLeft :size="18" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next photo"
+                class="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
+                @click="nextPhoto"
+              >
+                <ChevronRight :size="18" />
+              </button>
+
+              <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                <button
+                  v-for="(photo, index) in photos"
+                  :key="photo.src"
+                  type="button"
+                  class="h-1.5 rounded-full transition-all duration-300"
+                  :class="index === photoIndex ? 'w-5 bg-accent' : 'w-1.5 bg-white/40 hover:bg-white/70'"
+                  :aria-label="`Go to photo ${index + 1}`"
+                  :aria-current="index === photoIndex ? 'true' : undefined"
+                  @click="goToPhoto(index)"
+                />
+              </div>
             </div>
             <p class="mt-3 text-xs md:text-sm text-muted leading-relaxed">
-              Standing with the Meituan autonomous delivery robot, BJUT campus, 2022
+              {{ currentPhoto.caption }}
             </p>
           </div>
 
