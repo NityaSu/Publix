@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { Play } from 'lucide-vue-next';
 import { useIntersectionObserver } from '@vueuse/core';
+import ProfileReveal from '~/component/ProfileReveal.vue';
 
 interface WordCloudItem {
   text: string;
@@ -23,11 +24,6 @@ const rightVerticalWords: string[] = ['ENTREPRENEURSHIP', 'RESILIENCE'];
 
 const heroRef = ref<HTMLElement | null>(null);
 const isVisible = ref(false);
-const imageFailed = ref(false);
-
-// Bound dynamically (not a literal template string) so Vite treats it as a
-// runtime public-folder URL instead of trying to statically resolve/bundle it.
-const profileImageSrc = ref('/assets/images/profile.jpg');
 
 useIntersectionObserver(
   heroRef,
@@ -94,24 +90,12 @@ useIntersectionObserver(
       </div>
 
       <div class="flex justify-center md:justify-end">
-        <div class="relative w-[220px] h-[220px] md:w-[280px] md:h-[280px] shrink-0">
-          <div class="absolute inset-0 rounded-full border-2 border-accent shadow-glow"></div>
-          <div class="absolute inset-[6px] rounded-full overflow-hidden bg-surface">
-            <img
-              v-if="!imageFailed"
-              :src="profileImageSrc"
-              alt="SUONNITYA"
-              class="w-full h-full object-cover"
-              @error="imageFailed = true"
-            />
-            <div
-              v-else
-              class="w-full h-full flex items-center justify-center bg-gradient-to-br from-accent via-blue-700 to-background"
-            >
-              <span class="font-display font-extrabold text-white text-7xl md:text-8xl">S</span>
-            </div>
-          </div>
-        </div>
+        <ProfileReveal
+          profile-src="/assets/images/profile.jpg"
+          profile-alt="NITYA SUON"
+          logo-src="/assets/images/logo.png"
+          fallback-initial="S"
+        />
       </div>
     </div>
 
