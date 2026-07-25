@@ -23,26 +23,52 @@ const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 const isLoading = ref(true);
 const profileFailed = ref(false);
 const logoFailed = ref(false);
+/** Bumps on each replay so the CSS spin animation restarts cleanly. */
+const spinKey = ref(0);
 
 let revealTimer: ReturnType<typeof setTimeout> | undefined;
 
-onMounted(() => {
+const clearRevealTimer = () => {
+  if (revealTimer) {
+    clearTimeout(revealTimer);
+    revealTimer = undefined;
+  }
+};
+
+const startReveal = () => {
+  clearRevealTimer();
   if (prefersReducedMotion.value) {
     isLoading.value = false;
     return;
   }
+  isLoading.value = true;
+  spinKey.value += 1;
   revealTimer = setTimeout(() => {
     isLoading.value = false;
   }, props.loadingDurationMs);
+};
+
+const replayReveal = () => {
+  if (prefersReducedMotion.value) return;
+  startReveal();
+};
+
+onMounted(() => {
+  startReveal();
 });
 
 onUnmounted(() => {
-  if (revealTimer) clearTimeout(revealTimer);
+  clearRevealTimer();
 });
 </script>
 
 <template>
-  <div class="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[260px] md:h-[260px] lg:w-[300px] lg:h-[300px] xl:w-[320px] xl:h-[320px] shrink-0">
+  <button
+    type="button"
+    class="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[260px] md:h-[260px] lg:w-[300px] lg:h-[300px] xl:w-[320px] xl:h-[320px] shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
+    :aria-label="isLoading ? 'Profile loading' : `Replay ${profileAlt} reveal`"
+    @click="replayReveal"
+  >
     <div class="absolute inset-0 rounded-full border-2 border-accent shadow-glow"></div>
 
     <div class="absolute inset-[6px] rounded-full overflow-hidden bg-surface">
@@ -56,14 +82,16 @@ onUnmounted(() => {
       >
         <img
           v-if="!logoFailed"
+          :key="`logo-${spinKey}`"
           :src="logoSrc"
-          alt="Loading"
+          alt=""
           class="w-[75%] h-[75%] object-contain"
           :class="prefersReducedMotion ? '' : 'animate-spin-left'"
           @error="logoFailed = true"
         />
         <div
           v-else
+          :key="`fallback-${spinKey}`"
           class="w-[55%] h-[55%] rounded-full border-4 border-accent/25 border-t-accent"
           :class="prefersReducedMotion ? '' : 'animate-spin-left'"
         ></div>
@@ -81,7 +109,7 @@ onUnmounted(() => {
           v-if="!profileFailed"
           :src="profileSrc"
           :alt="profileAlt"
-          class="w-full h-full object-cover"
+          class="w-full h-full object-cover pointer-events-none"
           @error="profileFailed = true"
         />
         <div
@@ -92,5 +120,5 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-  </div>
+  </button>
 </template>
