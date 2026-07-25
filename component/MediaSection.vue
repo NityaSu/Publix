@@ -214,7 +214,7 @@ useIntersectionObserver(
           <div v-if="showPhoto">
             <div
               ref="photoSwipeRef"
-              class="group relative rounded-xl overflow-hidden border border-white/10 hover:border-accent/50 transition-colors duration-300 bg-surface touch-pan-y select-none"
+              class="group relative rounded-xl overflow-hidden border border-white/10 bg-surface touch-pan-y select-none"
               role="region"
               aria-roledescription="carousel"
               :aria-label="currentPhoto.alt"
