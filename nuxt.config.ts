@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'Home',
-      titleTemplate: '%s - SUONNITYA',
+      titleTemplate: 'SUON NITYA',
       meta: [
         { charset: 'utf-8' },
         {
