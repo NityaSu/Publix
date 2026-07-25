@@ -161,7 +161,7 @@ useIntersectionObserver(
               <img
                 v-if="!photoFailed"
                 :src="photoSrc"
-                alt="Standing with the Meituan autonomous delivery robot, BJUT campus, 2020"
+                alt="Standing with the Meituan autonomous delivery robot, BJUT campus, 2022"
                 class="w-full h-auto max-h-[520px] object-contain"
                 @error="photoFailed = true"
               />
@@ -174,7 +174,7 @@ useIntersectionObserver(
               </div>
             </div>
             <p class="mt-3 text-xs md:text-sm text-muted leading-relaxed">
-              Standing with the Meituan autonomous delivery robot, BJUT campus, 2020
+              Standing with the Meituan autonomous delivery robot, BJUT campus, 2022
             </p>
           </div>
 
