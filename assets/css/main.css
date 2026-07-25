@@ -2,10 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Inter (body font) */
+/*
+ * Inter (body font) — self-hosted, only the weights actually used in the UI.
+ *
+ * We use font-display: swap + a head script that loads the real fonts via
+ * document.fonts.load() before removing the `fonts-loading` class. That means
+ * the browser never paints the body with a fallback font first; it only shows
+ * the page once the real fonts are ready. The fallback stack (with Fontaine
+ * metric overrides) still exists as a safety net for no-JS / slow paths.
+ */
 @font-face {
   font-family: 'Inter';
-  src: url('https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2') format('woff2');
+  src: url('/fonts/inter-400.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -13,7 +21,7 @@
 
 @font-face {
   font-family: 'Inter';
-  src: url('https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa2JL7.woff2') format('woff2');
+  src: url('/fonts/inter-500.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -21,32 +29,16 @@
 
 @font-face {
   font-family: 'Inter';
-  src: url('https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa45L7.woff2') format('woff2');
+  src: url('/fonts/inter-600.woff2') format('woff2');
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Inter';
-  src: url('https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMa25L7.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Montserrat (display/headline font) */
+/* Montserrat (display/headline font) — self-hosted, only the weights actually used in the UI */
 @font-face {
   font-family: 'Montserrat';
-  src: url('https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459Wlhyw.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Montserrat';
-  src: url('https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459W1hyw.woff2') format('woff2');
+  src: url('/fonts/montserrat-600.woff2') format('woff2');
   font-weight: 600;
   font-style: normal;
   font-display: swap;
@@ -54,7 +46,7 @@
 
 @font-face {
   font-family: 'Montserrat';
-  src: url('https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459WZhyw.woff2') format('woff2');
+  src: url('/fonts/montserrat-700.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -62,7 +54,7 @@
 
 @font-face {
   font-family: 'Montserrat';
-  src: url('https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459Wdhyw.woff2') format('woff2');
+  src: url('/fonts/montserrat-800.woff2') format('woff2');
   font-weight: 800;
   font-style: normal;
   font-display: swap;
@@ -78,4 +70,31 @@
   body {
     @apply font-sans bg-background text-white antialiased;
   }
+}
+
+/*
+ * Font-loading guard: the head script in nuxt.config.ts adds `.fonts-loading`
+ * to <html> immediately, and removes it (adding `.fonts-loaded`) once the real
+ * fonts are loaded. This keeps the body invisible during the SSR→hydration
+ * window so the user never sees a fallback font swap on the initial paint.
+ */
+html.fonts-loading body {
+  opacity: 0;
+  pointer-events: none;
+}
+
+html.fonts-loaded body {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+/* Safety net: if the guard script fails entirely, still show content after a
+   short grace period so the page is never permanently blank. */
+html:not(.fonts-loading):not(.fonts-loaded) body {
+  animation: fontGuardFadeIn 0.2s ease 0.5s forwards;
+}
+
+@keyframes fontGuardFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
