@@ -47,11 +47,28 @@ const closeMobileMenu = () => {
   isMobileMediaOpen.value = false;
 };
 
-const anchorLinkClass = (link: NavLink): string => {
-  if (link.type === 'anchor' && navigationStore.isAboutInView) {
-    return 'text-accent';
+const NAV_LINK_BASE =
+  "relative pb-1 text-[22px] lowercase tracking-wide transition-colors after:absolute after:left-0 after:bottom-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 after:content-['']";
+
+const isLinkActive = (link: NavLink): boolean => {
+  if (link.type === 'anchor') return navigationStore.isAboutInView;
+  if (link.type === 'route') return route.path === link.to;
+  return false;
+};
+
+const navLinkClass = (link: NavLink): string => {
+  if (isLinkActive(link)) {
+    return `${NAV_LINK_BASE} text-accent after:w-full`;
   }
-  return 'text-muted hover:text-accent';
+  return `${NAV_LINK_BASE} text-muted hover:text-accent after:w-0 hover:after:w-full`;
+};
+
+const mediaLinkClass = (): string => {
+  const base = `${NAV_LINK_BASE} flex items-center gap-1`;
+  if (navigationStore.isMediaInView) {
+    return `${base} text-accent after:w-full`;
+  }
+  return `${base} text-muted group-hover:text-accent after:w-0 group-hover:after:w-full`;
 };
 
 const scrollToMedia = async () => {
@@ -86,9 +103,7 @@ const selectMediaFilter = (filter: MediaFilter) => {
             <NuxtLink
               v-if="link.type !== 'dropdown'"
               :to="link.to!"
-              class="text-[22px] lowercase tracking-wide transition-colors"
-              :class="anchorLinkClass(link)"
-              :active-class="link.type === 'anchor' ? '' : 'text-accent'"
+              :class="navLinkClass(link)"
             >
               {{ link.label }}
             </NuxtLink>
@@ -96,8 +111,7 @@ const selectMediaFilter = (filter: MediaFilter) => {
             <div v-else class="relative group">
               <button
                 type="button"
-                class="flex items-center gap-1 text-[22px] lowercase tracking-wide transition-colors"
-                :class="navigationStore.isMediaInView ? 'text-accent' : 'text-muted group-hover:text-accent'"
+                :class="mediaLinkClass()"
                 @click="selectMediaFilter('all')"
               >
                 {{ link.label }}
@@ -144,8 +158,7 @@ const selectMediaFilter = (filter: MediaFilter) => {
             v-if="link.type !== 'dropdown'"
             :to="link.to!"
             class="text-sm lowercase tracking-wide transition-colors"
-            :class="anchorLinkClass(link)"
-            :active-class="link.type === 'anchor' ? '' : 'text-accent'"
+            :class="isLinkActive(link) ? 'text-accent' : 'text-muted hover:text-accent'"
             @click="closeMobileMenu"
           >
             {{ link.label }}
