@@ -64,7 +64,7 @@ useIntersectionObserver(
     ref="sectionRef"
     class="bg-background py-24 md:py-32 scroll-mt-20 md:scroll-mt-24"
   >
-    <div class="max-w-7xl mx-auto px-6 md:px-10">
+    <div class="w-full px-6 md:px-20 lg:px-[160px]">
       <p class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
         Curiosity in Action
       </p>

@@ -43,7 +43,7 @@ useIntersectionObserver(
 <template>
   <section
     ref="heroRef"
-    class="max-w-7xl mx-auto px-6 md:px-10 py-14 md:py-20"
+    class="w-full px-6 md:px-20 lg:px-[160px] py-14 md:py-20"
   >
     <div
       class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-12 md:gap-16 items-start transition-all duration-700 ease-out"

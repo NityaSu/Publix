@@ -71,11 +71,11 @@ const selectMediaFilter = (filter: MediaFilter) => {
 
 <template>
   <header class="sticky top-0 z-50 bg-background/90 backdrop-blur-sm border-b border-white/10">
-    <nav class="max-w-7xl mx-auto px-6 md:px-10">
+    <nav class="w-full px-6 md:px-16 lg:px-[120px]">
       <div class="flex items-center justify-between h-16 md:h-20">
         <NuxtLink
           to="/"
-          class="font-display font-extrabold tracking-tight text-lg md:text-xl text-white hover:text-accent transition-colors"
+          class="font-display font-extrabold tracking-tight text-[35px] text-white hover:text-accent transition-colors"
           @click="closeMobileMenu"
         >
           NITYA SUON
@@ -86,7 +86,7 @@ const selectMediaFilter = (filter: MediaFilter) => {
             <NuxtLink
               v-if="link.type !== 'dropdown'"
               :to="link.to!"
-              class="text-sm lowercase tracking-wide transition-colors"
+              class="text-[20px] lowercase tracking-wide transition-colors"
               :class="anchorLinkClass(link)"
               :active-class="link.type === 'anchor' ? '' : 'text-accent'"
             >
@@ -96,12 +96,12 @@ const selectMediaFilter = (filter: MediaFilter) => {
             <div v-else class="relative group">
               <button
                 type="button"
-                class="flex items-center gap-1 text-sm lowercase tracking-wide transition-colors"
+                class="flex items-center gap-1 text-[20px] lowercase tracking-wide transition-colors"
                 :class="navigationStore.isMediaInView ? 'text-accent' : 'text-muted group-hover:text-accent'"
                 @click="selectMediaFilter('all')"
               >
                 {{ link.label }}
-                <ChevronDown :size="14" class="transition-transform duration-200 group-hover:rotate-180" />
+                <ChevronDown :size="16" class="transition-transform duration-200 group-hover:rotate-180" />
               </button>
 
               <div
