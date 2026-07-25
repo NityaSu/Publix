@@ -80,14 +80,14 @@ const wordCloud: WordCloudItem[] = [
     return {
       text,
       class: `${MATCHED_TONE} font-display transition-colors duration-300 hover:text-accent`,
-      style: fluidSize(SIZE_MATCHES[text], 24, 52, 0.85),
+      style: fluidSize(SIZE_MATCHES[text], 24, 52, 1),
     };
   }
   const isCore = CORE_WORDS.has(text);
   return {
     text,
     class: `${tone} font-display transition-colors duration-300 hover:text-accent`,
-    style: isCore ? fluidSize(text, 24, 52, 0.85) : fluidSize(text, 11, 24, 0.48),
+    style: isCore ? fluidSize(text, 24, 52, 1) : fluidSize(text, 11, 24, 0.48),
   };
 });
 
@@ -133,7 +133,10 @@ const headlineRef = ref<HTMLElement | null>(null);
 const { width: headlineWidth } = useElementSize(headlineRef);
 const wordCloudRowStyle = computed(() => {
   if (!headlineWidth.value) return {};
-  return { width: `${Math.round(headlineWidth.value * 1.04)}px`, maxWidth: '100%' };
+  // Keep the block tied to the headline, but slightly under its width so the
+  // horizontal words (which hit a font-size ceiling) still reach the right
+  // vertical column instead of leaving a dead gap beside them.
+  return { width: `${Math.round(headlineWidth.value * 0.84)}px`, maxWidth: '100%' };
 });
 
 const heroRef = ref<HTMLElement | null>(null);
@@ -170,10 +173,10 @@ useIntersectionObserver(
         <div class="mt-6 h-1 w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
 
         <div
-          class="mt-10 md:mt-14 flex items-start gap-3 md:gap-6 select-none border border-white/10 rounded-xl px-4 md:px-6 py-4 md:py-6"
+          class="mt-10 md:mt-14 flex items-start gap-1.5 md:gap-2 select-none border border-white/10 rounded-xl px-4 md:px-6 py-4 md:py-6"
           :style="wordCloudRowStyle"
         >
-          <div class="hidden sm:flex flex-col items-center pt-1">
+          <div class="hidden sm:flex flex-col items-center pt-1 shrink-0">
             <span
               class="font-display uppercase tracking-[0.15em] rotate-180 transition-colors duration-300 hover:text-accent"
               :class="leftVerticalWord.tone"
@@ -200,7 +203,7 @@ useIntersectionObserver(
             </span>
           </div>
 
-          <div class="hidden sm:flex items-start gap-3 md:gap-6 -ml-2 md:-ml-4 lg:-ml-6">
+          <div class="hidden sm:flex items-start gap-1 md:gap-1.5 shrink-0 -ml-2 md:-ml-3">
             <div class="flex flex-col items-center pt-1">
               <span
                 class="font-display uppercase tracking-[0.15em] transition-colors duration-300 hover:text-accent"
