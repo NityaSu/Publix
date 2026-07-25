@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Film, Image as ImageIcon, Play, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { useIntersectionObserver, useSwipe } from '@vueuse/core';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
@@ -91,24 +91,25 @@ const photos: PhotoSlide[] = [
 
 const photoIndex = ref(0);
 const currentPhoto = computed(() => photos[photoIndex.value]!);
-const photoFailed = ref(false);
+const failedPhotos = ref<Record<string, boolean>>({});
 
 const photoSwipeRef = ref<HTMLElement | null>(null);
 
 const nextPhoto = () => {
-  photoFailed.value = false;
   photoIndex.value = (photoIndex.value + 1) % photos.length;
 };
 
 const prevPhoto = () => {
-  photoFailed.value = false;
   photoIndex.value = (photoIndex.value - 1 + photos.length) % photos.length;
 };
 
 const goToPhoto = (index: number) => {
   if (index === photoIndex.value) return;
-  photoFailed.value = false;
   photoIndex.value = index;
+};
+
+const markPhotoFailed = (src: string) => {
+  failedPhotos.value = { ...failedPhotos.value, [src]: true };
 };
 
 useSwipe(photoSwipeRef, {
@@ -117,6 +118,14 @@ useSwipe(photoSwipeRef, {
     if (direction === 'left') nextPhoto();
     if (direction === 'right') prevPhoto();
   },
+});
+
+// Warm both images so left/right never flashes empty/alt text while decoding.
+onMounted(() => {
+  for (const photo of photos) {
+    const img = new Image();
+    img.src = photo.src;
+  }
 });
 
 const videoSrc = ref('/assets/videos/meituan-reel.mp4');
@@ -208,29 +217,36 @@ useIntersectionObserver(
               class="group relative rounded-xl overflow-hidden border border-white/10 hover:border-accent/50 transition-colors duration-300 bg-surface touch-pan-y select-none"
               role="region"
               aria-roledescription="carousel"
-              aria-label="Meituan robot photos"
+              :aria-label="currentPhoto.alt"
             >
-              <img
-                v-if="!photoFailed"
-                :key="currentPhoto.src"
-                :src="currentPhoto.src"
-                :alt="currentPhoto.alt"
-                class="w-full h-auto max-h-[520px] object-contain transition-opacity duration-300"
-                draggable="false"
-                @error="photoFailed = true"
-              />
-              <div
-                v-else
-                class="w-full aspect-video flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-accent/20 via-surface to-background"
-              >
-                <ImageIcon :size="32" class="text-accent/60" />
-                <span class="text-xs uppercase tracking-widest text-muted">Photo</span>
+              <div class="relative w-full min-h-[200px] bg-surface">
+                <img
+                  v-for="(photo, index) in photos"
+                  :key="photo.src"
+                  :src="photo.src"
+                  alt=""
+                  class="w-full h-auto max-h-[520px] object-contain transition-opacity duration-300"
+                  :class="
+                    index === photoIndex
+                      ? 'relative z-[1] opacity-100'
+                      : 'absolute inset-0 z-0 opacity-0 pointer-events-none'
+                  "
+                  draggable="false"
+                  @error="markPhotoFailed(photo.src)"
+                />
+                <div
+                  v-if="failedPhotos[currentPhoto.src]"
+                  class="absolute inset-0 z-[2] flex items-center justify-center bg-gradient-to-br from-accent/20 via-surface to-background"
+                  aria-hidden="true"
+                >
+                  <ImageIcon :size="32" class="text-accent/60" />
+                </div>
               </div>
 
               <button
                 type="button"
                 aria-label="Previous photo"
-                class="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
+                class="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
                 @click="prevPhoto"
               >
                 <ChevronLeft :size="18" />
@@ -238,13 +254,13 @@ useIntersectionObserver(
               <button
                 type="button"
                 aria-label="Next photo"
-                class="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
+                class="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
                 @click="nextPhoto"
               >
                 <ChevronRight :size="18" />
               </button>
 
-              <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2">
+              <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
                 <button
                   v-for="(photo, index) in photos"
                   :key="photo.src"
