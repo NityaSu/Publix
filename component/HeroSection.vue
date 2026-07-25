@@ -29,6 +29,9 @@ interface HeightMatchedWord {
  * claim: core words fill almost the whole row (dominant), filler words
  * only claim a fraction of it, which is what creates the "3-4 big words
  * standing out above smaller surrounding ones" hierarchy.
+ *
+ * Floor stays low so long phrases can keep shrinking on tablet/mobile
+ * instead of overflowing the bordered box.
  */
 const fluidSize = (text: string, floorPx: number, ceilPx: number, fill: number, factor = 0.72): string => {
   const cqw = (100 * fill) / (text.length * factor);
@@ -53,7 +56,7 @@ const CORE_WORDS = new Set([
 // instead of an arbitrarily-chosen flat value that leaves it far short.
 const MUTED_TRIO = new Set(['INNOVATION', 'CURIOSITY', 'TECHNOLOGY']);
 const MUTED_TRIO_TONE = 'text-white/20 font-bold';
-const MUTED_TRIO_STYLE = fluidSize('INNOVATION', 24, 48, 0.72);
+const MUTED_TRIO_STYLE = fluidSize('INNOVATION', 10, 48, 0.72);
 
 // Words that should visually match another word's size (computed from that
 // other word's character count, not their own) and color/weight.
@@ -80,14 +83,14 @@ const wordCloud: WordCloudItem[] = [
     return {
       text,
       class: `${MATCHED_TONE} font-display transition-colors duration-300 hover:text-accent`,
-      style: fluidSize(SIZE_MATCHES[text], 24, 52, 1),
+      style: fluidSize(SIZE_MATCHES[text], 10, 52, 0.96),
     };
   }
   const isCore = CORE_WORDS.has(text);
   return {
     text,
     class: `${tone} font-display transition-colors duration-300 hover:text-accent`,
-    style: isCore ? fluidSize(text, 24, 52, 1) : fluidSize(text, 11, 24, 0.48),
+    style: isCore ? fluidSize(text, 10, 52, 0.96) : fluidSize(text, 8, 24, 0.48),
   };
 });
 
@@ -101,7 +104,7 @@ const resilienceWord: HeightMatchedWord = { text: 'RESILIENCE', tone: 'text-whit
 
 const entrepreneurshipWord: VerticalWordItem = {
   text: 'ENTREPRENEURSHIP',
-  class: 'text-base md:text-xl text-white/30 font-semibold',
+  class: 'text-[10px] md:text-xs lg:text-base xl:text-xl text-white/30 font-semibold',
 };
 
 const wordCloudRef = ref<HTMLElement | null>(null);
@@ -121,22 +124,19 @@ const verticalMatchStyle = (
   return `font-size: ${clamped.toFixed(1)}px; line-height: 0.86;`;
 };
 
-const leftVerticalStyle = computed(() => verticalMatchStyle(leftVerticalWord.text, 14, 42));
-const resilienceStyle = computed(() => verticalMatchStyle(resilienceWord.text, 14, 42));
+const leftVerticalStyle = computed(() => verticalMatchStyle(leftVerticalWord.text, 8, 42));
+const resilienceStyle = computed(() => verticalMatchStyle(resilienceWord.text, 8, 42));
 
-// Caps the whole word-cloud "rectangle" (both vertical columns + the
-// horizontal block) to a bit more than the measured width of the
-// "Software Engineer" headline above it, instead of stretching to fill
-// the entire column — this is what shrinks the block and keeps it
-// visually tied to the headline's width rather than the page width.
+// Caps the word-cloud block to the headline on large screens, but always
+// stays within the parent column on tablet/mobile (width: 100%).
 const headlineRef = ref<HTMLElement | null>(null);
 const { width: headlineWidth } = useElementSize(headlineRef);
 const wordCloudRowStyle = computed(() => {
-  if (!headlineWidth.value) return {};
-  // Keep the block tied to the headline, but slightly under its width so the
-  // horizontal words (which hit a font-size ceiling) still reach the right
-  // vertical column instead of leaving a dead gap beside them.
-  return { width: `${Math.round(headlineWidth.value * 0.84)}px`, maxWidth: '100%' };
+  if (!headlineWidth.value) return { width: '100%', maxWidth: '100%' };
+  return {
+    width: '100%',
+    maxWidth: `${Math.round(headlineWidth.value * 0.92)}px`,
+  };
 });
 
 const heroRef = ref<HTMLElement | null>(null);
@@ -156,29 +156,34 @@ useIntersectionObserver(
 <template>
   <section
     ref="heroRef"
-    class="w-full px-6 md:px-20 lg:px-[160px] py-14 md:py-20"
+    class="w-full px-5 sm:px-6 md:px-12 lg:px-20 xl:px-[160px] py-10 sm:py-14 md:py-20"
   >
     <div
-      class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-12 md:gap-16 items-start transition-all duration-700 ease-out"
+      class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-8 md:gap-12 lg:gap-16 items-start transition-all duration-700 ease-out"
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
     >
-      <div class="min-w-0">
+      <div class="min-w-0 w-full">
         <h1 class="font-display font-extrabold uppercase leading-[0.95] tracking-tight">
-          <span ref="headlineRef" class="block text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl">Software Engineer</span>
-          <span class="block text-accent mt-2 md:mt-3 text-lg sm:text-xl md:text-2xl lg:text-3xl tracking-wide">
+          <span
+            ref="headlineRef"
+            class="block text-white text-[clamp(1.75rem,6vw,4.5rem)]"
+          >
+            Software Engineer
+          </span>
+          <span class="block text-accent mt-2 md:mt-3 text-[clamp(0.9rem,2.5vw,1.875rem)] tracking-wide">
             Bronze Medalist &middot; National Math Olympiad
           </span>
         </h1>
 
-        <div class="mt-6 h-1 w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
+        <div class="mt-5 md:mt-6 h-1 w-32 sm:w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
 
         <div
-          class="mt-10 md:mt-14 flex items-start gap-1.5 md:gap-2 select-none border border-white/10 rounded-xl px-4 md:px-6 py-4 md:py-6"
+          class="mt-8 md:mt-12 lg:mt-14 flex items-start gap-1.5 sm:gap-2 select-none border border-white/10 rounded-xl px-3 sm:px-4 md:px-5 py-3 sm:py-4 md:py-5 w-full max-w-full overflow-hidden"
           :style="wordCloudRowStyle"
         >
-          <div class="hidden sm:flex flex-col items-center pt-1 shrink-0">
+          <div class="hidden md:flex flex-col items-center pt-1 shrink-0">
             <span
-              class="font-display uppercase tracking-[0.15em] rotate-180 transition-colors duration-300 hover:text-accent"
+              class="font-display uppercase tracking-[0.12em] rotate-180 transition-colors duration-300 hover:text-accent"
               :class="leftVerticalWord.tone"
               :style="leftVerticalStyle"
               style="writing-mode: vertical-rl"
@@ -189,13 +194,13 @@ useIntersectionObserver(
 
           <div
             ref="wordCloudRef"
-            class="flex-1 flex flex-col justify-start gap-0 md:gap-0.5 min-w-0"
+            class="flex-1 flex flex-col justify-start gap-0 md:gap-0.5 min-w-0 overflow-hidden"
             style="container-type: inline-size"
           >
             <span
               v-for="word in wordCloud"
               :key="word.text"
-              class="whitespace-nowrap uppercase"
+              class="block w-full whitespace-nowrap uppercase overflow-hidden text-ellipsis"
               :class="word.class"
               :style="word.style"
             >
@@ -203,10 +208,10 @@ useIntersectionObserver(
             </span>
           </div>
 
-          <div class="hidden sm:flex items-start gap-1 md:gap-1.5 shrink-0 -ml-2 md:-ml-3">
+          <div class="hidden md:flex items-start gap-1 lg:gap-1.5 shrink-0">
             <div class="flex flex-col items-center pt-1">
               <span
-                class="font-display uppercase tracking-[0.15em] transition-colors duration-300 hover:text-accent"
+                class="font-display uppercase tracking-[0.12em] transition-colors duration-300 hover:text-accent"
                 :class="entrepreneurshipWord.class"
                 style="writing-mode: vertical-rl"
               >
@@ -216,7 +221,7 @@ useIntersectionObserver(
 
             <div class="flex flex-col items-center pt-1">
               <span
-                class="font-display uppercase tracking-[0.15em] transition-colors duration-300 hover:text-accent"
+                class="font-display uppercase tracking-[0.12em] transition-colors duration-300 hover:text-accent"
                 :class="resilienceWord.tone"
                 :style="resilienceStyle"
                 style="writing-mode: vertical-rl"
@@ -228,7 +233,7 @@ useIntersectionObserver(
         </div>
       </div>
 
-      <div class="flex justify-center md:justify-end">
+      <div class="flex justify-center lg:justify-end">
         <ProfileReveal
           profile-src="/assets/images/profile.jpg"
           profile-alt="NITYA SUON"
@@ -239,16 +244,16 @@ useIntersectionObserver(
     </div>
 
     <div
-      class="mt-16 md:mt-24 pt-8 border-t border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all duration-700 ease-out delay-150"
+      class="mt-12 md:mt-16 lg:mt-24 pt-6 md:pt-8 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 transition-all duration-700 ease-out delay-150"
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
     >
-      <p class="font-display text-xs md:text-sm font-semibold tracking-[0.3em] text-muted uppercase">
+      <p class="font-display text-xs md:text-sm font-semibold tracking-[0.2em] sm:tracking-[0.3em] text-muted uppercase">
         Building systems that solve real problems
       </p>
 
       <NuxtLink
         to="/projects"
-        class="group inline-flex items-center gap-3 px-6 py-3 rounded-full border border-accent text-white text-sm uppercase tracking-widest hover:bg-accent/10 hover:shadow-glow-sm transition-all duration-300"
+        class="group inline-flex items-center gap-3 px-5 sm:px-6 py-2.5 sm:py-3 rounded-full border border-accent text-white text-xs sm:text-sm uppercase tracking-widest hover:bg-accent/10 hover:shadow-glow-sm transition-all duration-300"
       >
         <Play :size="16" class="text-accent transition-transform duration-300 group-hover:scale-110" />
         <span>view projects</span>

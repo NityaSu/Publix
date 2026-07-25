@@ -48,7 +48,7 @@ const closeMobileMenu = () => {
 };
 
 const NAV_LINK_BASE =
-  "relative pb-1 text-[22px] lowercase tracking-wide transition-colors after:absolute after:left-0 after:bottom-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 after:content-['']";
+  "relative pb-1 text-base lg:text-lg xl:text-[22px] lowercase tracking-wide transition-colors after:absolute after:left-0 after:bottom-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 after:content-['']";
 
 const isLinkActive = (link: NavLink): boolean => {
   if (link.type === 'anchor') return navigationStore.isAboutInView;
@@ -88,17 +88,17 @@ const selectMediaFilter = (filter: MediaFilter) => {
 
 <template>
   <header class="sticky top-0 z-50 bg-background/90 backdrop-blur-sm border-b border-white/10">
-    <nav class="w-full px-6 md:px-16 lg:px-[120px]">
-      <div class="flex items-center justify-between h-16 md:h-20">
+    <nav class="w-full px-5 sm:px-6 md:px-10 lg:px-16 xl:px-[120px]">
+      <div class="flex items-center justify-between gap-4 h-14 sm:h-16 md:h-20">
         <NuxtLink
           to="/"
-          class="font-display font-extrabold tracking-tight text-[42px] text-white hover:text-accent transition-colors"
+          class="font-display font-extrabold tracking-tight text-white hover:text-accent transition-colors whitespace-nowrap text-[clamp(1.15rem,3.5vw,2.625rem)] min-w-0"
           @click="closeMobileMenu"
         >
           NITYA SUON
         </NuxtLink>
 
-        <div class="hidden md:flex items-center gap-8">
+        <div class="hidden md:flex items-center gap-4 lg:gap-6 xl:gap-8 shrink-0">
           <template v-for="link in navLinks" :key="link.label">
             <NuxtLink
               v-if="link.type !== 'dropdown'"

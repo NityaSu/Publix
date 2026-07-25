@@ -42,7 +42,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="relative w-[250px] h-[250px] md:w-[320px] md:h-[320px] shrink-0">
+  <div class="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[260px] md:h-[260px] lg:w-[300px] lg:h-[300px] xl:w-[320px] xl:h-[320px] shrink-0">
     <div class="absolute inset-0 rounded-full border-2 border-accent shadow-glow"></div>
 
     <div class="absolute inset-[6px] rounded-full overflow-hidden bg-surface">
