@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
 
 interface Props {
   profileSrc?: string;
+  profileAltSrc?: string;
   profileAlt?: string;
   logoSrc?: string;
   fallbackInitial?: string;
@@ -12,6 +13,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   profileSrc: '/assets/images/profile.jpg',
+  profileAltSrc: '/assets/images/profile2.jpg',
   profileAlt: 'Profile photo',
   logoSrc: '/assets/images/logo.png',
   fallbackInitial: 'S',
@@ -25,6 +27,12 @@ const profileFailed = ref(false);
 const logoFailed = ref(false);
 /** Bumps on each replay so the CSS spin animation restarts cleanly. */
 const spinKey = ref(0);
+/** 0 = profileSrc, 1 = profileAltSrc — toggles on each click. */
+const photoIndex = ref(0);
+
+const activeProfileSrc = computed(() =>
+  photoIndex.value === 0 ? props.profileSrc : props.profileAltSrc,
+);
 
 let revealTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -43,13 +51,19 @@ const startReveal = () => {
   }
   isLoading.value = true;
   spinKey.value += 1;
+  profileFailed.value = false;
   revealTimer = setTimeout(() => {
     isLoading.value = false;
   }, props.loadingDurationMs);
 };
 
 const replayReveal = () => {
-  if (prefersReducedMotion.value) return;
+  if (prefersReducedMotion.value) {
+    photoIndex.value = photoIndex.value === 0 ? 1 : 0;
+    profileFailed.value = false;
+    return;
+  }
+  photoIndex.value = photoIndex.value === 0 ? 1 : 0;
   startReveal();
 };
 
@@ -66,7 +80,7 @@ onUnmounted(() => {
   <button
     type="button"
     class="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[260px] md:h-[260px] lg:w-[300px] lg:h-[300px] xl:w-[320px] xl:h-[320px] shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
-    :aria-label="isLoading ? 'Profile loading' : `Replay ${profileAlt} reveal`"
+    :aria-label="isLoading ? 'Profile loading' : `Switch photo and replay ${profileAlt} reveal`"
     @click="replayReveal"
   >
     <div class="absolute inset-0 rounded-full border-2 border-accent shadow-glow"></div>
@@ -107,7 +121,8 @@ onUnmounted(() => {
       >
         <img
           v-if="!profileFailed"
-          :src="profileSrc"
+          :key="activeProfileSrc"
+          :src="activeProfileSrc"
           :alt="profileAlt"
           class="w-full h-full object-cover pointer-events-none"
           @error="profileFailed = true"

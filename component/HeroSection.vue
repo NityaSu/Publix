@@ -236,6 +236,7 @@ useIntersectionObserver(
       <div class="flex justify-center lg:justify-end">
         <ProfileReveal
           profile-src="/assets/images/profile.jpg"
+          profile-alt-src="/assets/images/profile2.jpg"
           profile-alt="NITYA SUON"
           logo-src="/assets/images/logo.png"
           fallback-initial="S"
