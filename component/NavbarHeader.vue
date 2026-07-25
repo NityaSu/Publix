@@ -60,7 +60,7 @@ const navLinkClass = (link: NavLink): string => {
   if (isLinkActive(link)) {
     return `${NAV_LINK_BASE} text-accent after:w-full`;
   }
-  return `${NAV_LINK_BASE} text-muted hover:text-accent after:w-0 hover:after:w-full`;
+  return `${NAV_LINK_BASE} text-white hover:text-accent after:w-0 hover:after:w-full`;
 };
 
 const mediaLinkClass = (): string => {
@@ -68,7 +68,7 @@ const mediaLinkClass = (): string => {
   if (navigationStore.isMediaInView) {
     return `${base} text-accent after:w-full`;
   }
-  return `${base} text-muted group-hover:text-accent after:w-0 group-hover:after:w-full`;
+  return `${base} text-white group-hover:text-accent after:w-0 group-hover:after:w-full`;
 };
 
 const scrollToMedia = async () => {
@@ -158,7 +158,7 @@ const selectMediaFilter = (filter: MediaFilter) => {
             v-if="link.type !== 'dropdown'"
             :to="link.to!"
             class="text-sm lowercase tracking-wide transition-colors"
-            :class="isLinkActive(link) ? 'text-accent' : 'text-muted hover:text-accent'"
+            :class="isLinkActive(link) ? 'text-accent' : 'text-white hover:text-accent'"
             @click="closeMobileMenu"
           >
             {{ link.label }}
@@ -168,7 +168,7 @@ const selectMediaFilter = (filter: MediaFilter) => {
             <button
               type="button"
               class="flex items-center justify-between w-full text-sm lowercase tracking-wide transition-colors"
-              :class="navigationStore.isMediaInView ? 'text-accent' : 'text-muted hover:text-accent'"
+              :class="navigationStore.isMediaInView ? 'text-accent' : 'text-white hover:text-accent'"
               @click="isMobileMediaOpen = !isMobileMediaOpen"
             >
               <span>{{ link.label }}</span>

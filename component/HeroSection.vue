@@ -17,7 +17,10 @@ const wordCloud: WordCloudItem[] = [
   { text: 'MATHEMATICS', class: 'text-3xl md:text-5xl text-white/40 font-display font-bold' },
   { text: 'PERSISTENCE', class: 'text-4xl md:text-6xl text-white/50 font-display font-extrabold' },
   { text: 'REBUILDING', class: 'text-4xl md:text-6xl text-accent/90 font-display font-extrabold' },
-];
+].map((item) => ({
+  ...item,
+  class: `${item.class} transition-colors duration-300 hover:text-accent`,
+}));
 
 const leftVerticalWords: string[] = ['CROSS-CULTURAL'];
 const rightVerticalWords: string[] = ['ENTREPRENEURSHIP', 'RESILIENCE'];
@@ -58,7 +61,7 @@ useIntersectionObserver(
             <span
               v-for="word in leftVerticalWords"
               :key="word"
-              class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-white/25 rotate-180"
+              class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-white/25 rotate-180 transition-colors duration-300 hover:text-accent"
               style="writing-mode: vertical-rl"
             >
               {{ word }}
@@ -80,7 +83,7 @@ useIntersectionObserver(
             <span
               v-for="word in rightVerticalWords"
               :key="word"
-              class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-white/25"
+              class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-white/25 transition-colors duration-300 hover:text-accent"
               style="writing-mode: vertical-rl"
             >
               {{ word }}
