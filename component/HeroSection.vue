@@ -145,9 +145,11 @@ useIntersectionObserver(
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
     >
       <div class="min-w-0">
-        <h1 class="font-display font-extrabold uppercase leading-[0.95] tracking-tight text-5xl sm:text-6xl md:text-7xl lg:text-8xl">
-          <span class="block text-white">Bronze Medalist</span>
-          <span class="block text-accent">National Math Olympiad</span>
+        <h1 class="font-display font-extrabold uppercase leading-[0.95] tracking-tight">
+          <span class="block text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl">Software Engineer</span>
+          <span class="block text-accent mt-2 md:mt-3 text-lg sm:text-xl md:text-2xl lg:text-3xl tracking-wide">
+            Bronze Medalist &middot; National Math Olympiad
+          </span>
         </h1>
 
         <div class="mt-6 h-1 w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
