@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Play } from 'lucide-vue-next';
-import { useIntersectionObserver } from '@vueuse/core';
+import { useElementSize, useIntersectionObserver } from '@vueuse/core';
 import ProfileReveal from '~/component/ProfileReveal.vue';
 
 interface WordCloudItem {
@@ -13,6 +13,11 @@ interface WordCloudItem {
 interface VerticalWordItem {
   text: string;
   class: string;
+}
+
+interface HeightMatchedWord {
+  text: string;
+  tone: string;
 }
 
 /**
@@ -40,6 +45,18 @@ const CORE_WORDS = new Set([
   'BRING IMPOSSIBLE IDEAS TO LIFE',
 ]);
 
+// These three share one identical size/weight/color so they read as a
+// matched, deliberately muted trio — greyer than the brighter words
+// around them, rather than each scaling to its own character count.
+const MUTED_TRIO = new Set(['INNOVATION', 'CURIOSITY', 'TECHNOLOGY']);
+const MUTED_TRIO_TONE = 'text-white/20 font-bold';
+const MUTED_TRIO_STYLE = 'font-size: clamp(30px, 9cqw, 58px); line-height: 0.86;';
+
+// Words that should visually match another word's size (computed from that
+// other word's character count, not their own) and color/weight.
+const MATCHED_TONE = 'text-white/45 font-extrabold';
+const SIZE_MATCHES: Record<string, string> = { PERSISTENCE: 'ARTIFICIAL INTELLIGENCE' };
+
 const wordCloud: WordCloudItem[] = [
   { text: 'TRY TO BECOME SYSTEM THINKER', tone: 'text-white/40 font-extrabold' },
   { text: 'ARTIFICIAL INTELLIGENCE', tone: 'text-white/45 font-extrabold' },
@@ -49,6 +66,20 @@ const wordCloud: WordCloudItem[] = [
   { text: 'PERSISTENCE', tone: 'text-white/55 font-extrabold' },
   { text: 'BRING IMPOSSIBLE IDEAS TO LIFE', tone: 'text-white/30 font-extrabold' },
 ].map(({ text, tone }) => {
+  if (MUTED_TRIO.has(text)) {
+    return {
+      text,
+      class: `${MUTED_TRIO_TONE} font-display transition-colors duration-300 hover:text-accent`,
+      style: MUTED_TRIO_STYLE,
+    };
+  }
+  if (SIZE_MATCHES[text]) {
+    return {
+      text,
+      class: `${MATCHED_TONE} font-display transition-colors duration-300 hover:text-accent`,
+      style: fluidSize(SIZE_MATCHES[text], 30, 68, 0.95),
+    };
+  }
   const isCore = CORE_WORDS.has(text);
   return {
     text,
@@ -57,18 +88,38 @@ const wordCloud: WordCloudItem[] = [
   };
 });
 
-const leftVerticalWord: VerticalWordItem = {
-  text: 'ELIMINATE FRICTION',
-  class: 'text-lg md:text-2xl text-white/40 font-bold',
-};
+// ELIMINATE FRICTION (left) and RESILIENCE (right) are meant to read top-to-
+// bottom exactly as tall as the horizontal word block, so the three columns
+// form a clean rectangle. Rather than a fixed Tailwind size, their font size
+// is derived from the word block's *measured* rendered height — analogous
+// to the cqw trick used for the horizontal words, but for vertical length.
+const leftVerticalWord: HeightMatchedWord = { text: 'ELIMINATE FRICTION', tone: 'text-white/40 font-bold' };
+const resilienceWord: HeightMatchedWord = { text: 'RESILIENCE', tone: 'text-white/50 font-bold' };
+
 const entrepreneurshipWord: VerticalWordItem = {
   text: 'ENTREPRENEURSHIP',
   class: 'text-lg md:text-2xl text-white/30 font-semibold',
 };
-const resilienceWord: VerticalWordItem = {
-  text: 'RESILIENCE',
-  class: 'text-2xl md:text-4xl text-white/50 font-bold',
+
+const wordCloudRef = ref<HTMLElement | null>(null);
+const { height: wordCloudHeight } = useElementSize(wordCloudRef);
+
+const verticalMatchStyle = (
+  text: string,
+  floorPx: number,
+  ceilPx: number,
+  fill = 0.9,
+  factor = 0.72,
+): string => {
+  const available = wordCloudHeight.value;
+  if (!available) return `font-size: ${floorPx}px; line-height: 0.86;`;
+  const size = (fill * available) / (text.length * factor);
+  const clamped = Math.min(Math.max(size, floorPx), ceilPx);
+  return `font-size: ${clamped.toFixed(1)}px; line-height: 0.86;`;
 };
+
+const leftVerticalStyle = computed(() => verticalMatchStyle(leftVerticalWord.text, 18, 56));
+const resilienceStyle = computed(() => verticalMatchStyle(resilienceWord.text, 18, 56));
 
 const heroRef = ref<HTMLElement | null>(null);
 const isVisible = ref(false);
@@ -105,7 +156,8 @@ useIntersectionObserver(
           <div class="hidden sm:flex flex-col items-center pt-1">
             <span
               class="font-display uppercase tracking-[0.15em] rotate-180 transition-colors duration-300 hover:text-accent"
-              :class="leftVerticalWord.class"
+              :class="leftVerticalWord.tone"
+              :style="leftVerticalStyle"
               style="writing-mode: vertical-rl"
             >
               {{ leftVerticalWord.text }}
@@ -113,6 +165,7 @@ useIntersectionObserver(
           </div>
 
           <div
+            ref="wordCloudRef"
             class="flex-1 flex flex-col justify-start min-w-0"
             style="container-type: inline-size"
           >
@@ -127,7 +180,7 @@ useIntersectionObserver(
             </span>
           </div>
 
-          <div class="hidden sm:flex items-start gap-2 md:gap-3">
+          <div class="hidden sm:flex items-start gap-2 md:gap-3 md:-ml-10 lg:-ml-20">
             <div class="flex flex-col items-center pt-1">
               <span
                 class="font-display uppercase tracking-[0.15em] transition-colors duration-300 hover:text-accent"
@@ -141,7 +194,8 @@ useIntersectionObserver(
             <div class="flex flex-col items-center pt-1">
               <span
                 class="font-display uppercase tracking-[0.15em] transition-colors duration-300 hover:text-accent"
-                :class="resilienceWord.class"
+                :class="resilienceWord.tone"
+                :style="resilienceStyle"
                 style="writing-mode: vertical-rl"
               >
                 {{ resilienceWord.text }}
