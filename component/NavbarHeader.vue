@@ -1,13 +1,22 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, type Component } from 'vue';
 import { useRoute } from 'vue-router';
-import { Menu, X, ChevronDown, Film, Image as ImageIcon } from 'lucide-vue-next';
+import {
+  Menu,
+  X,
+  ChevronDown,
+  Film,
+  Image as ImageIcon,
+  Lightbulb,
+} from 'lucide-vue-next';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 
 interface DropdownChild {
   label: string;
-  filter: MediaFilter;
-  icon: typeof Film;
+  icon?: Component;
+  filter?: MediaFilter;
+  scrollTo?: string;
+  to?: string;
 }
 
 interface NavLink {
@@ -27,6 +36,13 @@ const navLinks: NavLink[] = [
       { label: 'Photo', filter: 'photo', icon: ImageIcon },
     ],
   },
+  {
+    label: 'insights',
+    type: 'dropdown',
+    children: [
+      { label: 'My Thoughts', to: '/insights', icon: Lightbulb },
+    ],
+  },
   { label: 'projects', type: 'route', to: '/projects' },
   { label: 'thesis', type: 'route', to: '/thesis' },
   { label: 'contact', type: 'route', to: '/contact' },
@@ -36,19 +52,32 @@ const route = useRoute();
 const navigationStore = useNavigationStore();
 
 const isMobileMenuOpen = ref(false);
-const isMobileMediaOpen = ref(false);
+const mobileOpenDropdown = ref<string | null>(null);
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value;
+  if (!isMobileMenuOpen.value) {
+    mobileOpenDropdown.value = null;
+  }
 };
 
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false;
-  isMobileMediaOpen.value = false;
+  mobileOpenDropdown.value = null;
+};
+
+const toggleMobileDropdown = (label: string) => {
+  mobileOpenDropdown.value = mobileOpenDropdown.value === label ? null : label;
 };
 
 const NAV_LINK_BASE =
   "relative pb-1 text-base lg:text-lg xl:text-[22px] lowercase tracking-wide transition-colors after:absolute after:left-0 after:bottom-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 after:content-['']";
+
+const isDropdownActive = (link: NavLink): boolean => {
+  if (link.label === 'media') return navigationStore.isMediaInView;
+  if (link.label === 'insights') return route.path === '/insights';
+  return false;
+};
 
 const isLinkActive = (link: NavLink): boolean => {
   if (link.type === 'anchor') return navigationStore.isAboutInView;
@@ -63,26 +92,49 @@ const navLinkClass = (link: NavLink): string => {
   return `${NAV_LINK_BASE} text-white hover:text-accent after:w-0 hover:after:w-full`;
 };
 
-const mediaLinkClass = (): string => {
+const dropdownLinkClass = (link: NavLink): string => {
   const base = `${NAV_LINK_BASE} flex items-center gap-1`;
-  if (navigationStore.isMediaInView) {
+  if (isDropdownActive(link)) {
     return `${base} text-accent after:w-full`;
   }
   return `${base} text-white group-hover:text-accent after:w-0 group-hover:after:w-full`;
 };
 
-const scrollToMedia = async () => {
+const scrollToId = async (id: string) => {
   if (route.path !== '/') {
     await navigateTo('/');
     await nextTick();
   }
-  document.getElementById('media')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
-const selectMediaFilter = (filter: MediaFilter) => {
-  navigationStore.setMediaFilter(filter);
+const onDropdownParentClick = async (link: NavLink) => {
+  if (link.label === 'media') {
+    navigationStore.setMediaFilter('all');
+    closeMobileMenu();
+    await scrollToId('media');
+    return;
+  }
+  if (link.label === 'insights') {
+    closeMobileMenu();
+    await navigateTo('/insights');
+  }
+};
+
+const selectDropdownChild = async (child: DropdownChild) => {
   closeMobileMenu();
-  scrollToMedia();
+  if (child.filter) {
+    navigationStore.setMediaFilter(child.filter);
+    await scrollToId('media');
+    return;
+  }
+  if (child.to) {
+    await navigateTo(child.to);
+    return;
+  }
+  if (child.scrollTo) {
+    await scrollToId(child.scrollTo);
+  }
 };
 
 const goHomeTop = async () => {
@@ -120,25 +172,25 @@ const goHomeTop = async () => {
             <div v-else class="relative group">
               <button
                 type="button"
-                :class="mediaLinkClass()"
-                @click="selectMediaFilter('all')"
+                :class="dropdownLinkClass(link)"
+                @click="onDropdownParentClick(link)"
               >
                 {{ link.label }}
                 <ChevronDown :size="18" class="transition-transform duration-200 group-hover:rotate-180" />
               </button>
 
               <div
-                class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-2 min-w-[140px]"
+                class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-2 min-w-[160px]"
               >
                 <div class="rounded-lg border border-white/10 bg-surface py-2 shadow-glow-sm">
                   <button
                     v-for="child in link.children"
-                    :key="child.filter"
+                    :key="child.label"
                     type="button"
                     class="flex w-full items-center gap-2 px-4 py-2 text-sm lowercase text-muted hover:text-accent hover:bg-white/5 transition-colors"
-                    @click="selectMediaFilter(child.filter)"
+                    @click="selectDropdownChild(child)"
                   >
-                    <component :is="child.icon" :size="14" />
+                    <component :is="child.icon" v-if="child.icon" :size="14" />
                     {{ child.label }}
                   </button>
                 </div>
@@ -177,26 +229,26 @@ const goHomeTop = async () => {
             <button
               type="button"
               class="flex items-center justify-between w-full text-sm lowercase tracking-wide transition-colors"
-              :class="navigationStore.isMediaInView ? 'text-accent' : 'text-white hover:text-accent'"
-              @click="isMobileMediaOpen = !isMobileMediaOpen"
+              :class="isDropdownActive(link) ? 'text-accent' : 'text-white hover:text-accent'"
+              @click="toggleMobileDropdown(link.label)"
             >
               <span>{{ link.label }}</span>
               <ChevronDown
                 :size="14"
                 class="transition-transform duration-200"
-                :class="isMobileMediaOpen ? 'rotate-180' : ''"
+                :class="mobileOpenDropdown === link.label ? 'rotate-180' : ''"
               />
             </button>
 
-            <div v-show="isMobileMediaOpen" class="mt-3 ml-4 flex flex-col gap-3">
+            <div v-show="mobileOpenDropdown === link.label" class="mt-3 ml-4 flex flex-col gap-3">
               <button
                 v-for="child in link.children"
-                :key="child.filter"
+                :key="child.label"
                 type="button"
                 class="flex items-center gap-2 text-sm lowercase text-muted hover:text-accent transition-colors"
-                @click="selectMediaFilter(child.filter)"
+                @click="selectDropdownChild(child)"
               >
-                <component :is="child.icon" :size="14" />
+                <component :is="child.icon" v-if="child.icon" :size="14" />
                 {{ child.label }}
               </button>
             </div>
