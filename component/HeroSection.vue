@@ -30,16 +30,24 @@ const fluidSize = (text: string, floorPx: number, ceilPx: number, fill: number, 
   return `font-size: clamp(${floorPx}px, ${cqw.toFixed(2)}cqw, ${ceilPx}px); line-height: 0.86;`;
 };
 
-const CORE_WORDS = new Set(['INNOVATION', 'TECHNOLOGY', 'PERSISTENCE', 'CURIOSITY']);
+const CORE_WORDS = new Set([
+  'TRY TO BECOME SYSTEM THINKER',
+  'ARTIFICIAL INTELLIGENCE',
+  'INNOVATION',
+  'TECHNOLOGY',
+  'PERSISTENCE',
+  'CURIOSITY',
+  'BRING IMPOSSIBLE IDEAS TO LIFE',
+]);
 
 const wordCloud: WordCloudItem[] = [
+  { text: 'TRY TO BECOME SYSTEM THINKER', tone: 'text-white/40 font-extrabold' },
   { text: 'ARTIFICIAL INTELLIGENCE', tone: 'text-white/45 font-extrabold' },
   { text: 'INNOVATION', tone: 'text-white/25 font-semibold' },
-  { text: 'SYSTEM THINKER', tone: 'text-white/30 font-bold' },
   { text: 'CURIOSITY', tone: 'text-white/55 font-extrabold' },
   { text: 'TECHNOLOGY', tone: 'text-white/40 font-extrabold' },
   { text: 'PERSISTENCE', tone: 'text-white/55 font-extrabold' },
-  { text: 'BRING IMPOSSIBLE IDEAS TO LIFE', tone: 'text-white/25 font-semibold' },
+  { text: 'BRING IMPOSSIBLE IDEAS TO LIFE', tone: 'text-white/30 font-extrabold' },
 ].map(({ text, tone }) => {
   const isCore = CORE_WORDS.has(text);
   return {
@@ -55,11 +63,11 @@ const leftVerticalWord: VerticalWordItem = {
 };
 const entrepreneurshipWord: VerticalWordItem = {
   text: 'ENTREPRENEURSHIP',
-  class: 'text-sm md:text-lg text-white/25 font-semibold',
+  class: 'text-lg md:text-2xl text-white/30 font-semibold',
 };
 const resilienceWord: VerticalWordItem = {
   text: 'RESILIENCE',
-  class: 'text-lg md:text-2xl text-white/45 font-bold',
+  class: 'text-2xl md:text-4xl text-white/50 font-bold',
 };
 
 const heroRef = ref<HTMLElement | null>(null);
