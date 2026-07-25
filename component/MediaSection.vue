@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Film, Image as ImageIcon, Play, LayoutGrid } from 'lucide-vue-next';
+import { Film, Image as ImageIcon, Play } from 'lucide-vue-next';
 import { useIntersectionObserver } from '@vueuse/core';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 
@@ -11,9 +11,8 @@ interface FilterOption {
 }
 
 const filterOptions: FilterOption[] = [
-  { label: 'All', value: 'all', icon: LayoutGrid },
-  { label: 'Video', value: 'video', icon: Film },
   { label: 'Photo', value: 'photo', icon: ImageIcon },
+  { label: 'Watch Reel', value: 'video', icon: Film },
 ];
 
 const storyParagraphs: string[] = [

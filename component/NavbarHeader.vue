@@ -23,7 +23,7 @@ const navLinks: NavLink[] = [
     label: 'media',
     type: 'dropdown',
     children: [
-      { label: 'Video', filter: 'video', icon: Film },
+      { label: 'Watch Reel', filter: 'video', icon: Film },
       { label: 'Photo', filter: 'photo', icon: ImageIcon },
     ],
   },

@@ -18,7 +18,7 @@ export const useNavigationStore = defineStore('navigation', {
   state: (): NavigationState => ({
     isAboutInView: false,
     isMediaInView: false,
-    mediaFilter: 'all',
+    mediaFilter: 'photo',
   }),
   actions: {
     setMediaFilter(filter: MediaFilter): void {
