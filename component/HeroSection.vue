@@ -47,10 +47,13 @@ const CORE_WORDS = new Set([
 
 // These three share one identical size/weight/color so they read as a
 // matched, deliberately muted trio — greyer than the brighter words
-// around them, rather than each scaling to its own character count.
+// around them, rather than each scaling to its own character count. The
+// shared size is still derived from the fill formula (using their average
+// length) so the line reaches a consistent, predictable share of the row
+// instead of an arbitrarily-chosen flat value that leaves it far short.
 const MUTED_TRIO = new Set(['INNOVATION', 'CURIOSITY', 'TECHNOLOGY']);
 const MUTED_TRIO_TONE = 'text-white/20 font-bold';
-const MUTED_TRIO_STYLE = 'font-size: clamp(22px, 7.5cqw, 42px); line-height: 0.95;';
+const MUTED_TRIO_STYLE = fluidSize('INNOVATION', 24, 48, 0.72);
 
 // Words that should visually match another word's size (computed from that
 // other word's character count, not their own) and color/weight.
@@ -130,7 +133,7 @@ const headlineRef = ref<HTMLElement | null>(null);
 const { width: headlineWidth } = useElementSize(headlineRef);
 const wordCloudRowStyle = computed(() => {
   if (!headlineWidth.value) return {};
-  return { width: `${Math.round(headlineWidth.value * 1.12)}px`, maxWidth: '100%' };
+  return { width: `${Math.round(headlineWidth.value * 1.04)}px`, maxWidth: '100%' };
 });
 
 const heroRef = ref<HTMLElement | null>(null);
@@ -167,7 +170,7 @@ useIntersectionObserver(
         <div class="mt-6 h-1 w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
 
         <div
-          class="mt-10 md:mt-14 flex items-start gap-3 md:gap-6 select-none"
+          class="mt-10 md:mt-14 flex items-start gap-3 md:gap-6 select-none border border-white/10 rounded-xl px-4 md:px-6 py-4 md:py-6"
           :style="wordCloudRowStyle"
         >
           <div class="hidden sm:flex flex-col items-center pt-1">
@@ -197,7 +200,7 @@ useIntersectionObserver(
             </span>
           </div>
 
-          <div class="hidden sm:flex items-start gap-3 md:gap-6">
+          <div class="hidden sm:flex items-start gap-3 md:gap-6 -ml-2 md:-ml-4 lg:-ml-6">
             <div class="flex flex-col items-center pt-1">
               <span
                 class="font-display uppercase tracking-[0.15em] transition-colors duration-300 hover:text-accent"
