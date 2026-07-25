@@ -84,6 +84,15 @@ const selectMediaFilter = (filter: MediaFilter) => {
   closeMobileMenu();
   scrollToMedia();
 };
+
+const goHomeTop = async () => {
+  closeMobileMenu();
+  if (route.path !== '/') {
+    await navigateTo('/');
+    await nextTick();
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 </script>
 
 <template>
@@ -93,7 +102,7 @@ const selectMediaFilter = (filter: MediaFilter) => {
         <NuxtLink
           to="/"
           class="font-display font-extrabold tracking-tight text-white hover:text-accent transition-colors whitespace-nowrap text-[clamp(1.15rem,3.5vw,2.625rem)] min-w-0"
-          @click="closeMobileMenu"
+          @click="goHomeTop"
         >
           NITYA SUON
         </NuxtLink>
