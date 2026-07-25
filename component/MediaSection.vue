@@ -15,10 +15,48 @@ const filterOptions: FilterOption[] = [
   { label: 'Watch Reel', value: 'video', icon: Film },
 ];
 
-const storyParagraphs: string[] = [
-  'In the winter of 2020, during COVID lockdown, Beijing was silent. All students had left campus. My friend and I were among the few still in the dorms.',
-  'One morning, I heard a sound — a fleet of autonomous Meituan delivery robots, driving back and forth on their own. Twelve of them. No drivers. No remote controls. Just machines navigating the empty campus, speaking to people, recognizing obstacles.',
-  'I went down to see. I stood next to one and watched it sense its surroundings, adjust its path, interact with the world. That curiosity — how can it see? how can it understand? — led me straight into NLP and Computer Vision. Not from a textbook. From a robot delivering lunch in an empty university.',
+interface QuoteLine {
+  chinese: string;
+  translation: string;
+}
+
+type StoryBlock =
+  | { type: 'text'; html: string }
+  | { type: 'quote'; lines: QuoteLine[] };
+
+const storyBlocks: StoryBlock[] = [
+  {
+    type: 'text',
+    html: 'In the winter of 2022, during COVID lockdown, Beijing was silent. All students had left campus. My friend and I were among the few still in the dorms.',
+  },
+  {
+    type: 'text',
+    html: 'I was sleeping. Then I heard it — the sound of driving machines, rolling past the window. Again and again. I wondered... what is that? I really want to see.',
+  },
+  {
+    type: 'text',
+    html: 'I went down. I called my friend to come down and watch with me.',
+  },
+  {
+    type: 'text',
+    html: 'There they were — a <strong class="text-white font-semibold">batch of twelve</strong> autonomous Meituan delivery robots. Twelve of them. No drivers. No remote controls. Just machines navigating the empty campus, speaking to people in Chinese:',
+  },
+  {
+    type: 'quote',
+    lines: [
+      { chinese: '请让一让，谢谢', translation: 'Please make way, thank you' },
+      { chinese: '您的外卖已到达', translation: 'Your delivery has arrived' },
+      { chinese: '请注意避让', translation: 'Please watch out' },
+    ],
+  },
+  {
+    type: 'text',
+    html: 'I tried to pause one by standing directly in front of it. It stopped. Sensed me. Adjusted its path. Spoke again. I took a photo as a memory.',
+  },
+  {
+    type: 'text',
+    html: 'That curiosity — <strong class="text-white font-semibold">how can it see? how can it understand? how can it speak?</strong> — led me straight into NLP and Computer Vision. Not from a textbook. From a robot delivering lunch in an empty university, speaking Chinese to students like us who had nowhere else to go.',
+  },
 ];
 
 const navigationStore = useNavigationStore();
@@ -74,13 +112,27 @@ useIntersectionObserver(
         </h2>
 
         <div class="mt-8 md:mt-10 space-y-5">
-          <p
-            v-for="paragraph in storyParagraphs"
-            :key="paragraph"
-            class="text-muted text-sm md:text-base leading-relaxed"
-          >
-            {{ paragraph }}
-          </p>
+          <template v-for="(block, index) in storyBlocks" :key="index">
+            <p
+              v-if="block.type === 'text'"
+              class="text-muted text-sm md:text-base leading-relaxed"
+              v-html="block.html"
+            />
+
+            <blockquote
+              v-else
+              class="border-l-2 border-accent/50 pl-4 space-y-1.5 my-2"
+            >
+              <p
+                v-for="line in block.lines"
+                :key="line.chinese"
+                class="text-sm md:text-base leading-relaxed"
+              >
+                <span class="text-white font-medium">“{{ line.chinese }}”</span>
+                <span class="text-muted"> ({{ line.translation }})</span>
+              </p>
+            </blockquote>
+          </template>
         </div>
       </div>
 
