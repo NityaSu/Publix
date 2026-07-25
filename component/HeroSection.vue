@@ -7,23 +7,60 @@ import ProfileReveal from '~/component/ProfileReveal.vue';
 interface WordCloudItem {
   text: string;
   class: string;
+  style: string;
 }
 
-const wordCloud: WordCloudItem[] = [
-  { text: 'INNOVATION', class: 'text-4xl md:text-6xl text-white/30 font-display font-extrabold' },
-  { text: 'DEEP LEARNING', class: 'text-3xl md:text-5xl text-white/40 font-display font-bold' },
-  { text: 'OBJECT DETECTION', class: 'text-2xl md:text-4xl text-white/35 font-display font-bold' },
-  { text: 'SEMI-SUPERVISED', class: 'text-xl md:text-3xl text-white/25 font-display font-semibold' },
-  { text: 'MATHEMATICS', class: 'text-3xl md:text-5xl text-white/40 font-display font-bold' },
-  { text: 'PERSISTENCE', class: 'text-4xl md:text-6xl text-white/50 font-display font-extrabold' },
-  { text: 'REBUILDING', class: 'text-4xl md:text-6xl text-accent/90 font-display font-extrabold' },
-].map((item) => ({
-  ...item,
-  class: `${item.class} transition-colors duration-300 hover:text-accent`,
-}));
+interface VerticalWordItem {
+  text: string;
+  class: string;
+}
 
-const leftVerticalWords: string[] = ['CROSS-CULTURAL'];
-const rightVerticalWords: string[] = ['ENTREPRENEURSHIP', 'RESILIENCE'];
+/**
+ * Estimates a font size (in container-query width units) that makes a
+ * whitespace-nowrap uppercase word roughly span a target share of its
+ * container's width, regardless of character count — short words end up
+ * bigger, long phrases end up smaller, so every row reaches a similar
+ * visual width. `fill` controls how much of the row a tier is allowed to
+ * claim: core words fill almost the whole row (dominant), filler words
+ * only claim a fraction of it, which is what creates the "3-4 big words
+ * standing out above smaller surrounding ones" hierarchy.
+ */
+const fluidSize = (text: string, floorPx: number, ceilPx: number, fill: number, factor = 0.72): string => {
+  const cqw = (100 * fill) / (text.length * factor);
+  return `font-size: clamp(${floorPx}px, ${cqw.toFixed(2)}cqw, ${ceilPx}px); line-height: 0.86;`;
+};
+
+const CORE_WORDS = new Set(['INNOVATION', 'TECHNOLOGY', 'PERSISTENCE', 'CURIOSITY']);
+
+const wordCloud: WordCloudItem[] = [
+  { text: 'ARTIFICIAL INTELLIGENCE', tone: 'text-white/45 font-extrabold' },
+  { text: 'INNOVATION', tone: 'text-white/25 font-semibold' },
+  { text: 'SYSTEM THINKER', tone: 'text-white/30 font-bold' },
+  { text: 'CURIOSITY', tone: 'text-white/55 font-extrabold' },
+  { text: 'TECHNOLOGY', tone: 'text-white/40 font-extrabold' },
+  { text: 'PERSISTENCE', tone: 'text-white/55 font-extrabold' },
+  { text: 'BRING IMPOSSIBLE IDEAS TO LIFE', tone: 'text-white/25 font-semibold' },
+].map(({ text, tone }) => {
+  const isCore = CORE_WORDS.has(text);
+  return {
+    text,
+    class: `${tone} font-display transition-colors duration-300 hover:text-accent`,
+    style: isCore ? fluidSize(text, 30, 68, 0.95) : fluidSize(text, 14, 32, 0.55),
+  };
+});
+
+const leftVerticalWord: VerticalWordItem = {
+  text: 'ELIMINATE FRICTION',
+  class: 'text-lg md:text-2xl text-white/40 font-bold',
+};
+const entrepreneurshipWord: VerticalWordItem = {
+  text: 'ENTREPRENEURSHIP',
+  class: 'text-sm md:text-lg text-white/25 font-semibold',
+};
+const resilienceWord: VerticalWordItem = {
+  text: 'RESILIENCE',
+  class: 'text-lg md:text-2xl text-white/45 font-bold',
+};
 
 const heroRef = ref<HTMLElement | null>(null);
 const isVisible = ref(false);
@@ -57,37 +94,51 @@ useIntersectionObserver(
         <div class="mt-6 h-1 w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
 
         <div class="mt-10 md:mt-14 flex items-start gap-3 md:gap-6 select-none">
-          <div class="hidden sm:flex flex-col items-center justify-end gap-2 pb-2">
+          <div class="hidden sm:flex flex-col items-center pt-1">
             <span
-              v-for="word in leftVerticalWords"
-              :key="word"
-              class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-white/25 rotate-180 transition-colors duration-300 hover:text-accent"
+              class="font-display uppercase tracking-[0.15em] rotate-180 transition-colors duration-300 hover:text-accent"
+              :class="leftVerticalWord.class"
               style="writing-mode: vertical-rl"
             >
-              {{ word }}
+              {{ leftVerticalWord.text }}
             </span>
           </div>
 
-          <div class="flex-1 flex flex-col gap-1 md:gap-2 min-w-0">
+          <div
+            class="flex-1 flex flex-col justify-start min-w-0"
+            style="container-type: inline-size"
+          >
             <span
               v-for="word in wordCloud"
               :key="word.text"
-              class="leading-none whitespace-nowrap"
+              class="whitespace-nowrap uppercase"
               :class="word.class"
+              :style="word.style"
             >
               {{ word.text }}
             </span>
           </div>
 
-          <div class="hidden sm:flex flex-col items-center justify-end gap-3 pb-2">
-            <span
-              v-for="word in rightVerticalWords"
-              :key="word"
-              class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-white/25 transition-colors duration-300 hover:text-accent"
-              style="writing-mode: vertical-rl"
-            >
-              {{ word }}
-            </span>
+          <div class="hidden sm:flex items-start gap-2 md:gap-3">
+            <div class="flex flex-col items-center pt-1">
+              <span
+                class="font-display uppercase tracking-[0.15em] transition-colors duration-300 hover:text-accent"
+                :class="entrepreneurshipWord.class"
+                style="writing-mode: vertical-rl"
+              >
+                {{ entrepreneurshipWord.text }}
+              </span>
+            </div>
+
+            <div class="flex flex-col items-center pt-1">
+              <span
+                class="font-display uppercase tracking-[0.15em] transition-colors duration-300 hover:text-accent"
+                :class="resilienceWord.class"
+                style="writing-mode: vertical-rl"
+              >
+                {{ resilienceWord.text }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
