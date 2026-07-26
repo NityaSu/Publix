@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { Play } from 'lucide-vue-next';
 import { useElementSize, useIntersectionObserver } from '@vueuse/core';
 import ProfileReveal from '~/component/ProfileReveal.vue';
-import AiTyping from '~/component/AiTyping.vue';
+import HeroSubtitle from '~/component/HeroSubtitle.vue';
 
 interface WordCloudItem {
   text: string;
@@ -164,16 +164,11 @@ useIntersectionObserver(
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
     >
       <div class="min-w-0 w-full">
-        <h1 class="font-display font-extrabold uppercase leading-[0.95] tracking-tight">
-          <span
-            ref="headlineRef"
-            class="block text-white text-[clamp(1.75rem,6vw,4.5rem)]"
-          >
-            <AiTyping text="Software Engineer" :start-delay-ms="1000" />
-          </span>
-          <span class="block text-accent mt-2 md:mt-3 text-[clamp(0.9rem,2.5vw,1.875rem)] tracking-wide">
-            Bronze Medalist &middot; National Math Olympiad
-          </span>
+        <h1
+          ref="headlineRef"
+          class="font-display font-extrabold uppercase leading-[0.95] tracking-tight text-[clamp(1.75rem,6vw,4.5rem)]"
+        >
+          <HeroSubtitle class="text-accent" />
         </h1>
 
         <div class="mt-5 md:mt-6 h-1 w-32 sm:w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
