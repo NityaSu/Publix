@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Play } from 'lucide-vue-next';
 import { useElementSize, useIntersectionObserver } from '@vueuse/core';
 import ProfileReveal from '~/component/ProfileReveal.vue';
+import AiTyping from '~/component/AiTyping.vue';
 
 interface WordCloudItem {
   text: string;
@@ -168,7 +169,7 @@ useIntersectionObserver(
             ref="headlineRef"
             class="block text-white text-[clamp(1.75rem,6vw,4.5rem)]"
           >
-            Software Engineer
+            <AiTyping text="Software Engineer" :start-delay-ms="1000" />
           </span>
           <span class="block text-accent mt-2 md:mt-3 text-[clamp(0.9rem,2.5vw,1.875rem)] tracking-wide">
             Bronze Medalist &middot; National Math Olympiad
