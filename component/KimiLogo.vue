@@ -54,16 +54,16 @@ onUnmounted(() => {
 
 <style scoped>
 .kimi-logo {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 40%, #2b8cfd 0%, #1a7aef 60%, #0d6ce0 100%);
   border: 2px solid #75b6ff;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: 5px;
-  padding-top: 14px;
+  gap: 6px;
+  padding-top: 15px;
   box-sizing: border-box;
   cursor: pointer;
   transition: transform 0.2s ease;
@@ -72,10 +72,10 @@ onUnmounted(() => {
 }
 
 .kimi-logo.is-small {
-  width: 32px;
-  height: 32px;
-  gap: 3px;
-  padding-top: 9px;
+  width: 38px;
+  height: 38px;
+  gap: 4px;
+  padding-top: 10px;
   border-width: 1.5px;
 }
 
@@ -89,8 +89,8 @@ onUnmounted(() => {
 }
 
 .kimi-eye {
-  width: 7px;
-  height: 9px;
+  width: 8px;
+  height: 12px;
   background: white;
   border-radius: 4px;
   animation: eyeBlink 3.5s ease-in-out infinite;
@@ -98,8 +98,8 @@ onUnmounted(() => {
 }
 
 .kimi-logo.is-small .kimi-eye {
-  width: 5px;
-  height: 6px;
+  width: 6px;
+  height: 8px;
   border-radius: 3px;
 }
 
