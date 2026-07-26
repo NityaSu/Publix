@@ -72,7 +72,7 @@ const toggleMobileDropdown = (label: string) => {
 };
 
 const NAV_LINK_BASE =
-  "relative pb-1 text-base lg:text-lg xl:text-[22px] lowercase tracking-wide transition-colors after:absolute after:left-0 after:bottom-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 after:content-['']";
+  "relative pb-1 text-base lg:text-lg xl:text-[22px] font-semibold lowercase tracking-wide transition-colors after:absolute after:left-0 after:bottom-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 after:content-['']";
 
 const isDropdownActive = (link: NavLink): boolean => {
   if (link.label === 'media') return navigationStore.isMediaInView;
@@ -220,7 +220,7 @@ const goHomeTop = async () => {
           <NuxtLink
             v-if="link.type !== 'dropdown'"
             :to="link.to!"
-            class="text-sm lowercase tracking-wide transition-colors"
+            class="text-sm font-semibold lowercase tracking-wide transition-colors"
             :class="isLinkActive(link) ? 'text-accent' : 'text-white hover:text-accent'"
             @click="closeMobileMenu"
           >
@@ -230,7 +230,7 @@ const goHomeTop = async () => {
           <div v-else>
             <button
               type="button"
-              class="flex items-center justify-between w-full text-sm lowercase tracking-wide transition-colors"
+              class="flex items-center justify-between w-full text-sm font-semibold lowercase tracking-wide transition-colors"
               :class="isDropdownActive(link) ? 'text-accent' : 'text-white hover:text-accent'"
               @click="toggleMobileDropdown(link.label)"
             >
