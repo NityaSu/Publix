@@ -10,6 +10,7 @@ import {
   Lightbulb,
 } from 'lucide-vue-next';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
+import KimiEyes from '~/component/KimiEyes.vue';
 
 interface DropdownChild {
   label: string;
@@ -153,10 +154,11 @@ const goHomeTop = async () => {
       <div class="flex items-center justify-between gap-4 h-14 sm:h-16 md:h-20">
         <NuxtLink
           to="/"
-          class="font-display font-extrabold tracking-tight text-white hover:text-accent transition-colors whitespace-nowrap text-[clamp(1.15rem,3.5vw,2.625rem)] min-w-0"
+          class="inline-flex items-center gap-2.5 sm:gap-3 min-w-0 font-display font-extrabold tracking-tight text-white hover:text-accent transition-colors whitespace-nowrap text-[clamp(1.15rem,3.5vw,2.625rem)]"
           @click="goHomeTop"
         >
-          NITYA SUON
+          <KimiEyes size="nav" />
+          <span>NITYA SUON</span>
         </NuxtLink>
 
         <div class="hidden md:flex items-center gap-4 lg:gap-6 xl:gap-8 shrink-0">
