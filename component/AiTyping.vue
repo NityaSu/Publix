@@ -103,28 +103,31 @@ onUnmounted(() => {
 
 <style scoped>
 .typing-wrapper {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-  min-height: 1em;
+  display: inline;
 }
 
 .thinking-dots {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.12em;
-  flex-shrink: 0;
+  display: inline;
+  white-space: nowrap;
+  margin-left: 0.2em;
 }
 
 .dot {
+  display: inline-block;
   width: 0.14em;
   height: 0.14em;
   min-width: 5px;
   min-height: 5px;
+  margin-right: 0.1em;
   border-radius: 50%;
   background: #4a9eff;
   opacity: 0.3;
+  vertical-align: middle;
   animation: thinkPulse 1.2s ease-in-out infinite;
+}
+
+.dot:last-child {
+  margin-right: 0;
 }
 
 .dot:nth-child(2) {
