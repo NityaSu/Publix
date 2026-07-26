@@ -90,7 +90,7 @@ onUnmounted(() => {
 
 .kimi-eye {
   width: 8px;
-  height: 12px;
+  height: 14px;
   background: white;
   border-radius: 4px;
   animation: eyeBlink 3.5s ease-in-out infinite;
@@ -99,7 +99,7 @@ onUnmounted(() => {
 
 .kimi-logo.is-small .kimi-eye {
   width: 6px;
-  height: 8px;
+  height: 10px;
   border-radius: 3px;
 }
 
