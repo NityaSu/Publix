@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue';
+import { computed, ref, onUnmounted } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
 
 interface Props {
@@ -12,22 +12,29 @@ withDefaults(defineProps<Props>(), {
 });
 
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
-const { isLookingDown } = useHeroSequence();
-const isScaled = ref(false);
+const { isLookingDown: sequenceLookingDown } = useHeroSequence();
+const isSurprised = ref(false);
 
-let scaleTimer: ReturnType<typeof setTimeout> | undefined;
+let surpriseTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** Look down only when hero is Thinking/typing and not in surprise override. */
+const isLookingDown = computed(
+  () => sequenceLookingDown.value && !isSurprised.value && !prefersReducedMotion.value,
+);
 
 const handleClick = () => {
   if (prefersReducedMotion.value) return;
-  isScaled.value = true;
-  if (scaleTimer) clearTimeout(scaleTimer);
-  scaleTimer = setTimeout(() => {
-    isScaled.value = false;
-  }, 200);
+  if (isSurprised.value) return;
+
+  isSurprised.value = true;
+  if (surpriseTimer) clearTimeout(surpriseTimer);
+  surpriseTimer = setTimeout(() => {
+    isSurprised.value = false;
+  }, 800);
 };
 
 onUnmounted(() => {
-  if (scaleTimer) clearTimeout(scaleTimer);
+  if (surpriseTimer) clearTimeout(surpriseTimer);
 });
 </script>
 
@@ -36,8 +43,8 @@ onUnmounted(() => {
     class="kimi-logo"
     :class="{
       'is-small': small,
-      'is-scaled': isScaled,
-      'is-looking-down': isLookingDown && !prefersReducedMotion,
+      'is-looking-down': isLookingDown,
+      'is-surprised': isSurprised,
     }"
     role="img"
     aria-label="Kimi logo"
@@ -87,9 +94,8 @@ onUnmounted(() => {
   transform: scale(1.08);
 }
 
-.kimi-logo:active,
-.kimi-logo.is-scaled {
-  transform: scale(1.15);
+.kimi-logo:active {
+  transform: scale(0.95);
 }
 
 .kimi-eye {
@@ -98,7 +104,8 @@ onUnmounted(() => {
   background: white;
   border-radius: 4px;
   transform-origin: center;
-  transition: height 0.4s ease, transform 0.4s ease;
+  transition: height 0.3s ease, transform 0.3s ease;
+  position: relative;
 }
 
 .kimi-logo.is-small .kimi-eye {
@@ -107,7 +114,30 @@ onUnmounted(() => {
   border-radius: 3px;
 }
 
-/* Normal blink — both eyes equal */
+/* Tiny pupil dots — only when surprised */
+.kimi-eye-left::after,
+.kimi-eye-right::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2.5px;
+  height: 2.5px;
+  background: #2b8cfd;
+  border-radius: 50%;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.kimi-logo.is-small .kimi-eye-left::after,
+.kimi-logo.is-small .kimi-eye-right::after {
+  width: 2px;
+  height: 2px;
+  bottom: 1px;
+}
+
+/* ===== 1. NORMAL ===== */
 .kimi-eye-left:not(.kimi-eye--static) {
   animation: blinkLeftNormal 3.5s ease-in-out infinite;
 }
@@ -140,7 +170,7 @@ onUnmounted(() => {
   }
 }
 
-/* Look-down pose — first 10s, peeking at THINKING below */
+/* ===== 2. LOOK DOWN ===== */
 .kimi-logo.is-looking-down .kimi-eye-left {
   height: 16px;
   animation: blinkLeftDown 3.5s ease-in-out infinite;
@@ -183,6 +213,67 @@ onUnmounted(() => {
   }
 }
 
+/* ===== 3. SURPRISED (click) — overrides look down ===== */
+.kimi-logo.is-surprised {
+  animation: surprisePop 0.8s ease-in-out;
+}
+
+.kimi-logo.is-surprised:hover {
+  transform: none; /* let surprisePop own the transform */
+}
+
+.kimi-logo.is-surprised .kimi-eye-left,
+.kimi-logo.is-surprised .kimi-eye-right {
+  height: 18px !important;
+  transform: translate(0, -1px) !important;
+  animation: none !important;
+}
+
+.kimi-logo.is-small.is-surprised .kimi-eye-left,
+.kimi-logo.is-small.is-surprised .kimi-eye-right {
+  height: 13px !important;
+}
+
+.kimi-logo.is-surprised .kimi-eye-left::after,
+.kimi-logo.is-surprised .kimi-eye-right::after {
+  opacity: 1;
+  width: 2px;
+  height: 2px;
+  bottom: 3px;
+}
+
+.kimi-logo.is-small.is-surprised .kimi-eye-left::after,
+.kimi-logo.is-small.is-surprised .kimi-eye-right::after {
+  opacity: 1;
+  width: 1.5px;
+  height: 1.5px;
+  bottom: 2px;
+}
+
+@keyframes surprisePop {
+  0% {
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+  15% {
+    transform: translateX(-4px) rotate(-6deg) scale(1.28);
+  }
+  30% {
+    transform: translateX(4px) rotate(6deg) scale(1.35);
+  }
+  45% {
+    transform: translateX(-3px) rotate(-4deg) scale(1.32);
+  }
+  60% {
+    transform: translateX(3px) rotate(4deg) scale(1.3);
+  }
+  75% {
+    transform: translateX(-2px) rotate(-2deg) scale(1.22);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+}
+
 .kimi-eye--static {
   animation: none !important;
 }
@@ -191,9 +282,10 @@ onUnmounted(() => {
   .kimi-logo,
   .kimi-logo:hover,
   .kimi-logo:active,
-  .kimi-logo.is-scaled {
+  .kimi-logo.is-surprised {
     transition: none;
     transform: none;
+    animation: none;
   }
 
   .kimi-eye {
