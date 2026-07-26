@@ -11,6 +11,7 @@ const THINKING_MS = 10000;
 const FLASH_MS = 3600;
 
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+const { setPhase } = useHeroSequence();
 
 const currentText = ref('');
 const phase = ref<Phase>('thinking');
@@ -31,16 +32,21 @@ const later = (fn: () => void, ms: number) => {
 
 const getDelay = () => Math.random() * 200 + 60;
 
+const syncPhase = (next: Phase) => {
+  phase.value = next;
+  setPhase(next);
+};
+
 const showFinal = () => {
   clearTimers();
   currentText.value = FULL_TEXT;
-  phase.value = 'done';
+  syncPhase('done');
   showMoon.value = false;
 };
 
 const typeText = () => {
   currentText.value = '';
-  phase.value = 'typing';
+  syncPhase('typing');
   showMoon.value = true;
 
   let i = 0;
@@ -54,11 +60,11 @@ const typeText = () => {
 
     // Phase 3: same text, white gradient sweep ×3
     showMoon.value = false;
-    phase.value = 'flashing';
+    syncPhase('flashing');
 
     // Phase 4: pure white
     later(() => {
-      phase.value = 'done';
+      syncPhase('done');
     }, FLASH_MS);
   };
 
@@ -75,7 +81,7 @@ const runSequence = () => {
 
   // Phase 1: Thinking with gradient sweep + moon (10s)
   currentText.value = THINKING_LABEL;
-  phase.value = 'thinking';
+  syncPhase('thinking');
   showMoon.value = true;
 
   later(() => {
@@ -93,6 +99,7 @@ watch(prefersReducedMotion, (reduced) => {
 
 onUnmounted(() => {
   clearTimers();
+  setPhase('idle');
 });
 </script>
 
