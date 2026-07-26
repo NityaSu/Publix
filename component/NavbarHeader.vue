@@ -10,7 +10,7 @@ import {
   Lightbulb,
 } from 'lucide-vue-next';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
-import KimiEyes from '~/component/KimiEyes.vue';
+import KimiLogo from '~/component/KimiLogo.vue';
 
 interface DropdownChild {
   label: string;
@@ -157,7 +157,7 @@ const goHomeTop = async () => {
           class="inline-flex items-center gap-2.5 sm:gap-3 min-w-0 font-display font-extrabold tracking-tight text-white hover:text-accent transition-colors whitespace-nowrap text-[clamp(1.15rem,3.5vw,2.625rem)]"
           @click="goHomeTop"
         >
-          <KimiEyes size="nav" />
+          <KimiLogo small />
           <span>NITYA SUON</span>
         </NuxtLink>
 
