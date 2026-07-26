@@ -156,7 +156,7 @@ useIntersectionObserver(
 <template>
   <section
     ref="heroRef"
-    class="w-full px-5 sm:px-6 md:px-12 lg:px-20 xl:px-[160px] py-10 sm:py-14 md:py-20"
+    class="w-full overflow-x-clip px-5 sm:px-6 md:px-12 lg:px-20 xl:px-[160px] py-10 sm:py-14 md:py-20"
   >
     <div
       class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-8 md:gap-12 lg:gap-16 items-start transition-all duration-700 ease-out"
