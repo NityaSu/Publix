@@ -31,7 +31,7 @@ const toggleFlip = () => {
 <template>
   <button
     type="button"
-    class="insight-card group w-full text-left [perspective:1000px] transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    class="insight-card group w-full text-left transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     :aria-pressed="isFlipped"
     :aria-label="isFlipped ? 'Flip card back' : 'Flip card'"
     @click="toggleFlip"
@@ -42,12 +42,13 @@ const toggleFlip = () => {
     >
       <!-- Front -->
       <div
-        class="insight-card-face absolute inset-0 flex flex-col justify-between rounded-2xl border border-white/[0.06] p-8 overflow-hidden transition-all duration-300 group-hover:border-accent/20 group-hover:shadow-glow-sm"
+        class="insight-card-face insight-card-front absolute inset-0 flex flex-col justify-between rounded-2xl border border-white/[0.06] p-8 overflow-hidden transition-[border-color,box-shadow] duration-300 group-hover:border-accent/20 group-hover:shadow-glow-sm"
         :class="{
           'insight-bg-curiosity': variant === 'curiosity',
           'insight-bg-campus': variant === 'campus',
           'insight-bg-persistence': variant === 'persistence',
         }"
+        :aria-hidden="isFlipped"
       >
         <div class="relative z-[1] space-y-4">
           <h3
@@ -76,7 +77,8 @@ const toggleFlip = () => {
 
       <!-- Back -->
       <div
-        class="insight-card-face insight-card-back absolute inset-0 flex flex-col justify-between rounded-2xl border border-accent/20 bg-gradient-to-br from-[#1e1e1e] to-[#151515] p-8 overflow-hidden"
+        class="insight-card-face insight-card-back absolute inset-0 flex flex-col justify-between rounded-2xl border border-accent/20 p-8 overflow-hidden"
+        :aria-hidden="!isFlipped"
       >
         <div class="space-y-4 overflow-y-auto">
           <h3
@@ -100,8 +102,16 @@ const toggleFlip = () => {
 </template>
 
 <style scoped>
+.insight-card {
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+  /* Promote to its own layer — helps iOS not composite both faces */
+  transform: translateZ(0);
+}
+
 .insight-card-inner {
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   transition: transform 0.6s ease;
 }
 
@@ -110,19 +120,57 @@ const toggleFlip = () => {
 }
 
 .insight-card-face {
-  backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  /* Fully opaque fill so text from the other face can't bleed through */
+  background-color: #151515;
   background-image: linear-gradient(160deg, #1e1e1e 0%, #151515 100%);
 }
 
+.insight-card-front {
+  transform: rotateY(0deg) translateZ(1px);
+  -webkit-transform: rotateY(0deg) translateZ(1px);
+  z-index: 2;
+  /* Hide after mid-flip so iOS can't keep painting front title over the back */
+  transition: opacity 0s linear 0s, visibility 0s linear 0s;
+  opacity: 1;
+  visibility: visible;
+}
+
+.insight-card-inner.is-flipped .insight-card-front {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0s linear 0.3s, visibility 0s linear 0.3s;
+}
+
 .insight-card-back {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(1px);
+  -webkit-transform: rotateY(180deg) translateZ(1px);
+  z-index: 1;
+  background-color: #151515;
+  background-image: linear-gradient(160deg, #1e1e1e 0%, #151515 100%);
+  transition: opacity 0s linear 0.3s, visibility 0s linear 0.3s;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.insight-card-inner.is-flipped .insight-card-back {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 2;
+  transition: opacity 0s linear 0s, visibility 0s linear 0s;
 }
 
 .insight-bg-curiosity::before {
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background:
     linear-gradient(160deg, rgba(30, 30, 30, 0.92) 0%, rgba(21, 21, 21, 0.96) 100%),
     radial-gradient(circle at 80% 20%, rgba(74, 158, 255, 0.18), transparent 45%),
@@ -141,6 +189,7 @@ const toggleFlip = () => {
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background:
     linear-gradient(160deg, rgba(30, 30, 30, 0.97) 0%, rgba(21, 21, 21, 1) 100%),
     radial-gradient(ellipse at 10% 90%, rgba(74, 158, 255, 0.08), transparent 50%);
@@ -151,6 +200,7 @@ const toggleFlip = () => {
   content: '';
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background-color: #151515;
   background-image:
     linear-gradient(160deg, rgba(30, 30, 30, 0.9) 0%, rgba(21, 21, 21, 0.95) 100%),
@@ -163,5 +213,4 @@ const toggleFlip = () => {
   background-size: auto, 120px 120px, 160px 160px, 100px 100px, 140px 140px, 180px 180px, 90px 90px;
   pointer-events: none;
 }
-
 </style>
