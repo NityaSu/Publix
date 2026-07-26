@@ -22,18 +22,17 @@ const insights: InsightItem[] = [
     variant: 'curiosity',
   },
   {
-    id: 'campus',
-    titleHtml: 'The Empty Campus',
-    body:
-      'An empty campus. Twelve autonomous robots. No drivers. Just machines navigating silence, speaking in Chinese, sensing obstacles. I stood in front of one. It stopped. Adjusted. Spoke again. That curiosity — how can it see? how can it understand? — led me straight into NLP and Computer Vision. Not from a textbook. From a robot delivering lunch in an empty university.',
+    id: 'focus',
+    titleHtml: 'Focus on what keeps users coming back.',
+    backBody:
+      'Shazam focused on music recognition.\nInstagram focused on photos.\nUber focused on convenience.\nAnthropic focused on accuracy.\nPolymarket focused on prediction markets.\n\nSuccess rarely comes from doing everything at once. The strongest builders identify the behavior or value that matters most to users and concentrate their efforts there. Find the core loop, then strengthen it relentlessly.',
     variant: 'campus',
   },
   {
-    id: 'persistence',
-    quoteHtml:
-      'The number one determinant of <span class="text-accent">technical growth</span> is persistence.',
-    body:
-      'From math olympiad to production code. The path is never linear. What matters is staying in the game.',
+    id: 'resilience',
+    titleHtml: 'Resilience and Courage',
+    backBody:
+      "Hyundai's founder survived 3–4 major failures before building an industrial giant.\n\nShell's founder started from nothing, but with a big vision and the courage to challenge Rockefeller, the oil giant of his era.",
     variant: 'persistence',
   },
 ];

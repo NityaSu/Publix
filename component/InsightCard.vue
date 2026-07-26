@@ -85,7 +85,7 @@ const toggleFlip = () => {
           >
             {{ backTitle }}
           </h3>
-          <p class="text-sm md:text-[15px] leading-relaxed text-[#a0a0a0]">
+          <p class="text-sm md:text-[15px] leading-relaxed text-[#a0a0a0] whitespace-pre-line">
             {{ backBody }}
           </p>
         </div>
