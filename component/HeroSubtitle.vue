@@ -3,19 +3,18 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
 import MoonDot from '~/component/MoonDot.vue';
 
+type Phase = 'thinking' | 'typing' | 'flashing' | 'done';
+
 const FULL_TEXT = 'SOFTWARE ENGINEER';
 const THINKING_LABEL = 'Thinking';
-const THINKING_MS = 3500;
-const FLASH_MS = 3200;
+const THINKING_MS = 10000;
+const FLASH_MS = 3600;
 
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
 const currentText = ref('');
-const showStatic = ref(false);
+const phase = ref<Phase>('thinking');
 const showMoon = ref(false);
-const isFlashing = ref(false);
-const isDone = ref(false);
-const isThinkingLabel = ref(false);
 
 const timers: ReturnType<typeof setTimeout>[] = [];
 
@@ -30,25 +29,19 @@ const later = (fn: () => void, ms: number) => {
   timers.push(setTimeout(fn, ms));
 };
 
-const getDelay = () => Math.random() * 270 + 80;
+const getDelay = () => Math.random() * 200 + 60;
 
 const showFinal = () => {
   clearTimers();
   currentText.value = FULL_TEXT;
-  showStatic.value = true;
+  phase.value = 'done';
   showMoon.value = false;
-  isFlashing.value = false;
-  isDone.value = true;
-  isThinkingLabel.value = false;
 };
 
 const typeText = () => {
   currentText.value = '';
-  showStatic.value = true;
+  phase.value = 'typing';
   showMoon.value = true;
-  isFlashing.value = false;
-  isDone.value = false;
-  isThinkingLabel.value = false;
 
   let i = 0;
   const type = () => {
@@ -59,14 +52,13 @@ const typeText = () => {
       return;
     }
 
-    // Phase 3: flash the SAME element 4 times
+    // Phase 3: same text, white gradient sweep ×3
     showMoon.value = false;
-    isFlashing.value = true;
+    phase.value = 'flashing';
 
-    // Phase 4: final lit state
+    // Phase 4: pure white
     later(() => {
-      isFlashing.value = false;
-      isDone.value = true;
+      phase.value = 'done';
     }, FLASH_MS);
   };
 
@@ -81,12 +73,10 @@ const runSequence = () => {
     return;
   }
 
+  // Phase 1: Thinking with gradient sweep + moon (10s)
   currentText.value = THINKING_LABEL;
-  showStatic.value = false;
+  phase.value = 'thinking';
   showMoon.value = true;
-  isFlashing.value = false;
-  isDone.value = false;
-  isThinkingLabel.value = true;
 
   later(() => {
     typeText();
@@ -108,93 +98,101 @@ onUnmounted(() => {
 
 <template>
   <div class="subtitle">
-    <!-- Title line: ONE dynamic text element + moon (never duplicated) -->
-    <div class="dynamic-row">
-      <span
-        class="dynamic-text"
-        :class="{
-          'is-flashing': isFlashing,
-          'is-done': isDone,
-          'is-thinking-label': isThinkingLabel,
-        }"
-      >{{ currentText }}</span>
-      <MoonDot v-if="showMoon" />
-    </div>
-
-    <!-- Existing accent line — appears when typing begins -->
     <span
-      v-if="showStatic"
-      class="static-text"
-    >
-      Bronze Medalist · National Math Olympiad
-    </span>
+      class="dynamic-text"
+      :class="{
+        'thinking-sweep': phase === 'thinking',
+        typing: phase === 'typing',
+        'flash-sweep': phase === 'flashing',
+        'final-white': phase === 'done',
+      }"
+    >{{ currentText }}</span>
+    <MoonDot v-if="showMoon" />
   </div>
 </template>
 
 <style scoped>
 .subtitle {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-}
-
-.dynamic-row {
   display: block;
   line-height: 0.95;
 }
 
 .dynamic-text {
   font-weight: inherit;
-  color: #888888;
-  transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
-/* Keep "Thinking" title-case even inside the uppercase hero heading */
-.dynamic-text.is-thinking-label {
+/* Keep "Thinking" title-case inside the uppercase hero heading */
+.thinking-sweep {
   text-transform: none;
+  background: linear-gradient(
+    90deg,
+    #555555 0%,
+    #555555 30%,
+    #cccccc 50%,
+    #555555 70%,
+    #555555 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: thinkingSweep 2s ease-in-out infinite;
 }
 
-.dynamic-text.is-flashing {
-  animation: textFlash 0.8s ease-in-out 4;
-}
-
-@keyframes textFlash {
-  0%,
+@keyframes thinkingSweep {
+  0% {
+    background-position: 100% 0;
+  }
   100% {
-    color: #888888;
-    text-shadow: none;
-  }
-  50% {
-    color: #dddddd;
-    text-shadow: 0 0 25px rgba(221, 221, 221, 0.3);
+    background-position: 0% 0;
   }
 }
 
-.dynamic-text.is-done {
-  color: #aaaaaa;
-  text-shadow: none;
+.typing {
+  color: #888888;
+  -webkit-text-fill-color: #888888;
 }
 
-.static-text {
-  display: block;
-  margin-top: 0.5rem;
-  color: inherit;
-  font-weight: inherit;
-  font-size: clamp(0.9rem, 2.5vw, 1.875rem);
-  letter-spacing: 0.025em;
-  line-height: 1.25;
+.flash-sweep {
+  background: linear-gradient(
+    90deg,
+    #888888 0%,
+    #888888 30%,
+    #ffffff 50%,
+    #888888 70%,
+    #888888 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: softwareSweep 1.2s ease-in-out 3;
 }
 
-@media (min-width: 768px) {
-  .static-text {
-    margin-top: 0.75rem;
+@keyframes softwareSweep {
+  0% {
+    background-position: 100% 0;
   }
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+.final-white {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dynamic-text.is-flashing {
+  .thinking-sweep,
+  .flash-sweep {
     animation: none;
+    background: none;
+    -webkit-text-fill-color: #ffffff;
+    color: #ffffff;
   }
 }
 </style>

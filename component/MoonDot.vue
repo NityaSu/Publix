@@ -7,7 +7,7 @@
   width: max(18px, 0.32em);
   height: max(18px, 0.32em);
   border-radius: 50%;
-  background: #333333;
+  background: #555555;
   position: relative;
   overflow: hidden;
   display: inline-block;
@@ -24,7 +24,7 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: linear-gradient(90deg, transparent 0%, #888888 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, #bbbbbb 50%, transparent 100%);
   background-size: 200% 100%;
   animation: gradientSweep 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }

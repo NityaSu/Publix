@@ -168,7 +168,7 @@ useIntersectionObserver(
           ref="headlineRef"
           class="font-display font-extrabold uppercase leading-[0.95] tracking-tight text-[clamp(1.75rem,6vw,4.5rem)]"
         >
-          <HeroSubtitle class="text-accent" />
+          <HeroSubtitle />
         </h1>
 
         <div class="mt-5 md:mt-6 h-1 w-32 sm:w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
