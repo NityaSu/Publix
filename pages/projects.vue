@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import ProjectBot from '~/component/ProjectBot.vue';
-import AsciiWaveCanvas from '~/component/AsciiWaveCanvas.vue';
 import ProjectCard from '~/component/ProjectCard.vue';
 import { projects } from '~/data/projects';
 
@@ -37,9 +36,6 @@ const backToHero = () => {
     class="relative min-h-screen w-full overflow-hidden bg-[#0d0d0d] project-page"
     :class="{ 'v2-active': version === 'v2' }"
   >
-    <!-- Animated ASCII wave background -->
-    <AsciiWaveCanvas class="fixed inset-0 z-0" :version="version" />
-
     <!-- Intro view -->
     <section
       v-show="!showProjects"
