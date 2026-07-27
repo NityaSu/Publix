@@ -21,10 +21,10 @@ export const projects: Project[] = [
     tagline: 'End-to-end store built for a real client',
     category: 'Full Stack',
     description:
-      'A production e-commerce site with product catalog, cart, and checkout flow. Source code was lost due to a broken laptop, but screenshots and the deployed result remain.',
+      'A production e-commerce site with product catalog, cart, and checkout flow. Source code was lost due to a broken laptop, but screenshots result remain.',
     year: '2023',
     status: 'lost',
-    stack: ['Vue', 'Node.js'],
+    stack: ['React', 'Java'],
     images: [
       '/assets/images/projects/ecom1.jpg',
       '/assets/images/projects/ecom2.jpg',
@@ -37,13 +37,13 @@ export const projects: Project[] = [
   {
     id: 'object-detection',
     title: 'Satellite Image Object Detection',
-    tagline: 'Detection model built from scratch',
+    tagline: 'Detection model trained with YOLO',
     category: 'AI / Computer Vision',
     description:
-      'Thesis project implementing a semi-supervised object detector. Includes model architecture, training pipeline, and evaluation results.',
-    year: '2024',
+      'A normal object detection project trained with YOLO. Includes model setup, training pipeline, and evaluation results on satellite imagery.',
+    year: '2023',
     status: 'shipped',
-    stack: ['PyTorch', 'Python'],
+    stack: ['YOLO', 'Python'],
     images: [
       '/assets/images/projects/od1.jpg',
       '/assets/images/projects/od2.jpg',
@@ -59,7 +59,7 @@ export const projects: Project[] = [
     category: 'Machine Learning',
     description:
       'A recommendation engine that learns user preferences to suggest relevant movies. Built around collaborative filtering and content-based signals.',
-    year: '2024',
+    year: '2023',
     status: 'shipped',
     stack: ['Python', 'scikit-learn'],
     images: ['/assets/images/projects/recommendation.jpg'],
@@ -67,12 +67,12 @@ export const projects: Project[] = [
   },
   {
     id: 'toxic-detector',
-    title: 'Toxic CommentDetector',
+    title: 'Toxic Comment Detector',
     tagline: 'NLP model that flags harmful text',
     category: 'NLP',
     description:
       'A text-classification system trained to detect toxic, abusive, or harmful language in user-generated content.',
-    year: '2024',
+    year: '2023',
     status: 'shipped',
     stack: ['Python', 'Transformers'],
     images: [
