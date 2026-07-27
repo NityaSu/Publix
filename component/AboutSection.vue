@@ -58,7 +58,12 @@ onUnmounted(() => {
 
         <div class="mt-10 space-y-5">
           <div v-for="point in journeyPoints" :key="point" class="flex gap-3">
-            <span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent shrink-0"></span>
+            <img
+              src="/supermemory_bullet_split.svg"
+              alt=""
+              class="mt-1.5 h-5 w-5 shrink-0"
+              aria-hidden="true"
+            />
             <p class="text-muted text-sm md:text-base leading-relaxed">
               {{ point }}
             </p>
