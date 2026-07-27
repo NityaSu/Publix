@@ -1,36 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Linkedin, Instagram, Twitter } from 'lucide-vue-next';
+import FooterSection from '~/component/FooterSection.vue';
 
 useHead({
   title: 'Contact',
 });
 
 const CONTACT_EMAIL = 'Suonnitya7@gmail.com';
-
-const SOCIAL_LINKS = [
-  {
-    label: 'LinkedIn',
-    href: 'https://www.linkedin.com/in/nityasuon/',
-    icon: Linkedin,
-  },
-  {
-    label: 'Instagram',
-    href: 'https://www.instagram.com/nitya_suon/',
-    icon: Instagram,
-  },
-  {
-    label: 'X',
-    href: 'https://x.com/NityaSuon',
-    icon: Twitter,
-  },
-] as const;
-
-const POLICY_LINKS = [
-  { label: 'Privacy Policy', href: '#' },
-  { label: 'Cookie Policy', href: '#' },
-  { label: 'Cookie Settings', href: '#' },
-] as const;
 
 const name = ref('');
 const phone = ref('');
@@ -115,59 +91,7 @@ const fieldClass =
       </form>
     </div>
 
-    <footer class="mt-16 md:mt-24 pt-10 border-t border-accent">
-      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-10 md:gap-8">
-        <div>
-          <p
-            class="font-display font-extrabold uppercase text-white text-2xl sm:text-3xl md:text-4xl tracking-tight leading-none"
-            aria-label="START FROM ZERO"
-          >
-            START FROM ZER<span
-              class="relative inline-block text-transparent select-none"
-              aria-hidden="true"
-            >O<span
-              class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[0.78em] h-[0.78em] rounded-full border-[0.135em] border-accent box-border"
-            ></span></span><sup class="text-[0.45em] font-bold tracking-normal relative -top-[0.7em]">™</sup>
-          </p>
-          <p class="mt-3 text-xs sm:text-sm text-muted">
-            © 2026 Nitya Suon
-          </p>
-        </div>
-
-        <nav class="flex flex-col gap-2" aria-label="Legal">
-          <a
-            v-for="link in POLICY_LINKS"
-            :key="link.label"
-            :href="link.href"
-            class="text-sm text-white underline underline-offset-4 decoration-white/70 hover:text-accent hover:decoration-accent transition-colors duration-300 w-fit"
-          >
-            {{ link.label }}
-          </a>
-        </nav>
-
-        <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 md:ml-auto">
-          <NuxtLink
-            to="/projects"
-            class="text-sm text-white underline underline-offset-4 decoration-white/70 hover:text-accent hover:decoration-accent transition-colors duration-300 w-fit"
-          >
-            Work with me
-          </NuxtLink>
-
-          <div class="flex items-center gap-4">
-            <a
-              v-for="social in SOCIAL_LINKS"
-              :key="social.label"
-              :href="social.href"
-              target="_blank"
-              rel="noopener noreferrer"
-              :aria-label="social.label"
-              class="text-white hover:text-accent transition-colors duration-300"
-            >
-              <component :is="social.icon" :size="20" :stroke-width="1.75" />
-            </a>
-          </div>
-        </div>
-      </div>
-    </footer>
   </main>
+
+  <FooterSection />
 </template>
