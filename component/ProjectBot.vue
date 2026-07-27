@@ -28,7 +28,6 @@ const isReduced = computed(() => prefersReducedMotion.value);
       'is-sleepy': isSleepy,
       'is-reduced': isReduced,
     }"
-    aria-hidden="true"
   >
     <!-- Antennae (curved feelers) -->
     <div class="antenna antenna-left" />

@@ -8,17 +8,29 @@ useHead({
 });
 
 const mode = ref<'normal' | 'sleepy'>('normal');
+
+const toggleMode = () => {
+  mode.value = mode.value === 'normal' ? 'sleepy' : 'normal';
+};
 </script>
 
 <template>
   <main class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black">
     <!-- Animated ASCII wave background -->
-    <AsciiWaveCanvas class="z-0" color="#e74c3c" />
+    <AsciiWaveCanvas class="z-0" color="231, 76, 60" />
 
     <!-- Content -->
     <div class="relative z-10 flex flex-col items-center text-center px-6 py-20 max-w-2xl mx-auto">
-      <!-- Bot -->
-      <ProjectBot :mode="mode" class="mb-8 md:mb-10" />
+      <!-- Bot: click to toggle expression -->
+      <ProjectBot
+        :mode="mode"
+        class="mb-8 md:mb-10 cursor-pointer"
+        role="button"
+        tabindex="0"
+        aria-label="Toggle bot expression"
+        @click="toggleMode"
+        @keydown.enter="toggleMode"
+      />
 
       <!-- Sub-heading -->
       <p class="text-xs sm:text-sm uppercase tracking-[0.25em] font-semibold text-[#e74c3c]">
