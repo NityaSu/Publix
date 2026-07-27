@@ -14,10 +14,13 @@ const showDialog = ref(false);
 const STORAGE_KEY = 'moondot-intro-seen';
 const { isDone } = useHeroSequence();
 
-const hasSeen = typeof window !== 'undefined' && localStorage.getItem(STORAGE_KEY);
+const getHasSeen = () => {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(STORAGE_KEY) === 'true';
+};
 
 watch(isDone, (done) => {
-  if (done && !hasSeen && !showDialog.value) {
+  if (done && !getHasSeen() && !showDialog.value) {
     showDialog.value = true;
   }
 });
