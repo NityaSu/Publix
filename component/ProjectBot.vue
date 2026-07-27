@@ -285,12 +285,12 @@ const isV2 = computed(() => props.version === 'v2');
 }
 
 .arm-left {
-  left: -6px;
+  left: -2px;
   border-radius: 50% 40% 40% 50%;
 }
 
 .arm-right {
-  right: -6px;
+  right: -2px;
   border-radius: 40% 50% 50% 40%;
 }
 
