@@ -36,7 +36,7 @@ export const projects: Project[] = [
   },
   {
     id: 'object-detection',
-    title: 'Semi-Supervised Object Detection',
+    title: 'Satellite Image Object Detection',
     tagline: 'Detection model built from scratch',
     category: 'AI / Computer Vision',
     description:
@@ -67,7 +67,7 @@ export const projects: Project[] = [
   },
   {
     id: 'toxic-detector',
-    title: 'Toxic Detector',
+    title: 'Toxic CommentDetector',
     tagline: 'NLP model that flags harmful text',
     category: 'NLP',
     description:
