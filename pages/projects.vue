@@ -2,71 +2,123 @@
 import { ref } from 'vue';
 import ProjectBot from '~/component/ProjectBot.vue';
 import AsciiWaveCanvas from '~/component/AsciiWaveCanvas.vue';
+import ProjectCard from '~/component/ProjectCard.vue';
+import { projects } from '~/data/projects';
 
 useHead({
   title: 'Projects',
 });
 
 const mode = ref<'normal' | 'sleepy'>('normal');
+const showProjects = ref(false);
 
 const toggleMode = () => {
   mode.value = mode.value === 'normal' ? 'sleepy' : 'normal';
 };
+
+const enterProjects = () => {
+  showProjects.value = true;
+};
+
+const backToHero = () => {
+  showProjects.value = false;
+};
 </script>
 
 <template>
-  <main class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#0d0d0d] project-hero">
-    <!-- Animated ASCII wave background -->
-    <AsciiWaveCanvas class="z-0" color="231, 76, 60" />
+  <main class="relative min-h-screen w-full overflow-hidden bg-[#0d0d0d] project-page">
+    <!-- Animated ASCII wave background (always visible) -->
+    <AsciiWaveCanvas class="fixed inset-0 z-0" color="231, 76, 60" />
 
-    <!-- Content -->
-    <div class="relative z-10 flex flex-col items-center text-center px-6 project-tagline">
-      <!-- Bot: click to toggle expression -->
-      <ProjectBot
-        :mode="mode"
-        class="mb-6 cursor-pointer"
-        role="button"
-        tabindex="0"
-        aria-label="Toggle bot expression"
-        @click="toggleMode"
-        @keydown.enter="toggleMode"
-      />
+    <!-- Intro view -->
+    <section
+      v-show="!showProjects"
+      class="relative z-10 flex min-h-screen w-full items-center justify-center px-6"
+    >
+      <div class="relative z-10 flex flex-col items-center text-center project-tagline">
+        <!-- Bot -->
+        <ProjectBot
+          :mode="mode"
+          class="mb-6 cursor-pointer"
+          role="button"
+          tabindex="0"
+          aria-label="Toggle bot expression"
+          @click="toggleMode"
+          @keydown.enter="toggleMode"
+        />
 
-      <!-- Sub-heading -->
-      <p class="project-sub">
-        Coming Soon · Building in Public
-      </p>
+        <p class="project-sub">Coming Soon · Building in Public</p>
 
-      <!-- Headline -->
-      <h1 class="project-headline">
-        Projects are <em class="project-emphasis">currently</em><br />in development.
-      </h1>
+        <h1 class="project-headline">
+          Projects are <em class="project-emphasis">currently</em><br />in development.
+        </h1>
 
-      <!-- Mode toggles -->
-      <div class="mt-8 md:mt-10 flex items-center gap-2">
+        <div class="mt-8 md:mt-10 flex items-center gap-2">
+          <button
+            type="button"
+            class="oc-btn"
+            :class="{ active: mode === 'normal' }"
+            @click="mode = 'normal'"
+          >
+            Normal
+          </button>
+          <button
+            type="button"
+            class="oc-btn"
+            :class="{ active: mode === 'sleepy' }"
+            @click="mode = 'sleepy'"
+          >
+            Sleepy
+          </button>
+        </div>
+
         <button
           type="button"
-          class="oc-btn"
-          :class="{ active: mode === 'normal' }"
-          @click="mode = 'normal'"
+          class="mt-10 inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold uppercase tracking-widest text-white shadow-glow-sm transition-all duration-300 hover:bg-accent/90 hover:scale-105"
+          @click="enterProjects"
         >
-          Normal
-        </button>
-        <button
-          type="button"
-          class="oc-btn"
-          :class="{ active: mode === 'sleepy' }"
-          @click="mode = 'sleepy'"
-        >
-          Sleepy
+          View Projects
+          <span aria-hidden="true">→</span>
         </button>
       </div>
-    </div>
+    </section>
+
+    <!-- Project list view -->
+    <section
+      v-show="showProjects"
+      class="relative z-10 w-full px-6 py-24 md:px-12 lg:px-20 xl:px-[120px]"
+    >
+      <div class="mx-auto max-w-6xl">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="project-sub">Selected Work</p>
+            <h2 class="font-display font-extrabold text-3xl md:text-5xl text-white">
+              Projects
+            </h2>
+          </div>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-colors hover:bg-white/10"
+            @click="backToHero"
+          >
+            ← Back
+          </button>
+        </div>
+
+        <div class="mt-12 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <ProjectCard
+            v-for="project in projects"
+            :key="project.id"
+            :project="project"
+          />
+        </div>
+      </div>
+    </section>
   </main>
 </template>
 
 <style scoped>
-.project-hero {
+.project-page {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -98,7 +150,6 @@ const toggleMode = () => {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.project-headline em,
 .project-emphasis {
   color: #e74c3c;
   font-style: italic;
