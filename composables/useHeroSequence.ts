@@ -9,6 +9,7 @@ export function useHeroSequence() {
   const isLookingDown = computed(
     () => phase.value === 'thinking' || phase.value === 'typing',
   );
+  const isDone = computed(() => phase.value === 'done');
 
   const setPhase = (next: HeroSequencePhase) => {
     phase.value = next;
@@ -17,6 +18,7 @@ export function useHeroSequence() {
   return {
     phase,
     isLookingDown,
+    isDone,
     setPhase,
   };
 }

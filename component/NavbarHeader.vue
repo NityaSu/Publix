@@ -11,6 +11,7 @@ import {
 } from 'lucide-vue-next';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 import KimiLogo from '~/component/KimiLogo.vue';
+import IntroDialog from '~/component/IntroDialog.vue';
 
 interface DropdownChild {
   label: string;
@@ -152,14 +153,17 @@ const goHomeTop = async () => {
   <header class="sticky top-0 z-50 bg-background/90 backdrop-blur-sm border-b border-white/10">
     <nav class="w-full px-5 sm:px-6 md:px-10 lg:px-16 xl:px-[120px]">
       <div class="flex items-center justify-between gap-4 h-14 sm:h-16 md:h-20">
-        <NuxtLink
-          to="/"
-          class="inline-flex items-center gap-2.5 sm:gap-3 min-w-0 font-display font-extrabold tracking-tight text-white hover:text-accent transition-colors whitespace-nowrap text-[clamp(1.15rem,3.5vw,2.625rem)]"
-          @click="goHomeTop"
-        >
+        <div class="relative inline-flex items-center gap-2.5 sm:gap-3 min-w-0">
           <KimiLogo small />
-          <span>NITYA SUON</span>
-        </NuxtLink>
+          <IntroDialog position="header-bot" />
+          <NuxtLink
+            to="/"
+            class="font-display font-extrabold tracking-tight text-white hover:text-accent transition-colors whitespace-nowrap text-[clamp(1.15rem,3.5vw,2.625rem)]"
+            @click="goHomeTop"
+          >
+            NITYA SUON
+          </NuxtLink>
+        </div>
 
         <div class="hidden md:flex items-center gap-4 lg:gap-6 xl:gap-8 shrink-0">
           <template v-for="link in navLinks" :key="link.label">
