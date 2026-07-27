@@ -15,16 +15,16 @@ const toggleMode = () => {
 </script>
 
 <template>
-  <main class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black">
+  <main class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#0d0d0d] project-hero">
     <!-- Animated ASCII wave background -->
     <AsciiWaveCanvas class="z-0" color="231, 76, 60" />
 
     <!-- Content -->
-    <div class="relative z-10 flex flex-col items-center text-center px-6 py-20 max-w-2xl mx-auto">
+    <div class="relative z-10 flex flex-col items-center text-center px-6 project-tagline">
       <!-- Bot: click to toggle expression -->
       <ProjectBot
         :mode="mode"
-        class="mb-8 md:mb-10 cursor-pointer"
+        class="mb-6 cursor-pointer"
         role="button"
         tabindex="0"
         aria-label="Toggle bot expression"
@@ -33,33 +33,29 @@ const toggleMode = () => {
       />
 
       <!-- Sub-heading -->
-      <p class="text-xs sm:text-sm uppercase tracking-[0.25em] font-semibold text-[#e74c3c]">
+      <p class="project-sub">
         Coming Soon · Building in Public
       </p>
 
       <!-- Headline -->
-      <h1 class="mt-4 font-display font-extrabold text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white leading-tight">
-        Projects are <em class="not-italic font-display font-extrabold text-[#e74c3c]">currently</em><br />in development.
+      <h1 class="project-headline">
+        Projects are <em class="project-emphasis">currently</em><br />in development.
       </h1>
 
       <!-- Mode toggles -->
-      <div class="mt-10 md:mt-12 flex items-center gap-3">
+      <div class="mt-8 md:mt-10 flex items-center gap-2">
         <button
           type="button"
-          class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200"
-          :class="mode === 'normal'
-            ? 'bg-[#4A9EFF] text-white shadow-[0_0_20px_rgba(74,158,255,0.4)]'
-            : 'bg-white/10 text-white border border-white/20 hover:bg-white/15'"
+          class="oc-btn"
+          :class="{ active: mode === 'normal' }"
           @click="mode = 'normal'"
         >
           Normal
         </button>
         <button
           type="button"
-          class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200"
-          :class="mode === 'sleepy'
-            ? 'bg-[#4A9EFF] text-white shadow-[0_0_20px_rgba(74,158,255,0.4)]'
-            : 'bg-white/10 text-white border border-white/20 hover:bg-white/15'"
+          class="oc-btn"
+          :class="{ active: mode === 'sleepy' }"
           @click="mode = 'sleepy'"
         >
           Sleepy
@@ -68,3 +64,69 @@ const toggleMode = () => {
     </div>
   </main>
 </template>
+
+<style scoped>
+.project-hero {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.project-tagline {
+  pointer-events: none;
+}
+
+.project-tagline > * {
+  pointer-events: auto;
+}
+
+.project-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: #e74c3c;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.project-headline {
+  font-size: 36px;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.project-headline em,
+.project-emphasis {
+  color: #e74c3c;
+  font-style: italic;
+  font-family: Georgia, serif;
+  font-weight: 500;
+}
+
+.oc-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.oc-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.oc-btn.active {
+  background: #3a7bd5;
+  color: #fff;
+  border-color: #3a7bd5;
+}
+</style>
