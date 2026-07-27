@@ -5,10 +5,13 @@ import { useMediaQuery } from '@vueuse/core';
 interface Props {
   /** 'normal' = open eyes, 'sleepy' = closed / relaxed */
   mode?: 'normal' | 'sleepy';
+  /** 'v1' = blue, 'v2' = coral-red */
+  version?: 'v1' | 'v2';
 }
 
 const props = withDefaults(defineProps<Props>(), {
   mode: 'normal',
+  version: 'v1',
 });
 
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -16,6 +19,8 @@ const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 const isNormal = computed(() => props.mode === 'normal');
 const isSleepy = computed(() => props.mode === 'sleepy');
 const isReduced = computed(() => prefersReducedMotion.value);
+const isV1 = computed(() => props.version === 'v1');
+const isV2 = computed(() => props.version === 'v2');
 </script>
 
 <template>
@@ -25,6 +30,8 @@ const isReduced = computed(() => prefersReducedMotion.value);
       'is-normal': isNormal,
       'is-sleepy': isSleepy,
       'is-reduced': isReduced,
+      'is-v1': isV1,
+      'is-v2': isV2,
     }"
   >
     <!-- Antennae (curved feelers) -->
@@ -82,19 +89,32 @@ const isReduced = computed(() => prefersReducedMotion.value);
   }
 }
 
-/* Body: blue squircle, brighter at top */
+/* Body: squircle, brighter at top */
 .bot-body {
   width: 90px;
   height: 84px;
   border-radius: 45% 45% 42% 42% / 48% 48% 44% 44%;
-  background: radial-gradient(circle at 45% 35%, #5b9bd5 0%, #3a7bd5 55%, #2c5aa0 100%);
   position: relative;
-  box-shadow:
-    0 4px 20px rgba(58, 123, 213, 0.4),
-    0 0 60px rgba(58, 123, 213, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* V1: Blue */
+.project-bot.is-v1 .bot-body {
+  background: radial-gradient(circle at 45% 35%, #5b9bd5 0%, #3a7bd5 55%, #2c5aa0 100%);
+  box-shadow:
+    0 4px 20px rgba(58, 123, 213, 0.4),
+    0 0 60px rgba(58, 123, 213, 0.15);
+}
+
+/* V2: Coral-red */
+.project-bot.is-v2 .bot-body {
+  background: radial-gradient(circle at 45% 35%, #ff6b6b 0%, #e74c3c 55%, #c0392b 100%);
+  box-shadow:
+    0 4px 20px rgba(231, 76, 60, 0.4),
+    0 0 60px rgba(231, 76, 60, 0.15);
 }
 
 /* Eyes */
@@ -121,9 +141,18 @@ const isReduced = computed(() => prefersReducedMotion.value);
   content: '';
   width: 7px;
   height: 7px;
-  background: radial-gradient(circle at 35% 35%, #00fff0, #00bcd4);
   border-radius: 50%;
+  transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+
+.project-bot.is-v1 .eye::after {
+  background: radial-gradient(circle at 35% 35%, #00fff0, #00bcd4);
   box-shadow: 0 0 5px rgba(0, 255, 240, 0.5);
+}
+
+.project-bot.is-v2 .eye::after {
+  background: radial-gradient(circle at 35% 35%, #ffd700, #ffa500);
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
 }
 
 /* Normal blink */
@@ -181,10 +210,10 @@ const isReduced = computed(() => prefersReducedMotion.value);
   height: 22px;
   background: transparent;
   border-radius: 50%;
-  border-top: 3px solid #3a7bd5;
-  border-right: 3px solid #3a7bd5;
+  border-top: 3px solid transparent;
+  border-right: 3px solid transparent;
   transform-origin: bottom center;
-  transition: transform 0.4s ease;
+  transition: border-color 0.4s ease, transform 0.4s ease;
 }
 
 .antenna::after {
@@ -194,7 +223,25 @@ const isReduced = computed(() => prefersReducedMotion.value);
   width: 9px;
   height: 9px;
   border-radius: 50%;
+  transition: background 0.4s ease;
+}
+
+.project-bot.is-v1 .antenna {
+  border-top-color: #3a7bd5;
+  border-right-color: #3a7bd5;
+}
+
+.project-bot.is-v1 .antenna::after {
   background: radial-gradient(circle at 40% 40%, #7ec8e3, #3a7bd5);
+}
+
+.project-bot.is-v2 .antenna {
+  border-top-color: #e74c3c;
+  border-right-color: #e74c3c;
+}
+
+.project-bot.is-v2 .antenna::after {
+  background: radial-gradient(circle at 40% 40%, #ff8a80, #e74c3c);
 }
 
 .antenna-left {
@@ -225,9 +272,16 @@ const isReduced = computed(() => prefersReducedMotion.value);
   top: 34px;
   width: 18px;
   height: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  transition: background 0.4s ease, transform 0.4s ease;
+}
+
+.project-bot.is-v1 .arm {
   background: linear-gradient(to bottom, #5b9bd5, #3a7bd5);
-  box-shadow: 0 1px 4px rgba(44, 90, 160, 0.25);
-  transition: transform 0.4s ease;
+}
+
+.project-bot.is-v2 .arm {
+  background: linear-gradient(to bottom, #ff6b6b, #e74c3c);
 }
 
 .arm-left {
@@ -262,8 +316,16 @@ const isReduced = computed(() => prefersReducedMotion.value);
 .leg {
   width: 14px;
   height: 12px;
-  background: linear-gradient(to bottom, #3a7bd5, #2c5aa0);
   border-radius: 0 0 3px 3px;
+  transition: background 0.4s ease;
+}
+
+.project-bot.is-v1 .leg {
+  background: linear-gradient(to bottom, #3a7bd5, #2c5aa0);
+}
+
+.project-bot.is-v2 .leg {
+  background: linear-gradient(to bottom, #e74c3c, #c0392b);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -274,7 +336,8 @@ const isReduced = computed(() => prefersReducedMotion.value);
   .eye,
   .pupil,
   .arm,
-  .antenna {
+  .antenna,
+  .bot-body {
     transition: none;
     animation: none;
   }

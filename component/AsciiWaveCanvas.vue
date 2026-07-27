@@ -3,16 +3,43 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
 
 interface Props {
-  color?: string;
+  version?: 'v1' | 'v2';
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  color: '231, 76, 60', // rgb parts of coral #E74C3C
+  version: 'v1',
 });
 
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let rafId: number | null = null;
+
+const versionConfig = {
+  v1: {
+    color: '58, 123, 213',
+    speedMultiplier: 1,
+    maxWaves: 12,
+  },
+  v2: {
+    color: '231, 76, 60',
+    speedMultiplier: 2.5,
+    maxWaves: 18,
+  },
+};
+
+const color = ref(versionConfig[props.version].color);
+const speedMultiplier = ref(versionConfig[props.version].speedMultiplier);
+const maxWaves = ref(versionConfig[props.version].maxWaves);
+
+watch(
+  () => props.version,
+  (next) => {
+    const cfg = versionConfig[next];
+    color.value = cfg.color;
+    speedMultiplier.value = cfg.speedMultiplier;
+    maxWaves.value = cfg.maxWaves;
+  },
+);
 
 onMounted(() => {
   const canvas = canvasRef.value;
@@ -21,7 +48,6 @@ onMounted(() => {
   if (!ctx) return;
 
   const chars = '.::-=+xX#';
-  const maxWaves = 12;
   let w = 0;
   let h = 0;
   let cx = 0;
@@ -40,7 +66,7 @@ onMounted(() => {
 
   class Wave {
     radius: number;
-    speed: number;
+    baseSpeed: number;
     opacity: number;
     arcCount: number;
     arcSpread: number;
@@ -48,11 +74,15 @@ onMounted(() => {
 
     constructor(radius: number) {
       this.radius = radius;
-      this.speed = 0.4 + Math.random() * 0.3;
+      this.baseSpeed = 0.4 + Math.random() * 0.3;
       this.opacity = 1;
       this.arcCount = 3 + Math.floor(Math.random() * 3);
       this.arcSpread = 0.3 + Math.random() * 0.5;
       this.rotationOffset = Math.random() * Math.PI * 2;
+    }
+
+    get speed() {
+      return this.baseSpeed * speedMultiplier.value;
     }
 
     update() {
@@ -78,7 +108,7 @@ onMounted(() => {
           const distFromCenter = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
           const size = 8 + (distFromCenter / Math.max(w, h)) * 8;
           context.font = `${size}px monospace`;
-          context.fillStyle = `rgba(${props.color}, ${this.opacity * (0.3 + 0.7 * Math.sin(t * Math.PI))})`;
+          context.fillStyle = `rgba(${color.value}, ${this.opacity * (0.3 + 0.7 * Math.sin(t * Math.PI))})`;
           context.textAlign = 'center';
           context.textBaseline = 'middle';
           context.fillText(char, x, y);
@@ -90,14 +120,14 @@ onMounted(() => {
   let waves: Wave[] = [];
   const seedWaves = () => {
     waves = [];
-    for (let i = 0; i < maxWaves; i += 1) {
+    for (let i = 0; i < maxWaves.value; i += 1) {
       waves.push(new Wave(i * 35));
     }
   };
   seedWaves();
 
   const drawGrid = () => {
-    ctx.fillStyle = `rgba(${props.color}, 0.04)`;
+    ctx.fillStyle = `rgba(${color.value}, 0.04)`;
     for (let x = 0; x < w; x += 20) {
       for (let y = 0; y < h; y += 20) {
         const dx = x - cx;
@@ -127,7 +157,7 @@ onMounted(() => {
       }
     }
 
-    if (waves.length < maxWaves) {
+    if (waves.length < maxWaves.value) {
       const last = waves[waves.length - 1];
       const lastR = last ? last.radius : 9999;
       if (lastR > 35) {
