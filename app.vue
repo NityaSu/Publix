@@ -5,6 +5,7 @@ import NavbarHeader from '~/component/NavbarHeader.vue';
 <template>
   <div class="min-h-screen bg-background">
     <NavbarHeader />
+    <NuxtLoadingIndicator color="#3a7bd5" :height="3" :throttle="0" />
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
