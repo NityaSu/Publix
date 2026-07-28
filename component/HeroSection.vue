@@ -157,10 +157,10 @@ useIntersectionObserver(
 <template>
   <section
     ref="heroRef"
-    class="w-full overflow-x-clip px-5 sm:px-6 md:px-12 lg:px-20 xl:px-[160px] py-10 sm:py-14 md:py-20"
+    class="w-full overflow-x-clip py-10 sm:py-14 md:py-20"
   >
     <div
-      class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-8 md:gap-12 lg:gap-16 items-start transition-all duration-700 ease-out"
+      class="px-5 sm:px-6 md:px-12 lg:px-20 xl:px-[160px] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-8 md:gap-12 lg:gap-16 items-start transition-all duration-700 ease-out"
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
     >
       <div class="min-w-0 w-full">
@@ -246,7 +246,7 @@ useIntersectionObserver(
     </div>
 
     <div
-      class="hero-cta-bar mt-12 md:mt-16 lg:mt-24 relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 px-5 sm:px-6 md:px-8 py-12 md:py-16 lg:py-20 transition-all duration-700 ease-out delay-150"
+      class="hero-cta-bar mt-12 md:mt-16 lg:mt-24 relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 px-5 sm:px-6 md:px-12 lg:px-20 xl:px-[160px] py-12 md:py-16 lg:py-20 transition-all duration-700 ease-out delay-150"
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
     >
       <p class="relative z-10 font-display text-xs md:text-sm font-semibold tracking-[0.2em] sm:tracking-[0.3em] text-white/80 uppercase">
