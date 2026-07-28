@@ -212,7 +212,7 @@ useIntersectionObserver(
             v-for="option in filterOptions"
             :key="option.value"
             type="button"
-            class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs uppercase tracking-wide transition-colors duration-300"
+            class="inline-flex items-center gap-1.5 rounded-none border px-3 py-1.5 font-dm font-bold text-xs uppercase tracking-[0.14em] transition-colors duration-300"
             :class="
               navigationStore.mediaFilter === option.value
                 ? 'border-accent text-accent'

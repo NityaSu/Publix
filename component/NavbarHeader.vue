@@ -193,7 +193,7 @@ const goHomeTop = async () => {
                     v-for="child in link.children"
                     :key="child.label"
                     type="button"
-                    class="flex w-full items-center gap-2 px-4 py-2 text-sm lowercase text-muted hover:text-accent hover:bg-white/5 transition-colors"
+                    class="flex w-full items-center gap-2 px-4 py-2 font-dm font-medium text-sm lowercase text-muted hover:text-accent hover:bg-white/5 transition-colors"
                     @click="selectDropdownChild(child)"
                   >
                     <component :is="child.icon" v-if="child.icon" :size="14" />
@@ -251,7 +251,7 @@ const goHomeTop = async () => {
                 v-for="child in link.children"
                 :key="child.label"
                 type="button"
-                class="flex items-center gap-2 text-sm lowercase text-muted hover:text-accent transition-colors"
+                class="flex items-center gap-2 font-dm font-medium text-sm lowercase text-muted hover:text-accent transition-colors"
                 @click="selectDropdownChild(child)"
               >
                 <component :is="child.icon" v-if="child.icon" :size="14" />

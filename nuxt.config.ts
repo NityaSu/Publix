@@ -90,6 +90,13 @@ export default defineNuxtConfig({
           href: '/fonts/space-grotesk.woff2',
           crossorigin: 'anonymous',
         },
+        {
+          rel: 'preload',
+          as: 'font',
+          type: 'font/woff2',
+          href: '/fonts/dm-mono-400.woff2',
+          crossorigin: 'anonymous',
+        },
       ],
       style: [
         {

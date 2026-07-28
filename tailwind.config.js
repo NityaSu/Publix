@@ -27,6 +27,7 @@ module.exports = {
           'display': ['Space Grotesk', 'Space Grotesk fallback', 'Montserrat', 'Montserrat fallback', 'Gotham', 'sans-serif'],
           'heading': ['Space Grotesk', 'Space Grotesk fallback', 'Poppins', 'sans-serif'],
           'space': ['Space Grotesk', 'Space Grotesk fallback', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          'mono': ['"DM Mono"', '"DM Mono fallback"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
         },
         fontWeight: {
           'normal': '400',

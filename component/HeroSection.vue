@@ -255,7 +255,7 @@ useIntersectionObserver(
 
       <NuxtLink
         to="/projects"
-        class="group inline-flex items-center gap-3 px-5 sm:px-6 py-2.5 sm:py-3 rounded-full border border-accent text-white text-xs sm:text-sm uppercase tracking-widest hover:bg-accent/10 hover:shadow-glow-sm transition-all duration-300"
+        class="group inline-flex items-center gap-3 px-5 sm:px-6 py-2.5 sm:py-3 rounded-none border border-accent font-dm font-bold text-white text-xs sm:text-sm uppercase tracking-[0.14em] hover:bg-accent/10 hover:shadow-glow-sm transition-all duration-300"
       >
         <Play :size="16" class="text-accent transition-transform duration-300 group-hover:scale-110" />
         <span>view projects</span>
