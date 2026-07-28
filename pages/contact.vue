@@ -83,7 +83,7 @@ const fieldClass =
         <div class="mt-10 pt-6 border-t border-white/15 flex justify-end">
           <button
             type="submit"
-            class="px-8 py-3 rounded-md border border-accent text-accent text-sm uppercase tracking-widest font-semibold hover:bg-accent/10 hover:shadow-glow-sm transition-all duration-300"
+            class="px-8 py-3 rounded-none border border-accent text-accent font-dm font-bold text-sm uppercase tracking-[0.14em] hover:bg-accent/10 hover:shadow-glow-sm transition-all duration-300"
           >
             Submit
           </button>

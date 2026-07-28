@@ -101,7 +101,7 @@ const backToHero = () => {
 
         <button
           type="button"
-          class="mt-10 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-widest text-white shadow-glow-sm transition-all duration-300 hover:scale-105"
+          class="mt-10 inline-flex items-center gap-2 rounded-none px-6 py-3 font-dm font-bold text-sm uppercase tracking-[0.14em] text-white shadow-glow-sm transition-all duration-300 hover:scale-105"
           :class="version === 'v1' ? 'bg-[#3a7bd5]' : 'bg-[#e74c3c]'"
           @click="enterProjects"
         >
@@ -126,7 +126,7 @@ const backToHero = () => {
           </div>
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-colors hover:bg-white/10"
+            class="inline-flex items-center gap-2 rounded-none border border-white/20 px-4 py-2 font-dm font-bold text-xs uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/10"
             @click="backToHero"
           >
             ← Back
@@ -159,21 +159,23 @@ const backToHero = () => {
   gap: 4px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 4px;
 }
 
 .version-btn {
   padding: 6px 14px;
-  border-radius: 6px;
+  border-radius: 0;
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.5);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'DM Mono', 'DM Mono fallback', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
 .version-btn:hover {
@@ -229,15 +231,17 @@ const backToHero = () => {
 
 .oc-btn {
   padding: 5px 12px;
-  border-radius: 6px;
+  border-radius: 0;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.7);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'DM Mono', 'DM Mono fallback', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
 .oc-btn:hover {
