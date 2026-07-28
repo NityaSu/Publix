@@ -40,8 +40,11 @@ const statusLabel = () => {
 
 <template>
   <div
-    class="group relative flex flex-col rounded-2xl border border-white/10 bg-[#151515] overflow-hidden transition-all duration-300 hover:border-accent/40 hover:shadow-glow-sm"
+    class="project-card group relative flex flex-col overflow-hidden transition-all duration-300"
   >
+    <!-- Color tint (above grain, below content) -->
+    <div class="project-card__tint" aria-hidden="true" />
+
     <!-- Status badge -->
     <div class="absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[10px] uppercase tracking-wider text-white/80 backdrop-blur-sm">
       <component :is="statusLabel().icon" v-if="statusLabel().icon" :size="12" />
@@ -50,7 +53,7 @@ const statusLabel = () => {
 
     <!-- Image gallery / placeholder -->
     <div
-      class="relative aspect-video w-full bg-[#0d0d0d] overflow-hidden cursor-pointer"
+      class="relative z-10 aspect-video w-full overflow-hidden cursor-pointer"
       @click="openLightbox(0)"
     >
       <template v-if="project.images.length > 0">
@@ -70,7 +73,7 @@ const statusLabel = () => {
             :key="img"
             type="button"
             class="h-1.5 rounded-full transition-all duration-200"
-            :class="i === activeImage ? 'w-5 bg-accent' : 'w-1.5 bg-white/40 hover:bg-white/70'"
+            :class="i === activeImage ? 'w-5 bg-accent' : 'w-1.5 bg-black/30 hover:bg-black/50'"
             :aria-label="`Show image ${i + 1}`"
             @click.stop="activeImage = i"
           />
@@ -79,7 +82,7 @@ const statusLabel = () => {
 
       <div
         v-else
-        class="flex h-full w-full flex-col items-center justify-center gap-2 text-white/40"
+        class="flex h-full w-full flex-col items-center justify-center gap-2 text-black/35"
       >
         <Clock :size="32" />
         <span class="text-xs uppercase tracking-widest">Coming Soon</span>
@@ -87,17 +90,17 @@ const statusLabel = () => {
     </div>
 
     <!-- Content -->
-    <div class="flex flex-1 flex-col p-5 md:p-6">
+    <div class="relative z-10 flex flex-1 flex-col p-5 md:p-6">
       <div class="flex items-center justify-between gap-3">
-        <span class="text-[10px] uppercase tracking-[0.2em] text-accent">{{ project.category }}</span>
-        <span class="text-[10px] uppercase tracking-wider text-white/40">{{ project.year }}</span>
+        <span class="text-[10px] uppercase tracking-[0.2em] text-[#5b7fd4]">{{ project.category }}</span>
+        <span class="text-[10px] uppercase tracking-wider text-black/40">{{ project.year }}</span>
       </div>
 
-      <h3 class="mt-2 font-display font-bold text-lg md:text-xl text-white">
+      <h3 class="mt-2 font-display font-bold text-lg md:text-xl text-[#1a1a2e]">
         {{ project.title }}
       </h3>
-      <p class="mt-1 text-sm text-white/60">{{ project.tagline }}</p>
-      <p class="mt-3 text-sm text-white/50 leading-relaxed flex-1">
+      <p class="mt-1 text-sm text-black/55">{{ project.tagline }}</p>
+      <p class="mt-3 text-sm text-black/45 leading-relaxed flex-1">
         {{ project.description }}
       </p>
 
@@ -106,7 +109,7 @@ const statusLabel = () => {
         <span
           v-for="tech in project.stack"
           :key="tech"
-          class="rounded-full border border-white/10 px-2.5 py-1 text-[10px] uppercase tracking-wider text-white/70"
+          class="rounded-full border border-black/10 bg-white/40 px-2.5 py-1 text-[10px] uppercase tracking-wider text-black/60"
         >
           {{ tech }}
         </span>
@@ -119,7 +122,7 @@ const statusLabel = () => {
           :href="project.github"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-white hover:bg-accent/20 hover:text-accent transition-colors"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-black/5 px-3 py-2 text-xs font-medium text-[#1a1a2e] hover:bg-[#5b7fd4]/15 hover:text-[#3a5fb0] transition-colors"
         >
           <Github :size="14" />
           View Code
@@ -129,7 +132,7 @@ const statusLabel = () => {
           :href="project.demo"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-white hover:bg-accent/20 hover:text-accent transition-colors"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-black/5 px-3 py-2 text-xs font-medium text-[#1a1a2e] hover:bg-[#5b7fd4]/15 hover:text-[#3a5fb0] transition-colors"
         >
           <ExternalLink :size="14" />
           Live Demo
@@ -177,3 +180,77 @@ const statusLabel = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.project-card {
+  position: relative;
+  overflow: hidden;
+  background-color: #fdfeff;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Soft radial wash */
+.project-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(90% 90% at 100% 100%, #bfe0fa 0%, #e4f1fc 35%, transparent 70%),
+    #fdfeff;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+/* Chunky grain — scaled tile so each speck reads as a visible pixel */
+.project-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 300px 300px;
+  image-rendering: pixelated;
+  mix-blend-mode: multiply;
+  opacity: 0.6;
+  -webkit-mask-image: radial-gradient(
+    120% 120% at 100% 100%,
+    black 0%,
+    black 40%,
+    rgba(0, 0, 0, 0.35) 75%,
+    rgba(0, 0, 0, 0.2) 100%
+  );
+  mask-image: radial-gradient(
+    120% 120% at 100% 100%,
+    black 0%,
+    black 40%,
+    rgba(0, 0, 0, 0.35) 75%,
+    rgba(0, 0, 0, 0.2) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.project-card__tint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    #c9b6f2 0%,
+    #b9cdf5 45%,
+    #9ac3f5 75%,
+    #7fb4f2 100%
+  );
+  mix-blend-mode: color;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+}
+
+.project-card:hover {
+  border-color: rgba(91, 127, 212, 0.35);
+  box-shadow: 0 8px 32px rgba(127, 180, 242, 0.25);
+}
+</style>
