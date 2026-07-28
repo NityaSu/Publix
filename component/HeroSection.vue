@@ -174,9 +174,14 @@ useIntersectionObserver(
         <div class="mt-5 md:mt-6 h-1 w-32 sm:w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
 
         <div
-          class="mt-8 md:mt-12 lg:mt-14 flex items-start gap-1.5 sm:gap-2 select-none border border-white/10 rounded-xl px-3 sm:px-4 md:px-5 py-3 sm:py-4 md:py-5 w-full max-w-full overflow-hidden"
+          class="word-cloud-box mt-8 md:mt-12 lg:mt-14 flex items-start gap-1.5 sm:gap-2 select-none px-3 sm:px-4 md:px-5 py-3 sm:py-4 md:py-5 w-full max-w-full"
           :style="wordCloudRowStyle"
         >
+          <span class="corner tl" aria-hidden="true"></span>
+          <span class="corner tr" aria-hidden="true"></span>
+          <span class="corner bl" aria-hidden="true"></span>
+          <span class="corner br" aria-hidden="true"></span>
+
           <div class="hidden md:flex flex-col items-center pt-1 shrink-0">
             <span
               class="font-display uppercase tracking-[0.12em] rotate-180 transition-colors duration-300 hover:text-accent"
@@ -258,3 +263,27 @@ useIntersectionObserver(
     </div>
   </section>
 </template>
+
+<style scoped>
+.word-cloud-box {
+  position: relative;
+  border: 1px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 0;
+  background: #111;
+}
+
+.corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #4a9eff;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* offset = -(border-width) - (square-size / 2) = -1px - 4px */
+.corner.tl { top: -5px; left: -5px; }
+.corner.tr { top: -5px; right: -5px; }
+.corner.bl { bottom: -5px; left: -5px; }
+.corner.br { bottom: -5px; right: -5px; }
+</style>
