@@ -246,7 +246,7 @@ useIntersectionObserver(
     </div>
 
     <div
-      class="hero-cta-bar mt-12 md:mt-16 lg:mt-24 relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 px-5 sm:px-6 md:px-8 py-8 md:py-10 transition-all duration-700 ease-out delay-150"
+      class="hero-cta-bar mt-12 md:mt-16 lg:mt-24 relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 px-5 sm:px-6 md:px-8 py-12 md:py-16 lg:py-20 transition-all duration-700 ease-out delay-150"
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
     >
       <p class="relative z-10 font-display text-xs md:text-sm font-semibold tracking-[0.2em] sm:tracking-[0.3em] text-white/80 uppercase">
