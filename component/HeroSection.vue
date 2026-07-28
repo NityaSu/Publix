@@ -295,21 +295,29 @@ useIntersectionObserver(
     </div>
 
     <div
-      class="hero-cta-bar mt-12 md:mt-16 lg:mt-24 relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 px-5 sm:px-6 md:px-12 lg:px-20 xl:px-[160px] py-16 md:py-20 lg:py-28 transition-all duration-700 ease-out delay-150"
+      class="mt-12 md:mt-16 lg:mt-24 px-5 sm:px-6 md:px-12 lg:px-20 xl:px-[160px] transition-all duration-700 ease-out delay-150"
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
     >
-      <p class="relative z-10 font-display text-xs md:text-sm font-semibold tracking-[0.2em] sm:tracking-[0.3em] text-white/80 uppercase">
-        Building systems that solve real problems
-      </p>
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+        <p class="font-display text-xs md:text-sm font-semibold tracking-[0.2em] sm:tracking-[0.3em] text-white/80 uppercase">
+          Building systems that solve real problems
+        </p>
 
-      <NuxtLink
-        to="/projects"
-        class="relative z-10 group inline-flex items-center gap-3 px-5 sm:px-6 py-2.5 sm:py-3 rounded-none border border-accent font-dm font-bold text-white text-xs sm:text-sm uppercase tracking-[0.14em] hover:bg-accent/10 hover:shadow-glow-sm transition-all duration-300"
-      >
-        <Play :size="16" class="text-accent transition-transform duration-300 group-hover:scale-110" />
-        <span>view projects</span>
-      </NuxtLink>
+        <NuxtLink
+          to="/projects"
+          class="group inline-flex items-center gap-3 px-5 sm:px-6 py-2.5 sm:py-3 rounded-none border border-accent font-dm font-bold text-white text-xs sm:text-sm uppercase tracking-[0.14em] hover:bg-accent/10 hover:shadow-glow-sm transition-all duration-300"
+        >
+          <Play :size="16" class="text-accent transition-transform duration-300 group-hover:scale-110" />
+          <span>view projects</span>
+        </NuxtLink>
+      </div>
     </div>
+
+    <div
+      class="hero-cta-bar mt-6 md:mt-8 w-full min-h-[140px] md:min-h-[180px] lg:min-h-[220px] transition-all duration-700 ease-out delay-200"
+      :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+      aria-hidden="true"
+    />
   </section>
 </template>
 
