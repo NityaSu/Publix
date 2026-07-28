@@ -158,7 +158,13 @@ useIntersectionObserver(
   >
     <div class="w-full px-6 md:px-20 lg:px-[160px] grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
       <div class="lg:col-span-3">
-        <p class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
+        <p class="flex items-center gap-2 text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
+          <img
+            src="/chevron_mark.svg"
+            alt=""
+            class="h-5 w-auto shrink-0"
+            aria-hidden="true"
+          />
           Curiosity in Action
         </p>
 

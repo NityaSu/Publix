@@ -65,13 +65,13 @@ const MATCHED_TONE = 'text-white/45 font-extrabold';
 const SIZE_MATCHES: Record<string, string> = { PERSISTENCE: 'ARTIFICIAL INTELLIGENCE' };
 
 const wordCloud: WordCloudItem[] = [
-  { text: 'TRY TO BECOME SYSTEM THINKER', tone: 'text-white/40 font-extrabold' },
+  { text: 'TRY TO BECOME SYSTEM THINKER', tone: 'text-white/20 font-extrabold' },
   { text: 'ARTIFICIAL INTELLIGENCE', tone: 'text-white/45 font-extrabold' },
   { text: 'INNOVATION', tone: 'text-white/25 font-semibold' },
   { text: 'CURIOSITY', tone: 'text-white/55 font-extrabold' },
   { text: 'TECHNOLOGY', tone: 'text-white/40 font-extrabold' },
   { text: 'PERSISTENCE', tone: 'text-white/55 font-extrabold' },
-  { text: 'BRING IMPOSSIBLE IDEAS TO LIFE', tone: 'text-white/30 font-extrabold' },
+  { text: 'BRING IMPOSSIBLE IDEAS TO LIFE', tone: 'text-white/20 font-extrabold' },
 ].map(({ text, tone }) => {
   if (MUTED_TRIO.has(text)) {
     return {
