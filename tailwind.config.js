@@ -23,10 +23,12 @@ module.exports = {
           // descent-override) so the fallback occupies the exact same box
           // as the real webfont — this is what prevents text from visibly
           // reflowing/shifting once the real webfonts finish loading and swap in.
-          'sans': ['Space Grotesk', 'Space Grotesk fallback', 'Inter', 'Inter fallback', 'Helvetica Neue', 'Arial', 'sans-serif'],
-          'display': ['Space Grotesk', 'Space Grotesk fallback', 'Montserrat', 'Montserrat fallback', 'Gotham', 'sans-serif'],
+          'sans': ['Space Grotesk', 'Space Grotesk fallback', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          'display': ['Space Grotesk', 'Space Grotesk fallback', 'Gotham', 'sans-serif'],
           'heading': ['Space Grotesk', 'Space Grotesk fallback', 'Poppins', 'sans-serif'],
           'space': ['Space Grotesk', 'Space Grotesk fallback', 'Helvetica Neue', 'Arial', 'sans-serif'],
+          // Reserved for header brand + hero word-cloud rectangle only
+          'brand': ['Montserrat', 'Montserrat fallback', 'Inter', 'Inter fallback', 'sans-serif'],
           'mono': ['"DM Mono"', '"DM Mono fallback"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
         },
         fontWeight: {

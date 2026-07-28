@@ -158,7 +158,7 @@ const goHomeTop = async () => {
           <IntroDialog position="header-bot" />
           <NuxtLink
             to="/"
-            class="font-display font-extrabold tracking-tight text-white hover:text-accent transition-colors whitespace-nowrap text-[clamp(1.15rem,3.5vw,2.625rem)]"
+            class="font-brand font-extrabold tracking-tight text-white hover:text-accent transition-colors whitespace-nowrap text-[clamp(1.15rem,3.5vw,2.625rem)]"
             @click="goHomeTop"
           >
             NITYA SUON

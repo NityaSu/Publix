@@ -76,21 +76,21 @@ const wordCloud: WordCloudItem[] = [
   if (MUTED_TRIO.has(text)) {
     return {
       text,
-      class: `${MUTED_TRIO_TONE} font-display transition-colors duration-300 hover:text-accent`,
+      class: `${MUTED_TRIO_TONE} transition-colors duration-300 hover:text-accent`,
       style: MUTED_TRIO_STYLE,
     };
   }
   if (SIZE_MATCHES[text]) {
     return {
       text,
-      class: `${MATCHED_TONE} font-display transition-colors duration-300 hover:text-accent`,
+      class: `${MATCHED_TONE} transition-colors duration-300 hover:text-accent`,
       style: fluidSize(SIZE_MATCHES[text], 10, 52, 0.96),
     };
   }
   const isCore = CORE_WORDS.has(text);
   return {
     text,
-    class: `${tone} font-display transition-colors duration-300 hover:text-accent`,
+    class: `${tone} transition-colors duration-300 hover:text-accent`,
     style: isCore ? fluidSize(text, 10, 52, 0.96) : fluidSize(text, 8, 24, 0.48),
   };
 });
@@ -166,7 +166,7 @@ useIntersectionObserver(
       <div class="min-w-0 w-full">
         <h1
           ref="headlineRef"
-          class="font-display font-extrabold uppercase leading-[0.95] tracking-tight text-[clamp(1.75rem,6vw,4.5rem)]"
+          class="font-brand font-bold uppercase leading-[0.95] tracking-tight text-[clamp(1.75rem,6vw,4.5rem)]"
         >
           <HeroSubtitle />
         </h1>
@@ -174,7 +174,7 @@ useIntersectionObserver(
         <div class="mt-5 md:mt-6 h-1 w-32 sm:w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
 
         <div
-          class="word-cloud-box mt-8 md:mt-12 lg:mt-14 flex items-start gap-1.5 sm:gap-2 select-none px-3 sm:px-4 md:px-5 py-3 sm:py-4 md:py-5 w-full max-w-full"
+          class="word-cloud-box font-brand mt-8 md:mt-12 lg:mt-14 flex items-start gap-1.5 sm:gap-2 select-none px-3 sm:px-4 md:px-5 py-3 sm:py-4 md:py-5 w-full max-w-full"
           :style="wordCloudRowStyle"
         >
           <span class="corner tl" aria-hidden="true"></span>
@@ -184,7 +184,7 @@ useIntersectionObserver(
 
           <div class="hidden md:flex flex-col items-center pt-1 shrink-0">
             <span
-              class="font-display uppercase tracking-[0.12em] rotate-180 transition-colors duration-300 hover:text-accent"
+              class="uppercase tracking-[0.12em] rotate-180 transition-colors duration-300 hover:text-accent"
               :class="leftVerticalWord.tone"
               :style="leftVerticalStyle"
               style="writing-mode: vertical-rl"
@@ -212,7 +212,7 @@ useIntersectionObserver(
           <div class="hidden md:flex items-start gap-1 lg:gap-1.5 shrink-0">
             <div class="flex flex-col items-center pt-1">
               <span
-                class="font-display uppercase tracking-[0.12em] transition-colors duration-300 hover:text-accent"
+                class="uppercase tracking-[0.12em] transition-colors duration-300 hover:text-accent"
                 :class="entrepreneurshipWord.class"
                 style="writing-mode: vertical-rl"
               >
@@ -222,7 +222,7 @@ useIntersectionObserver(
 
             <div class="flex flex-col items-center pt-1">
               <span
-                class="font-display uppercase tracking-[0.12em] transition-colors duration-300 hover:text-accent"
+                class="uppercase tracking-[0.12em] transition-colors duration-300 hover:text-accent"
                 :class="resilienceWord.tone"
                 :style="resilienceStyle"
                 style="writing-mode: vertical-rl"
