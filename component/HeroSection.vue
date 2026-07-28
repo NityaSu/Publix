@@ -26,14 +26,14 @@ const wordClass = (tone: string) =>
 
 const topPhrase = {
   text: 'TRY TO BECOME SYSTEM THINKER',
-  weight: 800,
-  class: wordClass('text-white/20 font-extrabold'),
+  weight: 600,
+  class: wordClass('text-white/20 font-semibold'),
 };
 
 const bottomPhrase = {
   text: 'BRING IMPOSSIBLE IDEAS TO LIFE',
-  weight: 800,
-  class: wordClass('text-white/20 font-extrabold'),
+  weight: 600,
+  class: wordClass('text-white/20 font-semibold'),
 };
 
 /** Outer box — width target so top/bottom phrases end on the same edge as E/E/Y. */
@@ -53,20 +53,20 @@ const middleRows: MeasuredRow[] = [
   {
     words: [{
       text: 'ARTIFICIAL INTELLIGENCE',
-      weight: 800,
-      class: wordClass('text-white/45 font-extrabold'),
+      weight: 600,
+      class: wordClass('text-white/45 font-semibold'),
     }],
   },
   {
     words: [
-      { text: 'INNOVATION', weight: 700, class: wordClass('text-white/20 font-bold') },
-      { text: 'PERSISTENCE', weight: 800, class: wordClass('text-white/55 font-extrabold') },
+      { text: 'INNOVATION', weight: 600, class: wordClass('text-white/20 font-semibold') },
+      { text: 'PERSISTENCE', weight: 600, class: wordClass('text-white/55 font-semibold') },
     ],
   },
   {
     words: [
-      { text: 'CURIOSITY', weight: 800, class: wordClass('text-white/55 font-extrabold') },
-      { text: 'TECHNOLOGY', weight: 700, class: wordClass('text-white/20 font-bold') },
+      { text: 'CURIOSITY', weight: 600, class: wordClass('text-white/55 font-semibold') },
+      { text: 'TECHNOLOGY', weight: 600, class: wordClass('text-white/20 font-semibold') },
     ],
   },
 ];
@@ -121,7 +121,7 @@ const middleRowStyles = computed<string[]>(() => {
   void fontsReady.value;
   return middleRows.map((row) => {
     if (!bandWidth) return 'font-size: 12px; line-height: 0.95;';
-    const spaceWidth = measureText(' ', 700) * Math.max(row.words.length - 1, 0);
+    const spaceWidth = measureText(' ', 600) * Math.max(row.words.length - 1, 0);
     const totalAt100 = row.words.reduce((sum, w) => sum + measureText(w.text, w.weight), 0) + spaceWidth;
     if (!totalAt100) return 'font-size: 12px; line-height: 0.95;';
     const size = (bandWidth / totalAt100) * MEASURE_PX * 0.995;
@@ -130,11 +130,11 @@ const middleRowStyles = computed<string[]>(() => {
 });
 
 const leftVerticalLines: HeightMatchedWord[] = [
-  { text: 'ELIMINATE', tone: 'text-white/40 font-bold' },
-  { text: 'FRICTION', tone: 'text-white/40 font-bold' },
+  { text: 'ELIMINATE', tone: 'text-white/40 font-semibold' },
+  { text: 'FRICTION', tone: 'text-white/40 font-semibold' },
 ];
 const entrepreneurshipWord: HeightMatchedWord = { text: 'ENTREPRENEURSHIP', tone: 'text-white/30 font-semibold' };
-const resilienceWord: HeightMatchedWord = { text: 'RESILIENCE', tone: 'text-white/50 font-bold' };
+const resilienceWord: HeightMatchedWord = { text: 'RESILIENCE', tone: 'text-white/50 font-semibold' };
 
 /**
  * Fit a vertical word exactly to the middle-band height.
@@ -166,7 +166,7 @@ const wordCloudRowStyle = computed(() => {
   return {
     width: '100%',
     // Keep the dashed rectangle compact vs. the headline
-    maxWidth: `${Math.round(headlineWidth.value * 0.78)}px`,
+    maxWidth: `${Math.round(headlineWidth.value * 0.68)}px`,
   };
 });
 
@@ -203,17 +203,12 @@ useIntersectionObserver(
 
         <div class="mt-5 md:mt-6 h-1 w-32 sm:w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
 
-        <!-- Big rectangle -->
+        <!-- Word cloud — left-aligned with SOFTWARE ENGINEER, no border -->
         <div
           ref="wordCloudBoxRef"
-          class="word-cloud-box font-brand mt-8 md:mt-12 lg:mt-14 flex flex-col gap-1 sm:gap-1.5 select-none px-2.5 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 w-full max-w-full"
+          class="word-cloud-box font-brand mt-8 md:mt-12 lg:mt-14 flex flex-col gap-1 sm:gap-1.5 select-none w-full max-w-full"
           :style="wordCloudRowStyle"
         >
-          <span class="corner tl" aria-hidden="true"></span>
-          <span class="corner tr" aria-hidden="true"></span>
-          <span class="corner bl" aria-hidden="true"></span>
-          <span class="corner br" aria-hidden="true"></span>
-
           <!-- Top phrase — fills box width so R aligns with E/E/Y -->
           <span
             class="block w-full whitespace-nowrap uppercase overflow-hidden"
@@ -321,32 +316,8 @@ useIntersectionObserver(
 <style scoped>
 .word-cloud-box {
   position: relative;
-  border: 1px dashed rgba(255, 255, 255, 0.5);
-  border-radius: 0;
-  background: #111;
-}
-
-.corner {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: #4a9eff;
-  z-index: 2;
-  pointer-events: none;
-}
-
-/* offset = -(border-width) - (square-size / 2) = -1px - 4px */
-.corner.tl { top: -5px; left: -5px; }
-.corner.tr { top: -5px; right: -5px; }
-.corner.bl { bottom: -5px; left: -5px; }
-.corner.br { bottom: -5px; right: -5px; }
-
-.word-cloud-sidebar > .word-cloud-vertical {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin-inline: 0;
+  margin-right: auto;
 }
 
 .hero-cta-bar {
