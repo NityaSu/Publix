@@ -196,7 +196,7 @@ useIntersectionObserver(
       <div class="min-w-0 w-full">
         <h1
           ref="headlineRef"
-          class="font-brand font-bold uppercase leading-[0.95] tracking-tight text-[clamp(1.75rem,6vw,4.5rem)]"
+          class="font-dm font-bold uppercase leading-[0.95] tracking-tight text-[clamp(1.75rem,6vw,4.5rem)]"
         >
           <HeroSubtitle />
         </h1>
