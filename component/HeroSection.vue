@@ -220,7 +220,7 @@ useIntersectionObserver(
 
           <!-- Inner rectangle: left verticals | middle 3 rows | right verticals -->
           <div class="word-cloud-inner flex items-stretch gap-1.5 sm:gap-2 w-full min-w-0">
-            <div class="hidden md:flex flex-row items-center gap-0.5 shrink-0 self-stretch">
+            <div class="flex flex-row items-center gap-0.5 shrink-0 self-stretch">
               <span
                 v-for="(line, i) in leftVerticalLines"
                 :key="line.text"
@@ -252,7 +252,7 @@ useIntersectionObserver(
               </div>
             </div>
 
-            <div class="hidden md:flex flex-row items-center gap-0.5 shrink-0 self-stretch">
+            <div class="flex flex-row items-center gap-0.5 shrink-0 self-stretch">
               <span
                 class="uppercase transition-colors duration-300 hover:text-accent"
                 :class="entrepreneurshipWord.tone"
