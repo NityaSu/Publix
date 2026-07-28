@@ -5,15 +5,14 @@ import { useElementSize, useIntersectionObserver } from '@vueuse/core';
 import ProfileReveal from '~/component/ProfileReveal.vue';
 import HeroSubtitle from '~/component/HeroSubtitle.vue';
 
-interface WordCloudItem {
+interface WordCloudWord {
   text: string;
   class: string;
   style: string;
 }
 
-interface VerticalWordItem {
-  text: string;
-  class: string;
+interface WordCloudRow {
+  words: WordCloudWord[];
 }
 
 interface HeightMatchedWord {
@@ -24,112 +23,97 @@ interface HeightMatchedWord {
 /**
  * Estimates a font size (in container-query width units) that makes a
  * whitespace-nowrap uppercase word roughly span a target share of its
- * container's width, regardless of character count — short words end up
- * bigger, long phrases end up smaller, so every row reaches a similar
- * visual width. `fill` controls how much of the row a tier is allowed to
- * claim: core words fill almost the whole row (dominant), filler words
- * only claim a fraction of it, which is what creates the "3-4 big words
- * standing out above smaller surrounding ones" hierarchy.
- *
- * Floor stays low so long phrases can keep shrinking on tablet/mobile
- * instead of overflowing the bordered box.
+ * container's width. Middle-band rows use a slightly higher fill so the
+ * 3-row "inner rectangle" is tall enough for the vertical side words.
  */
 const fluidSize = (text: string, floorPx: number, ceilPx: number, fill: number, factor = 0.72): string => {
   const cqw = (100 * fill) / (text.length * factor);
   return `font-size: clamp(${floorPx}px, ${cqw.toFixed(2)}cqw, ${ceilPx}px); line-height: 0.95;`;
 };
 
-const CORE_WORDS = new Set([
-  'TRY TO BECOME SYSTEM THINKER',
-  'ARTIFICIAL INTELLIGENCE',
-  'INNOVATION',
-  'TECHNOLOGY',
-  'PERSISTENCE',
-  'CURIOSITY',
-  'BRING IMPOSSIBLE IDEAS TO LIFE',
-]);
+const wordClass = (tone: string) =>
+  `${tone} transition-colors duration-300 hover:text-accent`;
 
-// These three share one identical size/weight/color so they read as a
-// matched, deliberately muted trio — greyer than the brighter words
-// around them, rather than each scaling to its own character count. The
-// shared size is still derived from the fill formula (using their average
-// length) so the line reaches a consistent, predictable share of the row
-// instead of an arbitrarily-chosen flat value that leaves it far short.
-const MUTED_TRIO = new Set(['INNOVATION', 'CURIOSITY', 'TECHNOLOGY']);
-const MUTED_TRIO_TONE = 'text-white/20 font-bold';
-const MUTED_TRIO_STYLE = fluidSize('INNOVATION', 10, 48, 0.72);
+const topPhrase: WordCloudWord = {
+  text: 'TRY TO BECOME SYSTEM THINKER',
+  class: wordClass('text-white/20 font-extrabold'),
+  style: fluidSize('TRY TO BECOME SYSTEM THINKER', 10, 52, 0.96),
+};
 
-// Words that should visually match another word's size (computed from that
-// other word's character count, not their own) and color/weight.
-const MATCHED_TONE = 'text-white/45 font-extrabold';
-const SIZE_MATCHES: Record<string, string> = { PERSISTENCE: 'ARTIFICIAL INTELLIGENCE' };
+const bottomPhrase: WordCloudWord = {
+  text: 'BRING IMPOSSIBLE IDEAS TO LIFE',
+  class: wordClass('text-white/20 font-extrabold'),
+  style: fluidSize('BRING IMPOSSIBLE IDEAS TO LIFE', 10, 52, 0.96),
+};
 
-const wordCloud: WordCloudItem[] = [
-  { text: 'TRY TO BECOME SYSTEM THINKER', tone: 'text-white/20 font-extrabold' },
-  { text: 'ARTIFICIAL INTELLIGENCE', tone: 'text-white/45 font-extrabold' },
-  { text: 'INNOVATION', tone: 'text-white/25 font-semibold' },
-  { text: 'CURIOSITY', tone: 'text-white/55 font-extrabold' },
-  { text: 'TECHNOLOGY', tone: 'text-white/40 font-extrabold' },
-  { text: 'PERSISTENCE', tone: 'text-white/55 font-extrabold' },
-  { text: 'BRING IMPOSSIBLE IDEAS TO LIFE', tone: 'text-white/20 font-extrabold' },
-].map(({ text, tone }) => {
-  if (MUTED_TRIO.has(text)) {
-    return {
-      text,
-      class: `${MUTED_TRIO_TONE} transition-colors duration-300 hover:text-accent`,
-      style: MUTED_TRIO_STYLE,
-    };
-  }
-  if (SIZE_MATCHES[text]) {
-    return {
-      text,
-      class: `${MATCHED_TONE} transition-colors duration-300 hover:text-accent`,
-      style: fluidSize(SIZE_MATCHES[text], 10, 52, 0.96),
-    };
-  }
-  const isCore = CORE_WORDS.has(text);
-  return {
-    text,
-    class: `${tone} transition-colors duration-300 hover:text-accent`,
-    style: isCore ? fluidSize(text, 10, 52, 0.96) : fluidSize(text, 8, 24, 0.48),
-  };
-});
+/** Middle 3 rows — sit between the vertical words in the inner band. */
+const middleRows: WordCloudRow[] = [
+  {
+    words: [{
+      text: 'ARTIFICIAL INTELLIGENCE',
+      class: wordClass('text-white/45 font-extrabold'),
+      style: fluidSize('ARTIFICIAL INTELLIGENCE', 11, 44, 0.9),
+    }],
+  },
+  {
+    words: [
+      {
+        text: 'INNOVATION',
+        class: wordClass('text-white/20 font-bold'),
+        style: fluidSize('INNOVATION', 10, 36, 0.4),
+      },
+      {
+        text: 'PERSISTENCE',
+        class: wordClass('text-white/55 font-extrabold'),
+        style: fluidSize('PERSISTENCE', 10, 36, 0.44),
+      },
+    ],
+  },
+  {
+    words: [
+      {
+        text: 'CURIOSITY',
+        class: wordClass('text-white/55 font-extrabold'),
+        style: fluidSize('CURIOSITY', 10, 36, 0.42),
+      },
+      {
+        text: 'TECHNOLOGY',
+        class: wordClass('text-white/20 font-bold'),
+        style: fluidSize('TECHNOLOGY', 10, 36, 0.42),
+      },
+    ],
+  },
+];
 
-// ELIMINATE FRICTION (left) and RESILIENCE (right) are meant to read top-to-
-// bottom exactly as tall as the horizontal word block, so the three columns
-// form a clean rectangle. Rather than a fixed Tailwind size, their font size
-// is derived from the word block's *measured* rendered height — analogous
-// to the cqw trick used for the horizontal words, but for vertical length.
-const leftVerticalWord: HeightMatchedWord = { text: 'ELIMINATE FRICTION', tone: 'text-white/40 font-bold' };
+const leftVerticalLines: HeightMatchedWord[] = [
+  { text: 'ELIMINATE', tone: 'text-white/40 font-bold' },
+  { text: 'FRICTION', tone: 'text-white/40 font-bold' },
+];
+const entrepreneurshipWord: HeightMatchedWord = { text: 'ENTREPRENEURSHIP', tone: 'text-white/30 font-semibold' };
 const resilienceWord: HeightMatchedWord = { text: 'RESILIENCE', tone: 'text-white/50 font-bold' };
 
-const entrepreneurshipWord: VerticalWordItem = {
-  text: 'ENTREPRENEURSHIP',
-  class: 'text-[10px] md:text-xs lg:text-base xl:text-xl text-white/30 font-semibold',
+/** Measured height of the middle 3-row band (inner rectangle). */
+const middleBandRef = ref<HTMLElement | null>(null);
+const { height: middleBandHeight } = useElementSize(middleBandRef);
+
+/** Fit a vertical word exactly to the middle-band height. */
+const fitVerticalToBand = (text: string, trackingEm = 0.06): string => {
+  const available = middleBandHeight.value;
+  const n = text.length;
+  const lineHeight = 1;
+  if (!available) {
+    return `font-size: 8px; line-height: ${lineHeight}; letter-spacing: ${trackingEm}em;`;
+  }
+  const size = available / (n * lineHeight + trackingEm * Math.max(n - 1, 0));
+  return `font-size: ${size.toFixed(2)}px; line-height: ${lineHeight}; letter-spacing: ${trackingEm}em;`;
 };
 
-const wordCloudRef = ref<HTMLElement | null>(null);
-const { height: wordCloudHeight } = useElementSize(wordCloudRef);
+const leftVerticalStyles = computed(() =>
+  leftVerticalLines.map((line) => fitVerticalToBand(line.text)),
+);
+const entrepreneurshipStyle = computed(() => fitVerticalToBand(entrepreneurshipWord.text));
+const resilienceStyle = computed(() => fitVerticalToBand(resilienceWord.text));
 
-const verticalMatchStyle = (
-  text: string,
-  floorPx: number,
-  ceilPx: number,
-  fill = 0.9,
-  factor = 0.72,
-): string => {
-  const available = wordCloudHeight.value;
-  if (!available) return `font-size: ${floorPx}px; line-height: 0.86;`;
-  const size = (fill * available) / (text.length * factor);
-  const clamped = Math.min(Math.max(size, floorPx), ceilPx);
-  return `font-size: ${clamped.toFixed(1)}px; line-height: 0.86;`;
-};
-
-const leftVerticalStyle = computed(() => verticalMatchStyle(leftVerticalWord.text, 8, 42));
-const resilienceStyle = computed(() => verticalMatchStyle(resilienceWord.text, 8, 42));
-
-// Caps the word-cloud block to the headline on large screens, but always
-// stays within the parent column on tablet/mobile (width: 100%).
 const headlineRef = ref<HTMLElement | null>(null);
 const { width: headlineWidth } = useElementSize(headlineRef);
 const wordCloudRowStyle = computed(() => {
@@ -173,64 +157,94 @@ useIntersectionObserver(
 
         <div class="mt-5 md:mt-6 h-1 w-32 sm:w-40 md:w-56 rounded-full bg-gradient-to-r from-accent to-transparent"></div>
 
+        <!-- Big rectangle -->
         <div
-          class="word-cloud-box font-brand mt-8 md:mt-12 lg:mt-14 flex items-start gap-1.5 sm:gap-2 select-none px-3 sm:px-4 md:px-5 py-3 sm:py-4 md:py-5 w-full max-w-full"
+          class="word-cloud-box font-brand mt-8 md:mt-12 lg:mt-14 flex flex-col gap-1 sm:gap-1.5 select-none px-2.5 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 w-full max-w-full"
           :style="wordCloudRowStyle"
+          style="container-type: inline-size"
         >
           <span class="corner tl" aria-hidden="true"></span>
           <span class="corner tr" aria-hidden="true"></span>
           <span class="corner bl" aria-hidden="true"></span>
           <span class="corner br" aria-hidden="true"></span>
 
-          <div class="hidden md:flex flex-col items-center pt-1 shrink-0">
-            <span
-              class="uppercase tracking-[0.12em] rotate-180 transition-colors duration-300 hover:text-accent"
-              :class="leftVerticalWord.tone"
-              :style="leftVerticalStyle"
-              style="writing-mode: vertical-rl"
-            >
-              {{ leftVerticalWord.text }}
-            </span>
-          </div>
-
-          <div
-            ref="wordCloudRef"
-            class="flex-1 flex flex-col justify-start gap-0 md:gap-0.5 min-w-0 overflow-hidden"
-            style="container-type: inline-size"
+          <!-- Top phrase — full width of big rectangle -->
+          <span
+            class="block w-full whitespace-nowrap uppercase overflow-hidden text-ellipsis"
+            :class="topPhrase.class"
+            :style="topPhrase.style"
           >
-            <span
-              v-for="word in wordCloud"
-              :key="word.text"
-              class="block w-full whitespace-nowrap uppercase overflow-hidden text-ellipsis"
-              :class="word.class"
-              :style="word.style"
+            {{ topPhrase.text }}
+          </span>
+
+          <!-- Inner rectangle: verticals + middle 3 rows -->
+          <div class="word-cloud-inner flex items-stretch gap-1.5 sm:gap-2 w-full min-w-0">
+            <div class="hidden md:flex flex-row items-stretch gap-0.5 shrink-0 self-stretch">
+              <span
+                v-for="(line, i) in leftVerticalLines"
+                :key="line.text"
+                class="uppercase rotate-180 transition-colors duration-300 hover:text-accent"
+                :class="line.tone"
+                :style="leftVerticalStyles[i]"
+                style="writing-mode: vertical-rl"
+              >
+                {{ line.text }}
+              </span>
+            </div>
+
+            <div
+              ref="middleBandRef"
+              class="flex-1 flex flex-col justify-start gap-0 min-w-0 overflow-hidden"
             >
-              {{ word.text }}
-            </span>
-          </div>
-
-          <div class="hidden md:flex items-start gap-1 lg:gap-1.5 shrink-0">
-            <div class="flex flex-col items-center pt-1">
-              <span
-                class="uppercase tracking-[0.12em] transition-colors duration-300 hover:text-accent"
-                :class="entrepreneurshipWord.class"
-                style="writing-mode: vertical-rl"
+              <div
+                v-for="(row, rowIndex) in middleRows"
+                :key="rowIndex"
+                class="flex w-full items-baseline gap-2 sm:gap-3 md:gap-4 whitespace-nowrap overflow-hidden"
               >
-                {{ entrepreneurshipWord.text }}
-              </span>
+                <span
+                  v-for="word in row.words"
+                  :key="word.text"
+                  class="uppercase overflow-hidden text-ellipsis"
+                  :class="word.class"
+                  :style="word.style"
+                >
+                  {{ word.text }}
+                </span>
+              </div>
             </div>
 
-            <div class="flex flex-col items-center pt-1">
-              <span
-                class="uppercase tracking-[0.12em] transition-colors duration-300 hover:text-accent"
-                :class="resilienceWord.tone"
-                :style="resilienceStyle"
-                style="writing-mode: vertical-rl"
-              >
-                {{ resilienceWord.text }}
-              </span>
+            <div class="hidden md:flex items-stretch gap-1 lg:gap-1.5 shrink-0 self-stretch">
+              <div class="flex flex-col items-center justify-start">
+                <span
+                  class="uppercase transition-colors duration-300 hover:text-accent"
+                  :class="entrepreneurshipWord.tone"
+                  :style="entrepreneurshipStyle"
+                  style="writing-mode: vertical-rl"
+                >
+                  {{ entrepreneurshipWord.text }}
+                </span>
+              </div>
+              <div class="flex flex-col items-center justify-start">
+                <span
+                  class="uppercase transition-colors duration-300 hover:text-accent"
+                  :class="resilienceWord.tone"
+                  :style="resilienceStyle"
+                  style="writing-mode: vertical-rl"
+                >
+                  {{ resilienceWord.text }}
+                </span>
+              </div>
             </div>
           </div>
+
+          <!-- Bottom phrase — full width of big rectangle -->
+          <span
+            class="block w-full whitespace-nowrap uppercase overflow-hidden text-ellipsis"
+            :class="bottomPhrase.class"
+            :style="bottomPhrase.style"
+          >
+            {{ bottomPhrase.text }}
+          </span>
         </div>
       </div>
 
