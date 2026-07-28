@@ -76,17 +76,77 @@ onUnmounted(() => {
           <div
             v-for="stat in stats"
             :key="stat.label"
-            class="border border-white/10 rounded-xl p-6 hover:border-accent/40 transition-colors duration-300"
+            class="stat-card"
           >
-            <p class="font-display font-extrabold text-accent text-3xl md:text-4xl">
-              {{ stat.value }}
-            </p>
-            <p class="mt-2 text-xs md:text-sm uppercase tracking-wide text-muted">
-              {{ stat.label }}
-            </p>
+            <span class="stat-card-label">{{ stat.label }}</span>
+            <span class="stat-card-value">{{ stat.value }}</span>
           </div>
         </div>
       </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+.stat-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 22px 28px;
+  min-height: 140px;
+  overflow: hidden;
+  background-color: #1450e8;
+  color: #fff;
+  border-radius: 8px;
+}
+
+.stat-card-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  color: #ffffffd9;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 2;
+}
+
+.stat-card-value {
+  font-size: clamp(36px, 6.2vw, 80px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  position: relative;
+  z-index: 2;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 160% at 0% 0%, #5eb8ff 0%, #3e86f5 22%, transparent 55%),
+    linear-gradient(115deg, #1450e8 0%, #0e2fdd 55%, #0a1fd8 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.25' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='gamma' amplitude='1' exponent='1.6' offset='0'/></feComponentTransfer></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 220px 220px;
+  mix-blend-mode: overlay;
+  opacity: 0.9;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 30%, black 75%);
+  mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 30%, black 75%);
+  pointer-events: none;
+  z-index: 1;
+}
+</style>
