@@ -49,12 +49,21 @@ onUnmounted(() => {
     <div class="w-full px-6 md:px-20 lg:px-[160px] grid grid-cols-1 xl:grid-cols-12 gap-12 xl:gap-16">
       <div class="xl:col-span-7">
         <p class="flex items-center gap-2 text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
-          <img
-            src="/chevron_mark.svg"
-            alt=""
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 80 200"
             class="h-5 w-auto shrink-0"
             aria-hidden="true"
-          />
+          >
+            <path
+              d="M 10 10 L 70 100 L 10 190"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="16"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
           The Journey
         </p>
 
