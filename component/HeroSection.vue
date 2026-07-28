@@ -213,27 +213,23 @@ useIntersectionObserver(
               </div>
             </div>
 
-            <div class="hidden md:flex items-stretch gap-1 lg:gap-1.5 shrink-0 self-stretch">
-              <div class="flex flex-col items-center justify-start">
-                <span
-                  class="uppercase transition-colors duration-300 hover:text-accent"
-                  :class="entrepreneurshipWord.tone"
-                  :style="entrepreneurshipStyle"
-                  style="writing-mode: vertical-rl"
-                >
-                  {{ entrepreneurshipWord.text }}
-                </span>
-              </div>
-              <div class="flex flex-col items-center justify-start">
-                <span
-                  class="uppercase transition-colors duration-300 hover:text-accent"
-                  :class="resilienceWord.tone"
-                  :style="resilienceStyle"
-                  style="writing-mode: vertical-rl"
-                >
-                  {{ resilienceWord.text }}
-                </span>
-              </div>
+            <div class="hidden md:flex flex-row items-stretch gap-0.5 shrink-0 self-stretch">
+              <span
+                class="uppercase transition-colors duration-300 hover:text-accent"
+                :class="entrepreneurshipWord.tone"
+                :style="entrepreneurshipStyle"
+                style="writing-mode: vertical-rl"
+              >
+                {{ entrepreneurshipWord.text }}
+              </span>
+              <span
+                class="uppercase transition-colors duration-300 hover:text-accent"
+                :class="resilienceWord.tone"
+                :style="resilienceStyle"
+                style="writing-mode: vertical-rl"
+              >
+                {{ resilienceWord.text }}
+              </span>
             </div>
           </div>
 
