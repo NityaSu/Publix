@@ -29,9 +29,9 @@ interface NavLink {
 }
 
 const navLinks: NavLink[] = [
-  { label: 'about', type: 'anchor', to: '/#about' },
+  { label: 'About', type: 'anchor', to: '/#about' },
   {
-    label: 'media',
+    label: 'Media',
     type: 'dropdown',
     children: [
       { label: 'Watch Reel', filter: 'video', icon: Film },
@@ -39,15 +39,15 @@ const navLinks: NavLink[] = [
     ],
   },
   {
-    label: 'insights',
+    label: 'Insights',
     type: 'dropdown',
     children: [
       { label: 'My Thoughts', to: '/insights', icon: Lightbulb },
     ],
   },
-  { label: 'projects', type: 'route', to: '/projects' },
-  { label: 'thesis', type: 'route', to: '/thesis' },
-  { label: 'contact', type: 'route', to: '/contact' },
+  { label: 'Projects', type: 'route', to: '/projects' },
+  { label: 'Thesis', type: 'route', to: '/thesis' },
+  { label: 'Contact', type: 'route', to: '/contact' },
 ];
 
 const route = useRoute();
@@ -73,11 +73,11 @@ const toggleMobileDropdown = (label: string) => {
 };
 
 const NAV_LINK_BASE =
-  "relative pb-1 text-base lg:text-lg xl:text-[22px] font-semibold lowercase tracking-wide transition-colors after:absolute after:left-0 after:bottom-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 after:content-['']";
+  "relative pb-1 text-base lg:text-lg xl:text-[22px] font-semibold tracking-wide transition-colors after:absolute after:left-0 after:bottom-0 after:h-[2px] after:bg-accent after:transition-all after:duration-300 after:content-['']";
 
 const isDropdownActive = (link: NavLink): boolean => {
-  if (link.label === 'media') return navigationStore.isMediaInView;
-  if (link.label === 'insights') return route.path === '/insights';
+  if (link.label === 'Media') return navigationStore.isMediaInView;
+  if (link.label === 'Insights') return route.path === '/insights';
   return false;
 };
 
@@ -111,13 +111,13 @@ const scrollToId = async (id: string) => {
 };
 
 const onDropdownParentClick = async (link: NavLink) => {
-  if (link.label === 'media') {
+  if (link.label === 'Media') {
     navigationStore.setMediaFilter('all');
     closeMobileMenu();
     await scrollToId('media');
     return;
   }
-  if (link.label === 'insights') {
+  if (link.label === 'Insights') {
     closeMobileMenu();
     await navigateTo('/insights');
   }
@@ -193,7 +193,7 @@ const goHomeTop = async () => {
                     v-for="child in link.children"
                     :key="child.label"
                     type="button"
-                    class="flex w-full items-center gap-2 px-4 py-2 font-dm font-medium text-sm lowercase text-muted hover:text-accent hover:bg-white/5 transition-colors"
+                    class="flex w-full items-center gap-2 px-4 py-2 font-dm font-medium text-sm text-muted hover:text-accent hover:bg-white/5 transition-colors"
                     @click="selectDropdownChild(child)"
                   >
                     <component :is="child.icon" v-if="child.icon" :size="14" />
@@ -224,7 +224,7 @@ const goHomeTop = async () => {
           <NuxtLink
             v-if="link.type !== 'dropdown'"
             :to="link.to!"
-            class="text-sm font-semibold lowercase tracking-wide transition-colors"
+            class="text-sm font-semibold tracking-wide transition-colors"
             :class="isLinkActive(link) ? 'text-accent' : 'text-white hover:text-accent'"
             @click="closeMobileMenu"
           >
@@ -234,7 +234,7 @@ const goHomeTop = async () => {
           <div v-else>
             <button
               type="button"
-              class="flex items-center justify-between w-full text-sm font-semibold lowercase tracking-wide transition-colors"
+              class="flex items-center justify-between w-full text-sm font-semibold tracking-wide transition-colors"
               :class="isDropdownActive(link) ? 'text-accent' : 'text-white hover:text-accent'"
               @click="toggleMobileDropdown(link.label)"
             >
@@ -251,7 +251,7 @@ const goHomeTop = async () => {
                 v-for="child in link.children"
                 :key="child.label"
                 type="button"
-                class="flex items-center gap-2 font-dm font-medium text-sm lowercase text-muted hover:text-accent transition-colors"
+                class="flex items-center gap-2 font-dm font-medium text-sm text-muted hover:text-accent transition-colors"
                 @click="selectDropdownChild(child)"
               >
                 <component :is="child.icon" v-if="child.icon" :size="14" />
