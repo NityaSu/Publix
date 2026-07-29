@@ -14,6 +14,7 @@ const activeImage = ref(0);
 const showLightbox = ref(false);
 const lightboxIndex = ref(0);
 const galleryRef = ref<HTMLElement | null>(null);
+const lightboxSwipeRef = ref<HTMLElement | null>(null);
 const didSwipe = ref(false);
 
 const imageCount = () => props.project.images.length;
@@ -62,12 +63,28 @@ const closeLightbox = () => {
 };
 
 const nextLightbox = () => {
-  lightboxIndex.value = (lightboxIndex.value + 1) % props.project.images.length;
+  if (imageCount() < 2) return;
+  lightboxIndex.value = (lightboxIndex.value + 1) % imageCount();
 };
 
 const prevLightbox = () => {
-  lightboxIndex.value = (lightboxIndex.value - 1 + props.project.images.length) % props.project.images.length;
+  if (imageCount() < 2) return;
+  lightboxIndex.value = (lightboxIndex.value - 1 + imageCount()) % imageCount();
 };
+
+const goToLightbox = (index: number) => {
+  if (index === lightboxIndex.value) return;
+  lightboxIndex.value = index;
+};
+
+useSwipe(lightboxSwipeRef, {
+  threshold: 40,
+  onSwipeEnd(_e, direction) {
+    if (imageCount() < 2) return;
+    if (direction === 'left') nextLightbox();
+    if (direction === 'right') prevLightbox();
+  },
+});
 
 const statusLabel = () => {
   if (props.project.status === 'placeholder') return { text: 'Coming Soon', icon: Clock };
@@ -207,43 +224,82 @@ const statusLabel = () => {
       </div>
     </div>
 
-    <!-- Lightbox -->
-    <div
-      v-if="showLightbox"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-      @click.self="closeLightbox"
-    >
-      <button
-        type="button"
-        class="absolute right-4 top-4 text-white/70 hover:text-white"
-        aria-label="Close lightbox"
-        @click="closeLightbox"
+    <!-- Lightbox — same carousel UI as PHOTO (swipe + chevrons + dots) -->
+    <Teleport to="body">
+      <div
+        v-if="showLightbox"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-6"
+        @click.self="closeLightbox"
       >
-        ✕
-      </button>
-      <button
-        v-if="project.images.length > 1"
-        type="button"
-        class="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
-        aria-label="Previous image"
-        @click.stop="prevLightbox"
-      >
-        ‹
-      </button>
-      <img
-        :src="project.images[lightboxIndex]"
-        :alt="`${project.title} full preview ${lightboxIndex + 1}`"
-        class="max-h-[80vh] max-w-[90vw] rounded-lg object-contain"
-      />
-      <button
-        v-if="project.images.length > 1"
-        type="button"
-        class="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
-        aria-label="Next image"
-        @click.stop="nextLightbox"
-      >
-        ›
-      </button>
-    </div>
+        <button
+          type="button"
+          class="absolute right-4 top-4 z-20 h-11 w-11 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center hover:bg-black/70 hover:border-accent/50 transition-colors"
+          aria-label="Close lightbox"
+          @click="closeLightbox"
+        >
+          ✕
+        </button>
+
+        <div
+          ref="lightboxSwipeRef"
+          class="group relative w-full max-w-5xl rounded-xl overflow-hidden border border-white/10 bg-surface touch-pan-y select-none"
+          role="region"
+          aria-roledescription="carousel"
+          :aria-label="`${project.title} full preview`"
+          @click.stop
+        >
+          <div class="relative w-full min-h-[200px] bg-surface flex items-center justify-center">
+            <img
+              v-for="(img, index) in project.images"
+              :key="img"
+              :src="img"
+              alt=""
+              class="w-full h-auto max-h-[80vh] object-contain transition-opacity duration-300"
+              :class="
+                index === lightboxIndex
+                  ? 'relative z-[1] opacity-100'
+                  : 'absolute inset-0 z-0 opacity-0 pointer-events-none'
+              "
+              draggable="false"
+            />
+          </div>
+
+          <button
+            v-if="project.images.length > 1"
+            type="button"
+            aria-label="Previous image"
+            class="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-10 h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
+            @click="prevLightbox"
+          >
+            <ChevronLeft :size="24" />
+          </button>
+          <button
+            v-if="project.images.length > 1"
+            type="button"
+            aria-label="Next image"
+            class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-10 h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
+            @click="nextLightbox"
+          >
+            <ChevronRight :size="24" />
+          </button>
+
+          <div
+            v-if="project.images.length > 1"
+            class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2"
+          >
+            <button
+              v-for="(img, index) in project.images"
+              :key="img"
+              type="button"
+              class="h-1.5 rounded-full transition-all duration-300"
+              :class="index === lightboxIndex ? 'w-5 bg-accent' : 'w-1.5 bg-white/40 hover:bg-white/70'"
+              :aria-label="`Go to image ${index + 1}`"
+              :aria-current="index === lightboxIndex ? 'true' : undefined"
+              @click="goToLightbox(index)"
+            />
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
