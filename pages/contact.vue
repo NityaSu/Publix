@@ -6,7 +6,7 @@ useHead({
   title: 'Contact',
 });
 
-const CONTACT_EMAIL = 'Suonnitya7@gmail.com';
+const CONTACT_EMAIL = 'suonnitya@gmail.com';
 
 const name = ref('');
 const phone = ref('');
