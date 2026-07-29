@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Github, ExternalLink, AlertCircle, Clock } from 'lucide-vue-next';
+import { Github, ExternalLink, AlertCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { useSwipe } from '@vueuse/core';
 import type { Project } from '~/data/projects';
 
 interface Props {
@@ -12,11 +13,48 @@ const props = defineProps<Props>();
 const activeImage = ref(0);
 const showLightbox = ref(false);
 const lightboxIndex = ref(0);
+const galleryRef = ref<HTMLElement | null>(null);
+const didSwipe = ref(false);
+
+const imageCount = () => props.project.images.length;
+
+const nextImage = () => {
+  if (imageCount() < 2) return;
+  activeImage.value = (activeImage.value + 1) % imageCount();
+};
+
+const prevImage = () => {
+  if (imageCount() < 2) return;
+  activeImage.value = (activeImage.value - 1 + imageCount()) % imageCount();
+};
+
+const goToImage = (index: number) => {
+  if (index === activeImage.value) return;
+  activeImage.value = index;
+};
+
+useSwipe(galleryRef, {
+  threshold: 40,
+  onSwipeEnd(_e, direction) {
+    if (imageCount() < 2) return;
+    didSwipe.value = true;
+    if (direction === 'left') nextImage();
+    if (direction === 'right') prevImage();
+  },
+});
 
 const openLightbox = (index: number) => {
   if (props.project.images.length === 0) return;
   lightboxIndex.value = index;
   showLightbox.value = true;
+};
+
+const onGalleryClick = () => {
+  if (didSwipe.value) {
+    didSwipe.value = false;
+    return;
+  }
+  openLightbox(activeImage.value);
 };
 
 const closeLightbox = () => {
@@ -50,17 +88,48 @@ const statusLabel = () => {
 
     <!-- Image gallery / placeholder -->
     <div
-      class="relative aspect-video w-full bg-[#0d0d0d] overflow-hidden cursor-pointer"
-      @click="openLightbox(0)"
+      ref="galleryRef"
+      class="relative aspect-video w-full bg-[#0d0d0d] overflow-hidden cursor-pointer touch-pan-y select-none"
+      role="region"
+      aria-roledescription="carousel"
+      :aria-label="`${project.title} image gallery`"
+      @click="onGalleryClick"
     >
       <template v-if="project.images.length > 0">
         <img
-          :src="project.images[activeImage]"
-          :alt="`${project.title} preview ${activeImage + 1}`"
-          class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          v-for="(img, index) in project.images"
+          :key="img"
+          :src="img"
+          alt=""
+          class="h-full w-full object-cover transition-opacity duration-300"
+          :class="
+            index === activeImage
+              ? 'relative z-[1] opacity-100'
+              : 'absolute inset-0 z-0 opacity-0 pointer-events-none'
+          "
+          draggable="false"
         />
 
-        <!-- Thumbnails -->
+        <button
+          v-if="project.images.length > 1"
+          type="button"
+          aria-label="Previous image"
+          class="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
+          @click.stop="prevImage"
+        >
+          <ChevronLeft :size="16" />
+        </button>
+        <button
+          v-if="project.images.length > 1"
+          type="button"
+          aria-label="Next image"
+          class="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
+          @click.stop="nextImage"
+        >
+          <ChevronRight :size="16" />
+        </button>
+
+        <!-- Dots -->
         <div
           v-if="project.images.length > 1"
           class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-2"
@@ -72,7 +141,8 @@ const statusLabel = () => {
             class="h-1.5 rounded-full transition-all duration-200"
             :class="i === activeImage ? 'w-5 bg-accent' : 'w-1.5 bg-white/40 hover:bg-white/70'"
             :aria-label="`Show image ${i + 1}`"
-            @click.stop="activeImage = i"
+            :aria-current="i === activeImage ? 'true' : undefined"
+            @click.stop="goToImage(i)"
           />
         </div>
       </template>
