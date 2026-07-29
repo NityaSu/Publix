@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { Film, Image as ImageIcon, Play, ChevronLeft, ChevronRight } from 'lucide-vue-next';
-import { useIntersectionObserver, useSwipe } from '@vueuse/core';
+import { ref, computed } from 'vue';
+import { Film, Image as ImageIcon, Play } from 'lucide-vue-next';
+import { useIntersectionObserver } from '@vueuse/core';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
+import ImageCarousel from '~/component/ImageCarousel.vue';
 
 interface FilterOption {
   label: string;
@@ -91,42 +92,6 @@ const photos: PhotoSlide[] = [
 
 const photoIndex = ref(0);
 const currentPhoto = computed(() => photos[photoIndex.value]!);
-const failedPhotos = ref<Record<string, boolean>>({});
-
-const photoSwipeRef = ref<HTMLElement | null>(null);
-
-const nextPhoto = () => {
-  photoIndex.value = (photoIndex.value + 1) % photos.length;
-};
-
-const prevPhoto = () => {
-  photoIndex.value = (photoIndex.value - 1 + photos.length) % photos.length;
-};
-
-const goToPhoto = (index: number) => {
-  if (index === photoIndex.value) return;
-  photoIndex.value = index;
-};
-
-const markPhotoFailed = (src: string) => {
-  failedPhotos.value = { ...failedPhotos.value, [src]: true };
-};
-
-useSwipe(photoSwipeRef, {
-  threshold: 40,
-  onSwipeEnd(_e, direction) {
-    if (direction === 'left') nextPhoto();
-    if (direction === 'right') prevPhoto();
-  },
-});
-
-// Warm both images so left/right never flashes empty/alt text while decoding.
-onMounted(() => {
-  for (const photo of photos) {
-    const img = new Image();
-    img.src = photo.src;
-  }
-});
 
 const videoSrc = ref('/assets/videos/meituan-reel.mp4');
 const videoFailed = ref(false);
@@ -227,67 +192,16 @@ useIntersectionObserver(
 
         <div class="flex flex-col gap-8">
           <div v-if="showPhoto">
-            <div
-              ref="photoSwipeRef"
-              class="group relative rounded-xl overflow-hidden border border-white/10 bg-surface touch-pan-y select-none"
-              role="region"
-              aria-roledescription="carousel"
+            <ImageCarousel
+              v-model="photoIndex"
+              :images="photos"
               :aria-label="currentPhoto.alt"
-            >
-              <div class="relative w-full min-h-[200px] bg-surface">
-                <img
-                  v-for="(photo, index) in photos"
-                  :key="photo.src"
-                  :src="photo.src"
-                  alt=""
-                  class="w-full h-auto max-h-[520px] object-contain transition-opacity duration-300"
-                  :class="
-                    index === photoIndex
-                      ? 'relative z-[1] opacity-100'
-                      : 'absolute inset-0 z-0 opacity-0 pointer-events-none'
-                  "
-                  draggable="false"
-                  @error="markPhotoFailed(photo.src)"
-                />
-                <div
-                  v-if="failedPhotos[currentPhoto.src]"
-                  class="absolute inset-0 z-[2] flex items-center justify-center bg-gradient-to-br from-accent/20 via-surface to-background"
-                  aria-hidden="true"
-                >
-                  <ImageIcon :size="32" class="text-accent/60" />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                aria-label="Previous photo"
-                class="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
-                @click="prevPhoto"
-              >
-                <ChevronLeft :size="18" />
-              </button>
-              <button
-                type="button"
-                aria-label="Next photo"
-                class="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
-                @click="nextPhoto"
-              >
-                <ChevronRight :size="18" />
-              </button>
-
-              <div class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
-                <button
-                  v-for="(photo, index) in photos"
-                  :key="photo.src"
-                  type="button"
-                  class="h-1.5 rounded-full transition-all duration-300"
-                  :class="index === photoIndex ? 'w-5 bg-accent' : 'w-1.5 bg-white/40 hover:bg-white/70'"
-                  :aria-label="`Go to photo ${index + 1}`"
-                  :aria-current="index === photoIndex ? 'true' : undefined"
-                  @click="goToPhoto(index)"
-                />
-              </div>
-            </div>
+              fit="contain"
+              arrow-size="md"
+              show-error-fallback
+              frame-class="rounded-xl border border-white/10 bg-surface"
+              image-class="max-h-[520px]"
+            />
             <p class="mt-3 text-xs md:text-sm text-muted leading-relaxed">
               {{ currentPhoto.caption }}
             </p>

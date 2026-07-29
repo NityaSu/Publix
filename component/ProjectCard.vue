@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Github, ExternalLink, AlertCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-vue-next';
-import { useSwipe } from '@vueuse/core';
+import { Github, ExternalLink, AlertCircle, Clock } from 'lucide-vue-next';
 import type { Project } from '~/data/projects';
+import ImageCarousel from '~/component/ImageCarousel.vue';
 
 interface Props {
   project: Project;
@@ -13,36 +13,6 @@ const props = defineProps<Props>();
 const activeImage = ref(0);
 const showLightbox = ref(false);
 const lightboxIndex = ref(0);
-const galleryRef = ref<HTMLElement | null>(null);
-const lightboxSwipeRef = ref<HTMLElement | null>(null);
-const didSwipe = ref(false);
-
-const imageCount = () => props.project.images.length;
-
-const nextImage = () => {
-  if (imageCount() < 2) return;
-  activeImage.value = (activeImage.value + 1) % imageCount();
-};
-
-const prevImage = () => {
-  if (imageCount() < 2) return;
-  activeImage.value = (activeImage.value - 1 + imageCount()) % imageCount();
-};
-
-const goToImage = (index: number) => {
-  if (index === activeImage.value) return;
-  activeImage.value = index;
-};
-
-useSwipe(galleryRef, {
-  threshold: 40,
-  onSwipeEnd(_e, direction) {
-    if (imageCount() < 2) return;
-    didSwipe.value = true;
-    if (direction === 'left') nextImage();
-    if (direction === 'right') prevImage();
-  },
-});
 
 const openLightbox = (index: number) => {
   if (props.project.images.length === 0) return;
@@ -50,41 +20,9 @@ const openLightbox = (index: number) => {
   showLightbox.value = true;
 };
 
-const onGalleryClick = () => {
-  if (didSwipe.value) {
-    didSwipe.value = false;
-    return;
-  }
-  openLightbox(activeImage.value);
-};
-
 const closeLightbox = () => {
   showLightbox.value = false;
 };
-
-const nextLightbox = () => {
-  if (imageCount() < 2) return;
-  lightboxIndex.value = (lightboxIndex.value + 1) % imageCount();
-};
-
-const prevLightbox = () => {
-  if (imageCount() < 2) return;
-  lightboxIndex.value = (lightboxIndex.value - 1 + imageCount()) % imageCount();
-};
-
-const goToLightbox = (index: number) => {
-  if (index === lightboxIndex.value) return;
-  lightboxIndex.value = index;
-};
-
-useSwipe(lightboxSwipeRef, {
-  threshold: 40,
-  onSwipeEnd(_e, direction) {
-    if (imageCount() < 2) return;
-    if (direction === 'left') nextLightbox();
-    if (direction === 'right') prevLightbox();
-  },
-});
 
 const statusLabel = () => {
   if (props.project.status === 'placeholder') return { text: 'Coming Soon', icon: Clock };
@@ -104,73 +42,24 @@ const statusLabel = () => {
     </div>
 
     <!-- Image gallery / placeholder -->
-    <div
-      ref="galleryRef"
-      class="relative aspect-video w-full bg-[#0d0d0d] overflow-hidden cursor-pointer touch-pan-y select-none"
-      role="region"
-      aria-roledescription="carousel"
+    <ImageCarousel
+      v-if="project.images.length > 0"
+      v-model="activeImage"
+      :images="project.images"
       :aria-label="`${project.title} image gallery`"
-      @click="onGalleryClick"
+      fit="cover"
+      arrow-size="sm"
+      clickable
+      frame-class="aspect-video w-full bg-[#0d0d0d]"
+      image-class="h-full"
+      @select="openLightbox"
+    />
+    <div
+      v-else
+      class="relative aspect-video w-full bg-[#0d0d0d] flex flex-col items-center justify-center gap-2 text-white/40"
     >
-      <template v-if="project.images.length > 0">
-        <img
-          v-for="(img, index) in project.images"
-          :key="img"
-          :src="img"
-          alt=""
-          class="h-full w-full object-cover transition-opacity duration-300"
-          :class="
-            index === activeImage
-              ? 'relative z-[1] opacity-100'
-              : 'absolute inset-0 z-0 opacity-0 pointer-events-none'
-          "
-          draggable="false"
-        />
-
-        <button
-          v-if="project.images.length > 1"
-          type="button"
-          aria-label="Previous image"
-          class="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
-          @click.stop="prevImage"
-        >
-          <ChevronLeft :size="16" />
-        </button>
-        <button
-          v-if="project.images.length > 1"
-          type="button"
-          aria-label="Next image"
-          class="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
-          @click.stop="nextImage"
-        >
-          <ChevronRight :size="16" />
-        </button>
-
-        <!-- Dots -->
-        <div
-          v-if="project.images.length > 1"
-          class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-2"
-        >
-          <button
-            v-for="(img, i) in project.images"
-            :key="img"
-            type="button"
-            class="h-1.5 rounded-full transition-all duration-200"
-            :class="i === activeImage ? 'w-5 bg-accent' : 'w-1.5 bg-white/40 hover:bg-white/70'"
-            :aria-label="`Show image ${i + 1}`"
-            :aria-current="i === activeImage ? 'true' : undefined"
-            @click.stop="goToImage(i)"
-          />
-        </div>
-      </template>
-
-      <div
-        v-else
-        class="flex h-full w-full flex-col items-center justify-center gap-2 text-white/40"
-      >
-        <Clock :size="32" />
-        <span class="text-xs uppercase tracking-widest">Coming Soon</span>
-      </div>
+      <Clock :size="32" />
+      <span class="text-xs uppercase tracking-widest">Coming Soon</span>
     </div>
 
     <!-- Content -->
@@ -224,7 +113,7 @@ const statusLabel = () => {
       </div>
     </div>
 
-    <!-- Lightbox — same carousel UI as PHOTO (swipe + chevrons + dots) -->
+    <!-- Lightbox -->
     <Teleport to="body">
       <div
         v-if="showLightbox"
@@ -240,64 +129,17 @@ const statusLabel = () => {
           ✕
         </button>
 
-        <div
-          ref="lightboxSwipeRef"
-          class="group relative w-full max-w-5xl rounded-xl overflow-hidden border border-white/10 bg-surface touch-pan-y select-none"
-          role="region"
-          aria-roledescription="carousel"
-          :aria-label="`${project.title} full preview`"
-          @click.stop
-        >
-          <div class="relative w-full min-h-[200px] bg-surface flex items-center justify-center">
-            <img
-              v-for="(img, index) in project.images"
-              :key="img"
-              :src="img"
-              alt=""
-              class="w-full h-auto max-h-[80vh] object-contain transition-opacity duration-300"
-              :class="
-                index === lightboxIndex
-                  ? 'relative z-[1] opacity-100'
-                  : 'absolute inset-0 z-0 opacity-0 pointer-events-none'
-              "
-              draggable="false"
-            />
-          </div>
-
-          <button
-            v-if="project.images.length > 1"
-            type="button"
-            aria-label="Previous image"
-            class="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-10 h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
-            @click="prevLightbox"
-          >
-            <ChevronLeft :size="24" />
-          </button>
-          <button
-            v-if="project.images.length > 1"
-            type="button"
-            aria-label="Next image"
-            class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-10 h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center opacity-100 transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50"
-            @click="nextLightbox"
-          >
-            <ChevronRight :size="24" />
-          </button>
-
-          <div
-            v-if="project.images.length > 1"
-            class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2"
-          >
-            <button
-              v-for="(img, index) in project.images"
-              :key="img"
-              type="button"
-              class="h-1.5 rounded-full transition-all duration-300"
-              :class="index === lightboxIndex ? 'w-5 bg-accent' : 'w-1.5 bg-white/40 hover:bg-white/70'"
-              :aria-label="`Go to image ${index + 1}`"
-              :aria-current="index === lightboxIndex ? 'true' : undefined"
-              @click="goToLightbox(index)"
-            />
-          </div>
+        <div class="w-full max-w-5xl" @click.stop>
+          <ImageCarousel
+            v-model="lightboxIndex"
+            :images="project.images"
+            :aria-label="`${project.title} full preview`"
+            fit="contain"
+            arrow-size="lg"
+            arrows-always-visible
+            frame-class="rounded-xl border border-white/10 bg-surface"
+            image-class="max-h-[80vh]"
+          />
         </div>
       </div>
     </Teleport>
