@@ -329,7 +329,7 @@ useIntersectionObserver(
 }
 
 .hero-cta-bar {
-  background-image: url('/assets/images/bg1.png');
+  background-image: url('/assets/images/bg2.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
