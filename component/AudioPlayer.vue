@@ -21,6 +21,7 @@ const audioRef = ref<HTMLAudioElement | null>(null);
 const isPlaying = ref(false);
 const isLoading = ref(false);
 const hasStarted = ref(false);
+const hasFinished = ref(false);
 const hasGeneratedOnce = ref(false);
 const currentTime = ref(0);
 const duration = ref(0);
@@ -110,6 +111,7 @@ const statusLabel = computed(() => {
   if (isLoading.value && !hasGeneratedOnce.value) return 'Generating audio...';
   if (isPlaying.value) return 'Now playing...';
   if (hasStarted.value && !isPlaying.value) return 'Pausing';
+  if (hasFinished.value) return 'Listen again';
   return '';
 });
 
@@ -157,6 +159,7 @@ function onPlay() {
   isPlaying.value = true;
   isLoading.value = false;
   hasStarted.value = true;
+  hasFinished.value = false;
   hasGeneratedOnce.value = true;
   persistGeneratedOnce(props.slug);
   emit('playingchange', true);
@@ -174,6 +177,7 @@ function onPause() {
 function onEnded() {
   isPlaying.value = false;
   hasStarted.value = false;
+  hasFinished.value = true;
   stopTimeLoop();
   setCurrentTime(0);
   if (audioRef.value) audioRef.value.currentTime = 0;
@@ -255,6 +259,7 @@ watch(
     isPlaying.value = false;
     isLoading.value = false;
     hasStarted.value = false;
+    hasFinished.value = false;
     syncGeneratedOnce(slug);
     setCurrentTime(0);
     duration.value = 0;
@@ -280,8 +285,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="relative w-full rounded-[20px] border border-white/15 bg-background px-4"
-    :class="statusLabel ? 'pb-4 pt-5' : 'py-4'"
+    class="relative w-full rounded-[20px] border border-white/15 bg-background px-4 pb-4 pt-5"
     role="group"
     aria-label="Listen to article"
   >
@@ -298,9 +302,11 @@ onBeforeUnmount(() => {
       @ended="onEnded"
     />
 
+    <!-- Keep a visible label after end so the top border notch never closes. -->
     <div
       v-if="statusLabel"
       class="absolute left-4 right-4 top-0 flex -translate-y-1/2 items-center gap-3"
+      aria-live="polite"
     >
       <span class="shrink-0 bg-background pr-3 text-sm font-medium leading-none text-muted">
         {{ statusLabel }}
