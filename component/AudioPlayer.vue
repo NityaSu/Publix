@@ -23,9 +23,16 @@ const speedIndex = ref(0);
 const src = computed(() => `/api/listen/${props.slug}.mp3`);
 const playbackRate = computed(() => SPEEDS[speedIndex.value]);
 const waveformHeights = [
-  32, 46, 56, 48, 60, 50, 58, 52, 61, 55, 63, 57,
-  64, 59, 62, 54, 60, 51, 58, 49, 55, 46, 52, 44,
+  32, 46, 56, 48, 60, 50, 58, 52, 61, 55, 63, 57, 64, 59, 62, 54,
+  60, 51, 58, 49, 55, 46, 52, 44, 38, 50, 58, 47, 61, 53, 59, 48,
+  62, 56, 64, 51, 57, 45, 53, 42, 49, 38, 46, 40, 54, 47, 60, 44,
 ] as const;
+
+const statusLabel = computed(() => {
+  if (isLoading.value) return 'Generating audio...';
+  if (isPlaying.value || hasStarted.value) return 'Now playing';
+  return '';
+});
 
 const progressPercent = computed(() => {
   if (!duration.value) return 0;
@@ -163,7 +170,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="w-full max-w-[490px] rounded-[20px] border border-zinc-200 bg-white px-4 py-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]"
+    class="relative w-full rounded-[20px] border border-white/15 bg-background px-4"
+    :class="statusLabel ? 'pb-4 pt-5' : 'py-4'"
     role="group"
     aria-label="Listen to article"
   >
@@ -180,50 +188,52 @@ onBeforeUnmount(() => {
       @ended="onEnded"
     />
 
+    <div
+      v-if="statusLabel"
+      class="absolute left-4 right-4 top-0 flex -translate-y-1/2 items-center gap-3"
+    >
+      <span class="shrink-0 bg-background pr-3 text-sm font-medium leading-none text-muted">
+        {{ statusLabel }}
+      </span>
+      <div class="h-px flex-1 bg-white/15" />
+    </div>
+
     <div class="flex items-center gap-4">
       <button
         type="button"
-        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black text-white transition hover:bg-black/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:opacity-80"
+        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-background transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-80"
         :aria-label="isPlaying ? 'Pause' : 'Play'"
         @click="toggle"
       >
         <span
           v-if="isLoading"
-          class="h-6 w-6 animate-spin rounded-full border-2 border-white/25 border-t-white"
+          class="h-6 w-6 animate-spin rounded-full border-2 border-background/25 border-t-background"
           aria-hidden="true"
         />
         <Pause v-else-if="isPlaying" class="h-6 w-6" fill="currentColor" />
         <Play v-else class="ml-1 h-6 w-6" fill="currentColor" />
       </button>
 
-      <div class="relative min-w-0 flex-1">
-        <p
-          v-if="isLoading"
-          class="absolute inset-x-0 top-0.5 z-10 text-center text-xs font-medium leading-none text-black/60"
-        >
-          Generating audio...
-        </p>
+      <div
+        class="flex h-12 min-w-0 flex-1 items-center gap-[3px]"
+        role="progressbar"
+        :aria-valuenow="progressPercent"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
         <div
-          class="flex h-12 items-center gap-1 pt-3"
-          role="progressbar"
-          :aria-valuenow="progressPercent"
-          aria-valuemin="0"
-          aria-valuemax="100"
-        >
-          <div
-            v-for="(height, index) in waveformHeights"
-            :key="index"
-            class="audio-wave-bar w-1 shrink-0 rounded-full transition-colors duration-150"
-            :class="index / (waveformHeights.length - 1) < progressPercent / 100 ? 'bg-black' : 'bg-black/85'"
-            :style="{
-              height: `${height}%`,
-              opacity: isLoading ? 0.55 : 1,
-              animationDelay: `${index * 70}ms`,
-              animationDuration: `${900 + (index % 5) * 140}ms`,
-              animationPlayState: isPlaying || isLoading ? 'running' : 'paused',
-            }"
-          />
-        </div>
+          v-for="(height, index) in waveformHeights"
+          :key="index"
+          class="audio-wave-bar min-w-0 flex-1 rounded-full transition-colors duration-150"
+          :class="index / (waveformHeights.length - 1) < progressPercent / 100 ? 'bg-white' : 'bg-white/35'"
+          :style="{
+            height: `${height}%`,
+            opacity: isLoading ? 0.55 : 1,
+            animationDelay: `${index * 70}ms`,
+            animationDuration: `${900 + (index % 5) * 140}ms`,
+            animationPlayState: isPlaying || isLoading ? 'running' : 'paused',
+          }"
+        />
       </div>
     </div>
   </div>
