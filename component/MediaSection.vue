@@ -35,35 +35,51 @@ interface PhotoSlide {
 const storyBlocks: StoryBlock[] = [
   {
     type: 'text',
-    html: 'In the winter of 2022, during COVID lockdown, Beijing was silent. All students had left campus. My friend and I were among the few still in the dorms.',
+    html: 'In the winter of 2022, during the COVID lockdown, Beijing was unusually quiet. Most students had already left campus. My friend and I were among the few who remained in the dormitories.',
   },
   {
     type: 'text',
-    html: 'I was sleeping. Then I heard it — the sound of driving machines, rolling past the window. Again and again. I wondered... what is that? I really want to see.',
+    html: 'One afternoon, I was asleep when I heard something outside. The sound of machines moving along the road below my window. They kept passing by, again and again. Curious, I wondered what they were.',
   },
   {
     type: 'text',
-    html: 'I went down. I called my friend to come down and watch with me.',
+    html: 'I went downstairs and called my friend to join me.',
   },
   {
     type: 'text',
-    html: 'There they were — a <strong class="text-white font-semibold">batch of twelve</strong> autonomous Meituan delivery robots. Twelve of them. No drivers. No remote controls. Just machines navigating the empty campus, speaking to people in Chinese:',
+    html: 'What we saw was unforgettable.',
+  },
+  {
+    type: 'text',
+    html: 'A fleet of <strong class="text-white font-semibold">twelve autonomous Meituan delivery robots</strong> was moving across the empty campus. Twelve robots. No drivers. No remote controls. Just machines navigating on their own.',
+  },
+  {
+    type: 'text',
+    html: 'As they moved, they spoke to people in Chinese.',
   },
   {
     type: 'quote',
     lines: [
-      { chinese: '请让一让，谢谢', translation: 'Please make way, thank you' },
+      { chinese: '请让一让，谢谢', translation: 'Please make way. Thank you.' },
       { chinese: '您的外卖已到达', translation: 'Your delivery has arrived' },
       { chinese: '请注意避让', translation: 'Please watch out' },
     ],
   },
   {
     type: 'text',
-    html: 'I tried to pause one by standing directly in front of it. It stopped. Sensed me. Adjusted its path. Spoke again. I took a photo as a memory.',
+    html: 'I decided to test one. I stood directly in front of it. The robot stopped immediately. It detected me, adjusted its route, and continued on its way. I took a photo to remember the moment.',
   },
   {
     type: 'text',
-    html: 'That curiosity — <strong class="text-white font-semibold">how can it see? how can it understand? how can it speak?</strong> — led me straight into NLP and Computer Vision. Not from a textbook. From a robot delivering lunch in an empty university, speaking Chinese to students like us who had nowhere else to go.',
+    html: 'That experience stayed with me. I kept asking myself the same questions: <strong class="text-white font-semibold">How can a machine see? How can it understand the world around it? How can it communicate with people?</strong>',
+  },
+  {
+    type: 'text',
+    html: 'The search for those answers eventually led me into Natural Language Processing and Computer Vision.',
+  },
+  {
+    type: 'text',
+    html: 'It didn&apos;t begin with a textbook or a classroom lecture. It began with a delivery robot carrying lunch through a silent university campus, speaking Chinese to students like us during a time when the world seemed to stand still.',
   },
 ];
 
