@@ -24,6 +24,13 @@ export default defineNuxtConfig({
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseKey: process.env.SUPABASE_KEY || '',
   },
+  vite: {
+    server: {
+      watch: {
+        ignored: ['**/.venv/**'],
+      },
+    },
+  },
   app: {
     head: {
       title: 'Home',

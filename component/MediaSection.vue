@@ -5,6 +5,9 @@ import { useIntersectionObserver } from '@vueuse/core';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 import ImageCarousel from '~/component/ImageCarousel.vue';
 import AudioPlayer from '~/component/AudioPlayer.vue';
+import ReadAlongText from '~/component/ReadAlongText.vue';
+import { STORY_SLUG, buildStoryTimeline } from '~/data/story';
+import alignment from '~/data/alignments/moment-that-sparked-everything-2.json';
 
 interface FilterOption {
   label: string;
@@ -17,71 +20,37 @@ const filterOptions: FilterOption[] = [
   { label: 'Watch Reel', value: 'video', icon: Film },
 ];
 
-interface QuoteLine {
-  chinese: string;
-  translation: string;
-}
-
-type StoryBlock =
-  | { type: 'text'; html: string }
-  | { type: 'quote'; lines: QuoteLine[] };
-
 interface PhotoSlide {
   src: string;
   alt: string;
   caption: string;
 }
 
-const storyBlocks: StoryBlock[] = [
-  {
-    type: 'text',
-    html: 'In the winter of 2022, during the COVID lockdown, Beijing was unusually quiet. Most students had already left campus. My friend and I were among the few who remained in the dormitories.',
-  },
-  {
-    type: 'text',
-    html: 'One afternoon, I was asleep when I heard something outside. The sound of machines moving along the road below my window. They kept passing by, again and again. Curious, I wondered what they were.',
-  },
-  {
-    type: 'text',
-    html: 'I went downstairs and called my friend to join me.',
-  },
-  {
-    type: 'text',
-    html: 'What we saw was unforgettable.',
-  },
-  {
-    type: 'text',
-    html: 'A fleet of <strong class="text-white font-semibold">twelve autonomous Meituan delivery robots</strong> was moving across the empty campus. Twelve robots. No drivers. No remote controls. Just machines navigating on their own.',
-  },
-  {
-    type: 'text',
-    html: 'As they moved, they spoke to people in Chinese.',
-  },
-  {
-    type: 'quote',
-    lines: [
-      { chinese: '请让一让，谢谢', translation: 'Please make way. Thank you.' },
-      { chinese: '您的外卖已到达', translation: 'Your delivery has arrived' },
-      { chinese: '请注意避让', translation: 'Please watch out' },
-    ],
-  },
-  {
-    type: 'text',
-    html: 'I decided to test one. I stood directly in front of it. The robot stopped immediately. It detected me, adjusted its route, and continued on its way. I took a photo to remember the moment.',
-  },
-  {
-    type: 'text',
-    html: 'That experience stayed with me. I kept asking myself the same questions: <strong class="text-white font-semibold">How can a machine see? How can it understand the world around it? How can it communicate with people?</strong>',
-  },
-  {
-    type: 'text',
-    html: 'The search for those answers eventually led me into Natural Language Processing and Computer Vision.',
-  },
-  {
-    type: 'text',
-    html: 'It didn&apos;t begin with a textbook or a classroom lecture. It began with a delivery robot carrying lunch through a silent university campus, speaking Chinese to students like us during a time when the world seemed to stand still.',
-  },
-];
+const { renderBlocks } = buildStoryTimeline();
+const alignmentWords = alignment.words;
+const alignmentPhrases = alignment.phrases ?? [];
+const highlightDelaySec = alignment.highlightDelaySec ?? 0.18;
+
+const audioTime = ref(0);
+const isAudioPlaying = ref(false);
+const hasAudioStarted = ref(false);
+
+function onAudioTime(time: number) {
+  audioTime.value = time;
+}
+
+function onPlayingChange(playing: boolean) {
+  isAudioPlaying.value = playing;
+  if (playing) hasAudioStarted.value = true;
+}
+
+function onAudioEnded() {
+  isAudioPlaying.value = false;
+  hasAudioStarted.value = false;
+  audioTime.value = 0;
+}
+
+const readAlongActive = computed(() => hasAudioStarted.value);
 
 const navigationStore = useNavigationStore();
 
@@ -164,31 +133,23 @@ useIntersectionObserver(
         </h2>
 
         <div class="mt-5">
-          <AudioPlayer slug="moment-that-sparked-everything-2" />
+          <AudioPlayer
+            :slug="STORY_SLUG"
+            @timeupdate="onAudioTime"
+            @playingchange="onPlayingChange"
+            @ended="onAudioEnded"
+          />
         </div>
 
-        <div class="mt-8 md:mt-10 space-y-5">
-          <template v-for="(block, index) in storyBlocks" :key="index">
-            <p
-              v-if="block.type === 'text'"
-              class="text-muted text-sm md:text-base leading-relaxed"
-              v-html="block.html"
-            />
-
-            <blockquote
-              v-else
-              class="border-l-2 border-accent/50 pl-4 space-y-1.5 my-2"
-            >
-              <p
-                v-for="line in block.lines"
-                :key="line.chinese"
-                class="text-sm md:text-base leading-relaxed"
-              >
-                <span class="text-white font-medium">“{{ line.chinese }}”</span>
-                <span class="text-muted"> ({{ line.translation }})</span>
-              </p>
-            </blockquote>
-          </template>
+        <div class="mt-8 md:mt-10">
+          <ReadAlongText
+            :blocks="renderBlocks"
+            :words="alignmentWords"
+            :phrases="alignmentPhrases"
+            :current-time="audioTime"
+            :active="readAlongActive"
+            :highlight-delay-sec="highlightDelaySec"
+          />
         </div>
       </div>
 

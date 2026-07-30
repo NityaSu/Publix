@@ -6,6 +6,12 @@ const props = defineProps<{
   slug: string;
 }>();
 
+const emit = defineEmits<{
+  timeupdate: [time: number];
+  playingchange: [playing: boolean];
+  ended: [];
+}>();
+
 /** Minimum time to show "Generating audio..." before playback starts. */
 const MIN_LOADING_MS = 5600;
 
@@ -20,6 +26,30 @@ const currentTime = ref(0);
 const duration = ref(0);
 const loadingStartedAt = ref(0);
 const speedIndex = ref(0);
+let rafId = 0;
+
+function setCurrentTime(time: number) {
+  currentTime.value = time;
+  emit('timeupdate', time);
+}
+
+function tick() {
+  const el = audioRef.value;
+  if (el && !el.paused) {
+    setCurrentTime(el.currentTime);
+    rafId = requestAnimationFrame(tick);
+  }
+}
+
+function startTimeLoop() {
+  cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(tick);
+}
+
+function stopTimeLoop() {
+  cancelAnimationFrame(rafId);
+  rafId = 0;
+}
 
 const STORAGE_PREFIX = 'p:v1:';
 const LEGACY_STORAGE_PREFIX = 'audio-generated:';
@@ -110,7 +140,8 @@ function onLoadedMetadata() {
 function onTimeUpdate() {
   const el = audioRef.value;
   if (!el) return;
-  currentTime.value = el.currentTime;
+  // Fallback when rAF isn't running (paused scrub / buffer).
+  if (!rafId) setCurrentTime(el.currentTime);
 }
 
 function onWaiting() {
@@ -128,17 +159,26 @@ function onPlay() {
   hasStarted.value = true;
   hasGeneratedOnce.value = true;
   persistGeneratedOnce(props.slug);
+  emit('playingchange', true);
+  startTimeLoop();
 }
 
 function onPause() {
   isPlaying.value = false;
+  emit('playingchange', false);
+  stopTimeLoop();
+  const el = audioRef.value;
+  if (el) setCurrentTime(el.currentTime);
 }
 
 function onEnded() {
   isPlaying.value = false;
   hasStarted.value = false;
-  currentTime.value = 0;
+  stopTimeLoop();
+  setCurrentTime(0);
   if (audioRef.value) audioRef.value.currentTime = 0;
+  emit('playingchange', false);
+  emit('ended');
 }
 
 function waitForCanPlay(el: HTMLAudioElement) {
@@ -211,13 +251,15 @@ function cycleSpeed() {
 watch(
   () => props.slug,
   (slug) => {
+    stopTimeLoop();
     isPlaying.value = false;
     isLoading.value = false;
     hasStarted.value = false;
     syncGeneratedOnce(slug);
-    currentTime.value = 0;
+    setCurrentTime(0);
     duration.value = 0;
     speedIndex.value = 0;
+    emit('playingchange', false);
     const el = audioRef.value;
     if (el) {
       el.pause();
@@ -231,6 +273,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  stopTimeLoop();
   audioRef.value?.pause();
 });
 </script>
