@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Pause, Play } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -15,10 +15,58 @@ const audioRef = ref<HTMLAudioElement | null>(null);
 const isPlaying = ref(false);
 const isLoading = ref(false);
 const hasStarted = ref(false);
+const hasGeneratedOnce = ref(false);
 const currentTime = ref(0);
 const duration = ref(0);
 const loadingStartedAt = ref(0);
 const speedIndex = ref(0);
+
+const STORAGE_PREFIX = 'p:v1:';
+const LEGACY_STORAGE_PREFIX = 'audio-generated:';
+
+function hashSlug(slug: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < slug.length; i += 1) {
+    hash ^= slug.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function storageKey(slug: string) {
+  return `${STORAGE_PREFIX}${hashSlug(slug)}`;
+}
+
+function legacyStorageKey(slug: string) {
+  return `${LEGACY_STORAGE_PREFIX}${slug}`;
+}
+
+function readGeneratedOnce(slug: string) {
+  if (typeof localStorage === 'undefined') return false;
+
+  const key = storageKey(slug);
+  if (localStorage.getItem(key) === '1') return true;
+
+  // One-time migration from the old obvious key name.
+  const legacyKey = legacyStorageKey(slug);
+  if (localStorage.getItem(legacyKey) === '1') {
+    localStorage.setItem(key, '1');
+    localStorage.removeItem(legacyKey);
+    return true;
+  }
+
+  return false;
+}
+
+function persistGeneratedOnce(slug: string) {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(storageKey(slug), '1');
+  localStorage.removeItem(legacyStorageKey(slug));
+}
+
+function syncGeneratedOnce(slug: string) {
+  hasGeneratedOnce.value = readGeneratedOnce(slug);
+}
 
 const src = computed(() => `/api/listen/${props.slug}.mp3`);
 const playbackRate = computed(() => SPEEDS[speedIndex.value]);
@@ -29,8 +77,9 @@ const waveformHeights = [
 ] as const;
 
 const statusLabel = computed(() => {
-  if (isLoading.value) return 'Generating audio...';
-  if (isPlaying.value || hasStarted.value) return 'Now playing';
+  if (isLoading.value && !hasGeneratedOnce.value) return 'Generating audio...';
+  if (isPlaying.value) return 'Now playing...';
+  if (hasStarted.value && !isPlaying.value) return 'Pausing';
   return '';
 });
 
@@ -65,6 +114,7 @@ function onTimeUpdate() {
 }
 
 function onWaiting() {
+  if (hasGeneratedOnce.value) return;
   if (!isPlaying.value && hasStarted.value) isLoading.value = true;
 }
 
@@ -76,6 +126,8 @@ function onPlay() {
   isPlaying.value = true;
   isLoading.value = false;
   hasStarted.value = true;
+  hasGeneratedOnce.value = true;
+  persistGeneratedOnce(props.slug);
 }
 
 function onPause() {
@@ -128,6 +180,16 @@ async function toggle() {
     return;
   }
 
+  if (hasGeneratedOnce.value) {
+    try {
+      applyPlaybackRate();
+      await el.play();
+    } catch {
+      isPlaying.value = false;
+    }
+    return;
+  }
+
   isLoading.value = true;
   loadingStartedAt.value = Date.now();
 
@@ -148,10 +210,11 @@ function cycleSpeed() {
 
 watch(
   () => props.slug,
-  () => {
+  (slug) => {
     isPlaying.value = false;
     isLoading.value = false;
     hasStarted.value = false;
+    syncGeneratedOnce(slug);
     currentTime.value = 0;
     duration.value = 0;
     speedIndex.value = 0;
@@ -162,6 +225,10 @@ watch(
     }
   },
 );
+
+onMounted(() => {
+  syncGeneratedOnce(props.slug);
+});
 
 onBeforeUnmount(() => {
   audioRef.value?.pause();
@@ -206,7 +273,7 @@ onBeforeUnmount(() => {
         @click="toggle"
       >
         <span
-          v-if="isLoading"
+          v-if="isLoading && !hasGeneratedOnce"
           class="h-6 w-6 animate-spin rounded-full border-2 border-background/25 border-t-background"
           aria-hidden="true"
         />
