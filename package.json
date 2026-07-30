@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "upload:media": "node --env-file=.env scripts/upload-media.mjs"
   },
   "dependencies": {
     "@pinia/nuxt": "^0.11.2",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@nuxtjs/fontaine": "^0.5.0",
-    "@nuxtjs/tailwindcss": "^6.14.0"
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@types/node": "^26.1.2"
   }
 }

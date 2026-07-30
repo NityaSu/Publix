@@ -1,3 +1,5 @@
+import { mediaUrl } from '~/utils/media';
+
 export type ProjectStatus = 'shipped' | 'lost' | 'placeholder';
 
 export interface Project {
@@ -26,12 +28,12 @@ export const projects: Project[] = [
     status: 'lost',
     stack: ['React', 'Java'],
     images: [
-      '/assets/images/projects/ecom1.jpg',
-      '/assets/images/projects/ecom2.jpg',
-      '/assets/images/projects/ecom3.jpg',
-      '/assets/images/projects/ecom4.jpg',
-      '/assets/images/projects/ecom5.jpg',
-      '/assets/images/projects/ecom6.jpg',
+      mediaUrl('images/projects/ecom1.jpg'),
+      mediaUrl('images/projects/ecom2.jpg'),
+      mediaUrl('images/projects/ecom3.jpg'),
+      mediaUrl('images/projects/ecom4.jpg'),
+      mediaUrl('images/projects/ecom5.jpg'),
+      mediaUrl('images/projects/ecom6.jpg'),
     ],
   },
   {
@@ -45,10 +47,10 @@ export const projects: Project[] = [
     status: 'shipped',
     stack: ['YOLO', 'Python'],
     images: [
-      '/assets/images/projects/od1.jpg',
-      '/assets/images/projects/od2.jpg',
-      '/assets/images/projects/od3.jpg',
-      '/assets/images/projects/od4.jpg',
+      mediaUrl('images/projects/od1.jpg'),
+      mediaUrl('images/projects/od2.jpg'),
+      mediaUrl('images/projects/od3.jpg'),
+      mediaUrl('images/projects/od4.jpg'),
     ],
     github: 'https://github.com/nityasuon/semi-supervised-object-detection',
   },
@@ -62,7 +64,7 @@ export const projects: Project[] = [
     year: '2023',
     status: 'shipped',
     stack: ['Python', 'scikit-learn'],
-    images: ['/assets/images/projects/recommendation.jpg'],
+    images: [mediaUrl('images/projects/recommendation.jpg')],
     github: 'https://github.com/nityasuon/movie-recommendation-system',
   },
   {
@@ -76,8 +78,8 @@ export const projects: Project[] = [
     status: 'shipped',
     stack: ['Python', 'Transformers'],
     images: [
-      '/assets/images/projects/toxic1.jpg',
-      '/assets/images/projects/toxic2.jpg',
+      mediaUrl('images/projects/toxic1.jpg'),
+      mediaUrl('images/projects/toxic2.jpg'),
     ],
     github: 'https://github.com/nityasuon/toxic-detector',
   },

@@ -285,10 +285,10 @@ useIntersectionObserver(
 
       <div class="flex justify-center lg:justify-end">
         <ProfileReveal
-          profile-src="/assets/images/profile.jpg"
-          profile-alt-src="/assets/images/profile2.jpg"
+          :profile-src="mediaUrl('images/profile.jpg')"
+          :profile-alt-src="mediaUrl('images/profile2.jpg')"
           profile-alt="NITYA SUON"
-          logo-src="/assets/images/logo.png"
+          :logo-src="mediaUrl('images/logo.png')"
           fallback-initial="S"
         />
       </div>
@@ -316,6 +316,7 @@ useIntersectionObserver(
     <div
       class="hero-cta-bar mt-6 md:mt-8 w-full min-h-[140px] md:min-h-[180px] lg:min-h-[220px] transition-all duration-700 ease-out delay-200"
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+      :style="{ backgroundImage: `url('${mediaUrl('images/bg2.png')}')` }"
       aria-hidden="true"
     />
   </section>
@@ -329,7 +330,6 @@ useIntersectionObserver(
 }
 
 .hero-cta-bar {
-  background-image: url('/assets/images/bg2.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

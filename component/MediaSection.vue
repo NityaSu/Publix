@@ -96,12 +96,12 @@ const showVideo = computed(
 // runtime public-folder URLs instead of trying to statically resolve/bundle them.
 const photos: PhotoSlide[] = [
   {
-    src: '/assets/images/meituan-robot.jpg',
+    src: mediaUrl('images/meituan-robot.jpg'),
     alt: 'Standing with the Meituan autonomous delivery robot, BJUT campus, 2022',
     caption: 'Standing with the Meituan autonomous delivery robot, BJUT campus, 2022',
   },
   {
-    src: '/assets/images/meituan-robot2.jpg',
+    src: mediaUrl('images/meituan-robot2.jpg'),
     alt: 'Meituan autonomous delivery robot up close, BJUT campus, 2022',
     caption: 'Up close with the Meituan delivery robot, BJUT campus, 2022',
   },
@@ -110,7 +110,7 @@ const photos: PhotoSlide[] = [
 const photoIndex = ref(0);
 const currentPhoto = computed(() => photos[photoIndex.value]!);
 
-const videoSrc = ref('/assets/videos/meituan-reel.mp4');
+const videoSrc = ref(mediaUrl('videos/meituan-reel.mp4'));
 const videoFailed = ref(false);
 
 const videoRef = ref<HTMLVideoElement | null>(null);

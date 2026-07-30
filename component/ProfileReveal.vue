@@ -12,10 +12,10 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  profileSrc: '/assets/images/profile.jpg',
-  profileAltSrc: '/assets/images/profile2.jpg',
+  profileSrc: mediaUrl('images/profile.jpg'),
+  profileAltSrc: mediaUrl('images/profile2.jpg'),
   profileAlt: 'Profile photo',
-  logoSrc: '/assets/images/logo.png',
+  logoSrc: mediaUrl('images/logo.png'),
   fallbackInitial: 'S',
   loadingDurationMs: 1500,
 });
