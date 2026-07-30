@@ -4,6 +4,10 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@pinia/nuxt', '@nuxtjs/tailwindcss', '@nuxtjs/fontaine'],
   css: ['~/assets/css/main.css'],
+  runtimeConfig: {
+    supabaseUrl: process.env.SUPABASE_URL || '',
+    supabaseKey: process.env.SUPABASE_KEY || '',
+  },
   app: {
     head: {
       title: 'Home',

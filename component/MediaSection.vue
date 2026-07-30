@@ -4,6 +4,7 @@ import { Film, Image as ImageIcon, Play } from 'lucide-vue-next';
 import { useIntersectionObserver } from '@vueuse/core';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 import ImageCarousel from '~/component/ImageCarousel.vue';
+import AudioPlayer from '~/component/AudioPlayer.vue';
 
 interface FilterOption {
   label: string;
@@ -145,6 +146,10 @@ useIntersectionObserver(
         <h2 class="mt-4 max-w-4xl font-display font-extrabold uppercase text-white text-3xl sm:text-4xl md:text-5xl leading-tight">
           The Moment That Sparked Everything
         </h2>
+
+        <div class="mt-5">
+          <AudioPlayer slug="moment-that-sparked-everything" />
+        </div>
 
         <div class="mt-8 md:mt-10 space-y-5">
           <template v-for="(block, index) in storyBlocks" :key="index">
