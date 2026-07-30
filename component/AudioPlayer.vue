@@ -27,6 +27,7 @@ const currentTime = ref(0);
 const duration = ref(0);
 const loadingStartedAt = ref(0);
 const speedIndex = ref(0);
+const waveformRef = ref<HTMLElement | null>(null);
 let rafId = 0;
 
 function setCurrentTime(time: number) {
@@ -215,6 +216,57 @@ function waitForMinLoading() {
   return new Promise<void>((resolve) => setTimeout(resolve, remaining));
 }
 
+async function ensureAudioReady() {
+  const el = audioRef.value;
+  if (!el) return null;
+  if (el.readyState >= HTMLMediaElement.HAVE_METADATA && Number.isFinite(el.duration)) {
+    duration.value = el.duration;
+    return el;
+  }
+  await waitForCanPlay(el);
+  if (Number.isFinite(el.duration)) duration.value = el.duration;
+  return el;
+}
+
+/** Jump to a time (seconds) and start playback. Used by waveform + phrase clicks. */
+async function seekTo(time: number) {
+  const el = await ensureAudioReady();
+  if (!el) return;
+
+  const dur = duration.value || el.duration || 0;
+  const clamped =
+    Number.isFinite(dur) && dur > 0
+      ? Math.min(Math.max(0, time), Math.max(0, dur - 0.05))
+      : Math.max(0, time);
+
+  el.currentTime = clamped;
+  setCurrentTime(clamped);
+  hasFinished.value = false;
+  hasStarted.value = true;
+  hasGeneratedOnce.value = true;
+  persistGeneratedOnce(props.slug);
+  applyPlaybackRate();
+
+  try {
+    await el.play();
+  } catch {
+    isPlaying.value = false;
+  }
+}
+
+async function onWaveformPointer(event: MouseEvent) {
+  const track = waveformRef.value;
+  if (!track) return;
+  const rect = track.getBoundingClientRect();
+  if (rect.width <= 0) return;
+  const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+  const el = await ensureAudioReady();
+  if (!el) return;
+  const dur = duration.value || el.duration || 0;
+  if (!(dur > 0)) return;
+  await seekTo(ratio * dur);
+}
+
 async function toggle() {
   const el = audioRef.value;
   if (!el) return;
@@ -251,6 +303,8 @@ function cycleSpeed() {
   speedIndex.value = (speedIndex.value + 1) % SPEEDS.length;
   applyPlaybackRate();
 }
+
+defineExpose({ seekTo });
 
 watch(
   () => props.slug,
@@ -331,16 +385,20 @@ onBeforeUnmount(() => {
       </button>
 
       <div
-        class="flex h-12 min-w-0 flex-1 items-center gap-[3px]"
-        role="progressbar"
+        ref="waveformRef"
+        class="flex h-12 min-w-0 flex-1 cursor-pointer items-center gap-[3px]"
+        role="slider"
+        tabindex="0"
         :aria-valuenow="progressPercent"
         aria-valuemin="0"
         aria-valuemax="100"
+        aria-label="Seek audio"
+        @click="onWaveformPointer"
       >
         <div
           v-for="(height, index) in waveformHeights"
           :key="index"
-          class="audio-wave-bar min-w-0 flex-1 rounded-full transition-colors duration-150"
+          class="audio-wave-bar pointer-events-none min-w-0 flex-1 rounded-full transition-colors duration-150"
           :class="index / (waveformHeights.length - 1) < progressPercent / 100 ? 'bg-white' : 'bg-white/35'"
           :style="{
             height: `${height}%`,

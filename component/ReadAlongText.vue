@@ -33,11 +33,43 @@ const props = withDefaults(
   },
 );
 
+const emit = defineEmits<{
+  seek: [time: number];
+}>();
+
 const wordEls = new Map<number, HTMLElement>();
 
 function setWordRef(index: number, el: Element | null) {
   if (el instanceof HTMLElement) wordEls.set(index, el);
   else wordEls.delete(index);
+}
+
+function phraseStartForAlignIndex(alignIndex: number): number | null {
+  const timed = props.words[alignIndex];
+  if (!timed) return null;
+  if (typeof timed.phraseId === 'number') {
+    const phrase = props.phrases.find((p) => p.id === timed.phraseId);
+    if (phrase) return phrase.start;
+  }
+  return timed.start;
+}
+
+function onLineClick(line: StoryWord[]) {
+  const spoken = line.find((w) => w.alignIndex != null);
+  if (!spoken || spoken.alignIndex == null) return;
+  const start = phraseStartForAlignIndex(spoken.alignIndex);
+  if (start == null) return;
+  emit('seek', start);
+}
+
+function onWordClick(word: StoryWord, line: StoryWord[]) {
+  if (word.alignIndex == null) {
+    onLineClick(line);
+    return;
+  }
+  const start = phraseStartForAlignIndex(word.alignIndex);
+  if (start == null) return;
+  emit('seek', start);
 }
 
 /** Active phrase from timeline — stays lit across pauses inside the phrase. */
@@ -131,28 +163,29 @@ function isWordActive(word: StoryWord, line?: StoryWord[]) {
 
 function wordClass(word: StoryWord, line?: StoryWord[]) {
   const isActive = isWordActive(word, line);
+  const clickable = 'cursor-pointer hover:text-accent/80';
 
   if (word.role === 'chinese' || word.role === 'quote-mark') {
     return isActive
-      ? 'text-accent font-medium transition-colors duration-200'
-      : 'text-white font-medium transition-colors duration-200';
+      ? `text-accent font-medium transition-colors duration-200 ${clickable}`
+      : `text-white font-medium transition-colors duration-200 ${clickable}`;
   }
 
   if (word.role === 'paren') {
     return isActive
-      ? 'text-accent transition-colors duration-200'
-      : 'text-muted transition-colors duration-200';
+      ? `text-accent transition-colors duration-200 ${clickable}`
+      : `text-muted transition-colors duration-200 ${clickable}`;
   }
 
   if (isActive) {
-    return 'text-accent font-semibold transition-colors duration-200';
+    return `text-accent font-semibold transition-colors duration-200 ${clickable}`;
   }
 
   if (word.emphasize) {
-    return 'text-white font-semibold transition-colors duration-200';
+    return `text-white font-semibold transition-colors duration-200 ${clickable}`;
   }
 
-  return 'text-muted transition-colors duration-200';
+  return `text-muted transition-colors duration-200 ${clickable}`;
 }
 
 /** Insert a space between tokens only when both are regular/translation words. */
@@ -176,9 +209,20 @@ function needsSpace(curr: StoryWord, next: StoryWord | undefined) {
           <span
             v-if="word.alignIndex != null"
             :ref="(el) => setWordRef(word.alignIndex!, el as Element | null)"
-            :class="wordClass(word)"
+            :class="wordClass(word, block.lines[0])"
+            role="button"
+            tabindex="0"
+            @click="onWordClick(word, block.lines[0]!)"
+            @keydown.enter.prevent="onWordClick(word, block.lines[0]!)"
           >{{ word.text }}</span>
-          <span v-else :class="wordClass(word)">{{ word.text }}</span>
+          <span
+            v-else
+            :class="wordClass(word, block.lines[0])"
+            role="button"
+            tabindex="0"
+            @click="onWordClick(word, block.lines[0]!)"
+            @keydown.enter.prevent="onWordClick(word, block.lines[0]!)"
+          >{{ word.text }}</span>
           <template v-if="needsSpace(word, block.lines[0]![wordIndex + 1])">{{ ' ' }}</template>
         </template>
       </p>
@@ -197,8 +241,19 @@ function needsSpace(curr: StoryWord, next: StoryWord | undefined) {
               v-if="word.alignIndex != null"
               :ref="(el) => setWordRef(word.alignIndex!, el as Element | null)"
               :class="wordClass(word, line)"
+              role="button"
+              tabindex="0"
+              @click="onWordClick(word, line)"
+              @keydown.enter.prevent="onWordClick(word, line)"
             >{{ word.text }}</span>
-            <span v-else :class="wordClass(word, line)">{{ word.text }}</span>
+            <span
+              v-else
+              :class="wordClass(word, line)"
+              role="button"
+              tabindex="0"
+              @click="onWordClick(word, line)"
+              @keydown.enter.prevent="onWordClick(word, line)"
+            >{{ word.text }}</span>
             <template v-if="needsSpace(word, line[wordIndex + 1])">{{ ' ' }}</template>
           </template>
         </p>

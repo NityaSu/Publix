@@ -34,6 +34,7 @@ const highlightDelaySec = alignment.highlightDelaySec ?? 0.18;
 const audioTime = ref(0);
 const isAudioPlaying = ref(false);
 const hasAudioStarted = ref(false);
+const audioPlayerRef = ref<{ seekTo: (time: number) => Promise<void> } | null>(null);
 
 function onAudioTime(time: number) {
   audioTime.value = time;
@@ -48,6 +49,12 @@ function onAudioEnded() {
   isAudioPlaying.value = false;
   hasAudioStarted.value = false;
   audioTime.value = 0;
+}
+
+async function onSeek(time: number) {
+  hasAudioStarted.value = true;
+  audioTime.value = time;
+  await audioPlayerRef.value?.seekTo(time);
 }
 
 const readAlongActive = computed(() => hasAudioStarted.value);
@@ -134,6 +141,7 @@ useIntersectionObserver(
 
         <div class="mt-5">
           <AudioPlayer
+            ref="audioPlayerRef"
             :slug="STORY_SLUG"
             @timeupdate="onAudioTime"
             @playingchange="onPlayingChange"
@@ -149,6 +157,7 @@ useIntersectionObserver(
             :current-time="audioTime"
             :active="readAlongActive"
             :highlight-delay-sec="highlightDelaySec"
+            @seek="onSeek"
           />
         </div>
       </div>
