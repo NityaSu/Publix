@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
-import { ChevronLeft, ChevronRight, Film, Image as ImageIcon, Play } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Film, Image as ImageIcon, Play, Volume2, VolumeX } from 'lucide-vue-next';
 import { useIntersectionObserver } from '@vueuse/core';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 import ImageCarousel from '~/component/ImageCarousel.vue';
@@ -112,25 +112,36 @@ const videoRef = ref<HTMLVideoElement | null>(null);
 /** Set true after Watch Reel click — browsers allow unmuted play from that gesture. */
 const soundUnlocked = ref(false);
 const isVideoPlaying = ref(false);
+const isMuted = ref(false);
 
 const hasMultipleReels = computed(() => reels.length > 1);
+
+const applyMuteState = () => {
+  const el = videoRef.value;
+  if (!el) return;
+  el.muted = isMuted.value;
+};
 
 const playReel = async () => {
   await nextTick();
   const el = videoRef.value;
   if (!el || navigationStore.mediaFilter !== 'video') return;
-  soundUnlocked.value = true;
-  el.muted = false;
+  applyMuteState();
   try {
     await el.play();
     isVideoPlaying.value = true;
   } catch {
-    // If unmuted play fails, fall back to muted so the reel still plays.
-    el.muted = true;
-    try {
-      await el.play();
-      isVideoPlaying.value = true;
-    } catch {
+    // Unmuted autoplay blocked — mute and retry, keep UI in sync.
+    if (!el.muted) {
+      isMuted.value = true;
+      el.muted = true;
+      try {
+        await el.play();
+        isVideoPlaying.value = true;
+      } catch {
+        isVideoPlaying.value = false;
+      }
+    } else {
       isVideoPlaying.value = false;
     }
   }
@@ -147,8 +158,27 @@ const toggleReelPlayback = () => {
   else void playReel();
 };
 
+const toggleReelSound = async () => {
+  soundUnlocked.value = true;
+  isMuted.value = !isMuted.value;
+  applyMuteState();
+  // Turning sound on while paused / blocked: try play unmuted.
+  if (!isMuted.value && videoRef.value) {
+    try {
+      if (videoRef.value.paused) await videoRef.value.play();
+      isVideoPlaying.value = !videoRef.value.paused;
+    } catch {
+      isMuted.value = true;
+      applyMuteState();
+    }
+  }
+};
+
 const selectMediaFilter = (filter: MediaFilter) => {
-  if (filter === 'video') soundUnlocked.value = true;
+  if (filter === 'video') {
+    soundUnlocked.value = true;
+    isMuted.value = false;
+  }
   navigationStore.setMediaFilter(filter);
 };
 
@@ -180,6 +210,7 @@ watch(
   (filter) => {
     if (filter === 'video') {
       soundUnlocked.value = true;
+      isMuted.value = false;
       void playReel();
     } else {
       pauseReel();
@@ -337,6 +368,18 @@ useIntersectionObserver(
                       fill="currentColor"
                       stroke-width="0"
                     />
+                  </button>
+
+                  <!-- TikTok-style mute / unmute -->
+                  <button
+                    v-if="!videoFailed[currentReel.src]"
+                    type="button"
+                    class="absolute bottom-3 right-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+                    :aria-label="isMuted ? 'Unmute sound' : 'Mute sound'"
+                    @click.stop="toggleReelSound"
+                  >
+                    <VolumeX v-if="isMuted" :size="18" />
+                    <Volume2 v-else :size="18" />
                   </button>
                 </div>
               </div>
