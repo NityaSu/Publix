@@ -47,8 +47,9 @@ const insights: InsightItem[] = [
 
     <div class="mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       <InsightCard
-        v-for="insight in insights"
+        v-for="(insight, index) in insights"
         :key="insight.id"
+        :number="`${String(index + 1).padStart(2, '0')}.`"
         :title-html="insight.titleHtml"
         :quote-html="insight.quoteHtml"
         :body="insight.body"

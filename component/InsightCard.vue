@@ -4,6 +4,7 @@ import { ref } from 'vue';
 export type InsightVariant = 'curiosity' | 'campus' | 'persistence';
 
 interface Props {
+  number?: string;
   titleHtml?: string;
   quoteHtml?: string;
   body?: string;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), {
+  number: '',
   titleHtml: '',
   quoteHtml: '',
   body: '',
@@ -54,13 +56,21 @@ const toggleFlip = () => {
           <h3
             v-if="titleHtml"
             class="font-display font-bold text-white text-xl md:text-2xl leading-snug"
-            v-html="titleHtml"
-          />
+          >
+            <span
+              v-if="number"
+              class="font-dm font-medium text-accent mr-2"
+            >{{ number }}</span><span v-html="titleHtml" />
+          </h3>
           <p
             v-if="quoteHtml"
             class="font-display font-bold text-white text-xl md:text-2xl leading-snug"
-            v-html="quoteHtml"
-          />
+          >
+            <span
+              v-if="number && !titleHtml"
+              class="font-dm font-medium text-accent mr-2"
+            >{{ number }}</span><span v-html="quoteHtml" />
+          </p>
           <p
             v-if="body"
             class="text-sm md:text-[15px] leading-relaxed text-[#a0a0a0]"
