@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { ChevronLeft, ChevronRight, Film, Image as ImageIcon, Play } from 'lucide-vue-next';
+import { ref, computed, watch, nextTick } from 'vue';
+import { Film, Image as ImageIcon } from 'lucide-vue-next';
 import { useIntersectionObserver, useSwipe } from '@vueuse/core';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 import ImageCarousel from '~/component/ImageCarousel.vue';
@@ -109,45 +109,56 @@ const reelIndex = ref(0);
 const currentReel = computed(() => reels[reelIndex.value]!);
 const videoFailed = ref<Record<string, boolean>>({});
 const videoRef = ref<HTMLVideoElement | null>(null);
-const isVideoPlaying = ref(false);
 const reelFrameRef = ref<HTMLElement | null>(null);
+/** Set true after Watch Reel click — browsers allow unmuted play from that gesture. */
+const soundUnlocked = ref(false);
 
 const hasMultipleReels = computed(() => reels.length > 1);
 
-const pauseReel = () => {
+const playReel = async () => {
+  await nextTick();
   const el = videoRef.value;
-  if (!el) return;
-  el.pause();
-  isVideoPlaying.value = false;
-};
-
-const playVideo = async () => {
-  const el = videoRef.value;
-  if (!el) return;
+  if (!el || navigationStore.mediaFilter !== 'video') return;
+  el.muted = !soundUnlocked.value;
   try {
     await el.play();
-    isVideoPlaying.value = true;
   } catch {
-    isVideoPlaying.value = false;
+    // If unmuted play fails, fall back to muted so the reel still plays.
+    if (!el.muted) {
+      el.muted = true;
+      try {
+        await el.play();
+      } catch {
+        /* ignore */
+      }
+    }
   }
 };
 
-/** Paint first frame once metadata is ready (avoids black box before play). */
-const onReelLoadedMetadata = (event: Event) => {
-  const el = event.target as HTMLVideoElement;
-  if (!isVideoPlaying.value && el.currentTime < 0.05) {
-    el.currentTime = 0.001;
-  }
+const pauseReel = () => {
+  videoRef.value?.pause();
+};
+
+const selectMediaFilter = (filter: MediaFilter) => {
+  if (filter === 'video') soundUnlocked.value = true;
+  navigationStore.setMediaFilter(filter);
 };
 
 const goToReel = (index: number) => {
-  if (index === reelIndex.value || index < 0 || index >= reels.length) return;
+  if (index < 0 || index >= reels.length) return;
+  if (index === reelIndex.value) {
+    void playReel();
+    return;
+  }
   pauseReel();
   reelIndex.value = index;
 };
 
 const nextReel = () => {
-  if (!hasMultipleReels.value) return;
+  if (!hasMultipleReels.value) {
+    void playReel();
+    return;
+  }
   goToReel((reelIndex.value + 1) % reels.length);
 };
 
@@ -164,8 +175,21 @@ useSwipe(reelFrameRef, {
   },
 });
 
-watch(showVideo, (visible) => {
-  if (!visible) pauseReel();
+watch(
+  () => navigationStore.mediaFilter,
+  (filter) => {
+    if (filter === 'video') {
+      // Navbar / external filter change — unlock sound if user clicked Watch Reel there.
+      soundUnlocked.value = true;
+      void playReel();
+    } else {
+      pauseReel();
+    }
+  },
+);
+
+watch(reelIndex, () => {
+  if (navigationStore.mediaFilter === 'video') void playReel();
 });
 
 const sectionRef = ref<HTMLElement | null>(null);
@@ -245,7 +269,7 @@ useIntersectionObserver(
                 ? 'border-accent text-accent'
                 : 'border-white/10 text-muted hover:border-white/30'
             "
-            @click="navigationStore.setMediaFilter(option.value)"
+            @click="selectMediaFilter(option.value)"
           >
             <component :is="option.icon" :size="12" />
             {{ option.label }}
@@ -270,7 +294,6 @@ useIntersectionObserver(
           </div>
 
           <div v-if="showVideo">
-            <!-- Same chrome as photo carousel; inner 9:16 box reserves height before metadata -->
             <div
               ref="reelFrameRef"
               class="group relative overflow-hidden rounded-xl border border-white/10 bg-surface touch-pan-y select-none"
@@ -286,14 +309,11 @@ useIntersectionObserver(
                     ref="videoRef"
                     :src="currentReel.src"
                     class="absolute inset-0 h-full w-full object-contain"
-                    :controls="isVideoPlaying"
                     playsinline
-                    preload="metadata"
-                    @loadedmetadata="onReelLoadedMetadata"
+                    preload="auto"
                     @error="videoFailed = { ...videoFailed, [currentReel.src]: true }"
-                    @ended="isVideoPlaying = false"
-                    @pause="isVideoPlaying = false"
-                    @play="isVideoPlaying = true"
+                    @ended="nextReel"
+                    @click="soundUnlocked = true; playReel()"
                   />
                   <div
                     v-else
@@ -302,39 +322,8 @@ useIntersectionObserver(
                     <Film :size="32" class="text-accent/60" />
                     <span class="text-xs uppercase tracking-widest text-muted">Video</span>
                   </div>
-
-                  <button
-                    v-if="!isVideoPlaying && !videoFailed[currentReel.src]"
-                    type="button"
-                    aria-label="Play video"
-                    class="absolute inset-0 z-[1] flex items-center justify-center bg-black/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300"
-                    @click="playVideo"
-                  >
-                    <span class="h-14 w-14 rounded-full border border-white/20 bg-black/50 flex items-center justify-center hover:bg-black/70">
-                      <Play :size="22" class="text-white ml-1" fill="white" />
-                    </span>
-                  </button>
                 </div>
               </div>
-
-              <button
-                v-if="hasMultipleReels"
-                type="button"
-                aria-label="Previous reel"
-                class="absolute left-2 top-1/2 z-10 -translate-y-1/2 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50 opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                @click.stop="prevReel"
-              >
-                <ChevronLeft :size="18" />
-              </button>
-              <button
-                v-if="hasMultipleReels"
-                type="button"
-                aria-label="Next reel"
-                class="absolute right-2 top-1/2 z-10 -translate-y-1/2 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50 opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                @click.stop="nextReel"
-              >
-                <ChevronRight :size="18" />
-              </button>
 
               <div
                 v-if="hasMultipleReels"
