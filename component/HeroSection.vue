@@ -25,7 +25,7 @@ const wordClass = (tone: string) =>
   `${tone} transition-colors duration-300 hover:text-accent`;
 
 const topPhrase = {
-  text: 'TRY TO BECOME SYSTEM THINKER',
+  text: 'OBSESSED WITH HOW SYSTEMS WORK',
   weight: 600,
   class: wordClass('text-white/20 font-semibold'),
 };
