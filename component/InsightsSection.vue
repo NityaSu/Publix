@@ -35,6 +35,15 @@ const insights: InsightItem[] = [
       "Hyundai's founder survived 3–4 major failures before building an industrial giant.\n\nShell's founder started from nothing, but with a big vision and the courage to challenge Rockefeller, the oil giant of his era.",
     variant: 'persistence',
   },
+  {
+    id: 'bureaucracy',
+    titleHtml: 'Reducing Complex Bureaucracy',
+    body:
+      'Bureaucracy is the silent killer on speed and momentum. High-performing organizations stay agile by continuously reducing complex process, unnecessary approvals, and administrative friction.',
+    backBody:
+      'Amazon established its "Two-Pizza Rule" for teams and decentralized decision-making so small units could launch ideas without waiting for corporate approvals.\n\nSony had many of the technologies and assets needed to lead the digital music and smartphone revolutions, but internal organizational silos and slow decision-making made it difficult to coordinate across divisions. Combined with strong competition from Apple and Samsung, this contributed to Sony missing major opportunities in the MP3 player and smartphone eras.\n\nSo the core idea—that internal bureaucracy and silos hurt Sony\'s ability to respond quickly—is widely accepted and based on real events. The claim that this was the sole reason Apple and Samsung overtook Sony is an oversimplification.',
+    variant: 'curiosity',
+  },
 ];
 </script>
 
