@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Film, Image as ImageIcon, Play } from 'lucide-vue-next';
-import { useIntersectionObserver } from '@vueuse/core';
+import { ref, computed, watch } from 'vue';
+import { ChevronLeft, ChevronRight, Film, Image as ImageIcon, Play } from 'lucide-vue-next';
+import { useIntersectionObserver, useSwipe } from '@vueuse/core';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 import ImageCarousel from '~/component/ImageCarousel.vue';
 import AudioPlayer from '~/component/AudioPlayer.vue';
 import ReadAlongText from '~/component/ReadAlongText.vue';
 import { STORY_SLUG, buildStoryTimeline } from '~/data/story';
 import alignment from '~/data/alignments/moment-that-sparked-everything-2.json';
+import { mediaUrl } from '~/utils/media';
 
 interface FilterOption {
   label: string;
@@ -86,16 +87,86 @@ const photos: PhotoSlide[] = [
 const photoIndex = ref(0);
 const currentPhoto = computed(() => photos[photoIndex.value]!);
 
-const videoSrc = ref(mediaUrl('videos/meituan-reel.mp4'));
-const videoFailed = ref(false);
+interface ReelSlide {
+  src: string;
+  caption: string;
+}
 
+/** Portrait reels (464×848) — frame is reserved via aspect-[9/16] so layout never collapses. */
+const reels: ReelSlide[] = [
+  {
+    src: mediaUrl('videos/meituan-reel.mp4'),
+    caption:
+      "Me and my civil engineering friends trying to test the robot's intelligence by disrupting it.",
+  },
+  {
+    src: mediaUrl('videos/meituan-reel-2.mp4'),
+    caption: 'Stopped messing with the robot and rushed to the canteen instead.',
+  },
+];
+
+const reelIndex = ref(0);
+const currentReel = computed(() => reels[reelIndex.value]!);
+const videoFailed = ref<Record<string, boolean>>({});
 const videoRef = ref<HTMLVideoElement | null>(null);
 const isVideoPlaying = ref(false);
+const reelFrameRef = ref<HTMLElement | null>(null);
 
-const playVideo = () => {
-  videoRef.value?.play();
-  isVideoPlaying.value = true;
+const hasMultipleReels = computed(() => reels.length > 1);
+
+const pauseReel = () => {
+  const el = videoRef.value;
+  if (!el) return;
+  el.pause();
+  isVideoPlaying.value = false;
 };
+
+const playVideo = async () => {
+  const el = videoRef.value;
+  if (!el) return;
+  try {
+    await el.play();
+    isVideoPlaying.value = true;
+  } catch {
+    isVideoPlaying.value = false;
+  }
+};
+
+/** Paint first frame once metadata is ready (avoids black box before play). */
+const onReelLoadedMetadata = (event: Event) => {
+  const el = event.target as HTMLVideoElement;
+  if (!isVideoPlaying.value && el.currentTime < 0.05) {
+    el.currentTime = 0.001;
+  }
+};
+
+const goToReel = (index: number) => {
+  if (index === reelIndex.value || index < 0 || index >= reels.length) return;
+  pauseReel();
+  reelIndex.value = index;
+};
+
+const nextReel = () => {
+  if (!hasMultipleReels.value) return;
+  goToReel((reelIndex.value + 1) % reels.length);
+};
+
+const prevReel = () => {
+  if (!hasMultipleReels.value) return;
+  goToReel((reelIndex.value - 1 + reels.length) % reels.length);
+};
+
+useSwipe(reelFrameRef, {
+  threshold: 40,
+  onSwipeEnd(_e, direction) {
+    if (direction === 'left') nextReel();
+    if (direction === 'right') prevReel();
+  },
+});
+
+watch(showVideo, (visible) => {
+  if (!visible) pauseReel();
+});
 
 const sectionRef = ref<HTMLElement | null>(null);
 
@@ -199,39 +270,90 @@ useIntersectionObserver(
           </div>
 
           <div v-if="showVideo">
-            <div class="group relative rounded-xl overflow-hidden border border-white/10 hover:border-accent/50 transition-colors duration-300 bg-surface">
-              <video
-                v-if="!videoFailed"
-                ref="videoRef"
-                :src="videoSrc"
-                class="w-full h-auto max-h-[520px] object-contain"
-                :controls="isVideoPlaying"
-                playsinline
-                @error="videoFailed = true"
-                @ended="isVideoPlaying = false"
-              />
-              <div
-                v-else
-                class="w-full aspect-video flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-accent/20 via-surface to-background"
-              >
-                <Film :size="32" class="text-accent/60" />
-                <span class="text-xs uppercase tracking-widest text-muted">Video</span>
+            <!-- Same chrome as photo carousel; inner 9:16 box reserves height before metadata -->
+            <div
+              ref="reelFrameRef"
+              class="group relative overflow-hidden rounded-xl border border-white/10 bg-surface touch-pan-y select-none"
+              role="region"
+              aria-roledescription="carousel"
+              :aria-label="`Reel ${reelIndex + 1} of ${reels.length}`"
+            >
+              <div class="relative flex w-full min-h-[200px] items-center justify-center bg-surface">
+                <div class="relative aspect-[9/16] w-full max-w-[min(100%,292px)] max-h-[520px]">
+                  <video
+                    v-if="!videoFailed[currentReel.src]"
+                    :key="currentReel.src"
+                    ref="videoRef"
+                    :src="currentReel.src"
+                    class="absolute inset-0 h-full w-full object-contain"
+                    :controls="isVideoPlaying"
+                    playsinline
+                    preload="metadata"
+                    @loadedmetadata="onReelLoadedMetadata"
+                    @error="videoFailed = { ...videoFailed, [currentReel.src]: true }"
+                    @ended="isVideoPlaying = false"
+                    @pause="isVideoPlaying = false"
+                    @play="isVideoPlaying = true"
+                  />
+                  <div
+                    v-else
+                    class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-accent/20 via-surface to-background"
+                  >
+                    <Film :size="32" class="text-accent/60" />
+                    <span class="text-xs uppercase tracking-widest text-muted">Video</span>
+                  </div>
+
+                  <button
+                    v-if="!isVideoPlaying && !videoFailed[currentReel.src]"
+                    type="button"
+                    aria-label="Play video"
+                    class="absolute inset-0 z-[1] flex items-center justify-center bg-black/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300"
+                    @click="playVideo"
+                  >
+                    <span class="h-14 w-14 rounded-full border border-white/20 bg-black/50 flex items-center justify-center hover:bg-black/70">
+                      <Play :size="22" class="text-white ml-1" fill="white" />
+                    </span>
+                  </button>
+                </div>
               </div>
 
               <button
-                v-if="!isVideoPlaying"
+                v-if="hasMultipleReels"
                 type="button"
-                aria-label="Play video"
-                class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                @click="playVideo"
+                aria-label="Previous reel"
+                class="absolute left-2 top-1/2 z-10 -translate-y-1/2 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                @click.stop="prevReel"
               >
-                <span class="h-14 w-14 rounded-full bg-accent/90 flex items-center justify-center shadow-glow-sm">
-                  <Play :size="22" class="text-white ml-1" fill="white" />
-                </span>
+                <ChevronLeft :size="18" />
               </button>
+              <button
+                v-if="hasMultipleReels"
+                type="button"
+                aria-label="Next reel"
+                class="absolute right-2 top-1/2 z-10 -translate-y-1/2 h-9 w-9 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center transition-opacity duration-300 hover:bg-black/70 hover:border-accent/50 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                @click.stop="nextReel"
+              >
+                <ChevronRight :size="18" />
+              </button>
+
+              <div
+                v-if="hasMultipleReels"
+                class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2"
+              >
+                <button
+                  v-for="(reel, index) in reels"
+                  :key="reel.src"
+                  type="button"
+                  class="h-1.5 rounded-full transition-all duration-300"
+                  :class="index === reelIndex ? 'w-5 bg-accent' : 'w-1.5 bg-white/40 hover:bg-white/70'"
+                  :aria-label="`Go to reel ${index + 1}`"
+                  :aria-current="index === reelIndex ? 'true' : undefined"
+                  @click.stop="goToReel(index)"
+                />
+              </div>
             </div>
             <p class="mt-3 text-xs md:text-sm text-muted leading-relaxed">
-              The morning fleet — 12 robots navigating an empty campus
+              {{ currentReel.caption }}
             </p>
           </div>
         </div>
