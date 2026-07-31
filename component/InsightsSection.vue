@@ -44,6 +44,15 @@ const insights: InsightItem[] = [
       'Amazon established its "Two-Pizza Rule" for teams and decentralized decision-making so small units could launch ideas without waiting for corporate approvals.\n\nSony had many of the technologies and assets needed to lead the digital music and smartphone revolutions, but internal organizational silos and slow decision-making made it difficult to coordinate across divisions. Combined with strong competition from Apple and Samsung, this contributed to Sony missing major opportunities in the MP3 player and smartphone eras.\n\nSo the core idea—that internal bureaucracy and silos hurt Sony\'s ability to respond quickly—is widely accepted and based on real events. The claim that this was the sole reason Apple and Samsung overtook Sony is an oversimplification.',
     variant: 'curiosity',
   },
+  {
+    id: 'ship-early',
+    titleHtml: 'Done Is Better Than Perfect',
+    body:
+      'Perfection delays learning. High-performing teams ship early, gather real-world feedback, and improve through iteration. The goal is not a flawless launch—it is a faster learning cycle than the competition.',
+    backBody:
+      'Amazon built "Bias for Action" into its culture. Jeff Bezos argued that most decisions are reversible and should be made quickly rather than waiting for perfect information. AWS launched with only a handful of basic services and evolved into a cloud-computing giant through continuous customer feedback.\n\nDropbox validated demand before building a finished product. Drew Houston released a simple demo video showing how Dropbox would work and attracted tens of thousands of signups. Instead of perfecting the software first, he proved that users wanted the solution.\n\nLesson: Ship early, learn quickly, and let reality guide improvement. Feedback from users is often more valuable than months of internal debate.',
+    variant: 'campus',
+  },
 ];
 </script>
 
