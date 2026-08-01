@@ -108,20 +108,16 @@ const reels: ReelSlide[] = [
 const reelIndex = ref(0);
 const currentReel = computed(() => reels[reelIndex.value]!);
 const videoFailed = ref<Record<string, boolean>>({});
-/** Both reels stay mounted — switching only changes opacity/playback. */
+/** Plain array — function :ref must not write Vue reactive state (causes update loops). */
 const videoEls: (HTMLVideoElement | null)[] = [];
-/** Which reel is actually painted on screen (lags until next frame is ready). */
-const visibleReelIndex = ref(0);
 const soundUnlocked = ref(false);
 const isVideoPlaying = ref(false);
 const isMuted = ref(false);
-let handoffToken = 0;
 
 const hasMultipleReels = computed(() => reels.length > 1);
 
 function setVideoRef(index: number, el: Element | null) {
   const node = el instanceof HTMLVideoElement ? el : null;
-  // Guard: function :ref runs every render — never write reactive state here.
   if (videoEls[index] === node) return;
   videoEls[index] = node;
 }
@@ -136,47 +132,13 @@ const applyMuteState = () => {
   }
 };
 
-function waitForEvent(el: HTMLVideoElement, event: string, timeoutMs = 800): Promise<void> {
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      el.removeEventListener(event, finish);
-      resolve();
-    };
-    el.addEventListener(event, finish);
-    window.setTimeout(finish, timeoutMs);
-  });
-}
-
-/** Ensure a paused reel has a decoded first frame (call only while hidden). */
-async function ensureFirstFrame(el: HTMLVideoElement) {
-  if (el.readyState < 1) {
-    el.load();
-    await waitForEvent(el, 'loadedmetadata');
-  }
-  const nearStart = el.currentTime < 0.05;
-  const atEnd = el.ended || (el.duration > 0 && el.currentTime >= el.duration - 0.25);
-  if (!nearStart || atEnd) {
-    const seeked = waitForEvent(el, 'seeked');
-    try {
-      el.currentTime = 0.001;
-    } catch {
-      return;
-    }
-    await seeked;
-  } else if (el.readyState < 2) {
-    await waitForEvent(el, 'loadeddata');
-  }
-}
-
 async function playElement(el: HTMLVideoElement) {
   applyMuteState();
   try {
     await el.play();
     isVideoPlaying.value = true;
   } catch {
+    // Autoplay with sound often blocked — fall back to muted.
     if (!el.muted) {
       isMuted.value = true;
       applyMuteState();
@@ -192,76 +154,77 @@ async function playElement(el: HTMLVideoElement) {
   }
 }
 
+/** Wait until video refs exist after v-if mount, then play active reel. */
+const playActive = async () => {
+  if (navigationStore.mediaFilter !== 'video') return;
+  await nextTick();
+  let el = videoAt(reelIndex.value);
+  if (!el) {
+    await nextTick();
+    el = videoAt(reelIndex.value);
+  }
+  if (!el) return;
+  await playElement(el);
+};
+
 const pauseAllReels = () => {
   for (const el of videoEls) el?.pause();
   isVideoPlaying.value = false;
 };
 
-/** Start/resume the currently visible reel (tap-to-play, filter select). */
-const playVisible = async () => {
-  await nextTick();
-  if (navigationStore.mediaFilter !== 'video') return;
-  const el = videoAt(visibleReelIndex.value);
+/** Rewind only while hidden — seeking a visible video causes a blank flash. */
+function rewindHidden(el: HTMLVideoElement | null) {
   if (!el) return;
-  await playElement(el);
-};
+  el.pause();
+  try {
+    if (el.currentTime !== 0) el.currentTime = 0;
+  } catch {
+    /* ignore */
+  }
+}
 
-/**
- * Switch reels without blank flash:
- * 1) Prepare next video while still hidden (seek/decode first frame)
- * 2) Only then flip visibleReelIndex
- * 3) Play next; rewind previous after it's hidden
- */
 const goToReel = async (index: number) => {
   if (index < 0 || index >= reels.length) return;
 
   if (index === reelIndex.value) {
-    void playVisible();
+    void playActive();
     return;
   }
 
-  const prev = visibleReelIndex.value;
-  const token = ++handoffToken;
+  const prev = reelIndex.value;
+  const prevEl = videoAt(prev);
+  const nextEl = videoAt(index);
 
-  await nextTick();
-  if (token !== handoffToken) return;
-  if (navigationStore.mediaFilter !== 'video') return;
-
-  const incoming = videoAt(index);
-  if (!incoming || videoFailed.value[reels[index]!.src]) {
-    reelIndex.value = index;
-    visibleReelIndex.value = index;
-    return;
-  }
-
-  // Decode first frame WHILE still opacity-0 — previous reel stays visible.
-  await ensureFirstFrame(incoming);
-  if (token !== handoffToken) return;
-
+  prevEl?.pause();
+  // Show next immediately (it should already be buffered + at frame 0 from last hide).
   reelIndex.value = index;
-  visibleReelIndex.value = index;
-  await playElement(incoming);
-  if (token !== handoffToken) return;
 
-  const outgoing = videoAt(prev);
-  outgoing?.pause();
-  requestAnimationFrame(() => {
-    if (prev === visibleReelIndex.value) return;
-    const hidden = videoAt(prev);
-    if (!hidden) return;
-    void ensureFirstFrame(hidden);
-  });
+  if (nextEl) {
+    // Only reset if this reel finished / is near the end (otherwise keep painted frame).
+    if (nextEl.ended || (nextEl.duration > 0 && nextEl.currentTime >= nextEl.duration - 0.2)) {
+      try {
+        nextEl.currentTime = 0;
+      } catch {
+        /* ignore */
+      }
+    }
+    await playElement(nextEl);
+  }
+
+  // Prepare previous for the next loop — after it's hidden.
+  requestAnimationFrame(() => rewindHidden(prevEl));
 };
 
 const nextReel = () => {
   if (!hasMultipleReels.value) {
-    const el = videoAt(visibleReelIndex.value);
-    if (el) {
-      void (async () => {
-        await ensureFirstFrame(el);
-        await playElement(el);
-      })();
+    const el = videoAt(reelIndex.value);
+    if (!el) return;
+    try {
+      el.currentTime = 0;
+    } catch {
+      /* ignore */
     }
+    void playElement(el);
     return;
   }
   void goToReel((reelIndex.value + 1) % reels.length);
@@ -274,13 +237,13 @@ const prevReel = () => {
 
 const toggleReelPlayback = () => {
   soundUnlocked.value = true;
-  const el = videoAt(visibleReelIndex.value);
+  const el = videoAt(reelIndex.value);
   if (!el) return;
   if (isVideoPlaying.value) {
     el.pause();
     isVideoPlaying.value = false;
   } else {
-    void playVisible();
+    void playActive();
   }
 };
 
@@ -288,7 +251,7 @@ const toggleReelSound = async () => {
   soundUnlocked.value = true;
   isMuted.value = !isMuted.value;
   applyMuteState();
-  const el = videoAt(visibleReelIndex.value);
+  const el = videoAt(reelIndex.value);
   if (!isMuted.value && el) {
     try {
       if (el.paused) await el.play();
@@ -300,24 +263,17 @@ const toggleReelSound = async () => {
   }
 };
 
-const onReelLoadedMetadata = (index: number, event: Event) => {
-  const el = event.target as HTMLVideoElement;
-  // Prefetch a painted first frame for inactive (and initial) reels.
-  if (index === visibleReelIndex.value && isVideoPlaying.value) return;
-  void ensureFirstFrame(el);
-};
-
 const onReelEnded = (index: number) => {
-  if (index !== visibleReelIndex.value) return;
+  if (index !== reelIndex.value) return;
   nextReel();
 };
 
 const onReelPlay = (index: number) => {
-  if (index === visibleReelIndex.value) isVideoPlaying.value = true;
+  if (index === reelIndex.value) isVideoPlaying.value = true;
 };
 
 const onReelPause = (index: number) => {
-  if (index === visibleReelIndex.value) isVideoPlaying.value = false;
+  if (index === reelIndex.value) isVideoPlaying.value = false;
 };
 
 const selectMediaFilter = (filter: MediaFilter) => {
@@ -330,20 +286,11 @@ const selectMediaFilter = (filter: MediaFilter) => {
 
 watch(
   () => navigationStore.mediaFilter,
-  async (filter) => {
+  (filter) => {
     if (filter === 'video') {
       soundUnlocked.value = true;
       isMuted.value = false;
-      await nextTick();
-      // Warm first frames for all reels, then play the visible one.
-      await Promise.all(
-        videoEls.map(async (el, index) => {
-          if (!el || videoFailed.value[reels[index]?.src ?? '']) return;
-          await ensureFirstFrame(el);
-        }),
-      );
-      visibleReelIndex.value = reelIndex.value;
-      await playVisible();
+      void playActive();
     } else {
       pauseAllReels();
     }
@@ -467,13 +414,12 @@ useIntersectionObserver(
                     :src="reel.src"
                     class="absolute inset-0 h-full w-full object-contain"
                     :class="
-                      index === visibleReelIndex && !videoFailed[reel.src]
+                      index === reelIndex && !videoFailed[reel.src]
                         ? 'z-[1] opacity-100'
                         : 'z-0 opacity-0 pointer-events-none'
                     "
                     playsinline
                     preload="auto"
-                    @loadedmetadata="onReelLoadedMetadata(index, $event)"
                     @error="videoFailed = { ...videoFailed, [reel.src]: true }"
                     @ended="onReelEnded(index)"
                     @play="onReelPlay(index)"
