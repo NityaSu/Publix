@@ -109,7 +109,7 @@ const reelIndex = ref(0);
 const currentReel = computed(() => reels[reelIndex.value]!);
 const videoFailed = ref<Record<string, boolean>>({});
 /** Both reels stay mounted — switching only changes opacity/playback. */
-const videoEls = ref<(HTMLVideoElement | null)[]>([]);
+const videoEls: (HTMLVideoElement | null)[] = [];
 /** Which reel is actually painted on screen (lags until next frame is ready). */
 const visibleReelIndex = ref(0);
 const soundUnlocked = ref(false);
@@ -120,17 +120,18 @@ let handoffToken = 0;
 const hasMultipleReels = computed(() => reels.length > 1);
 
 function setVideoRef(index: number, el: Element | null) {
-  const next = videoEls.value.slice();
-  next[index] = el instanceof HTMLVideoElement ? el : null;
-  videoEls.value = next;
+  const node = el instanceof HTMLVideoElement ? el : null;
+  // Guard: function :ref runs every render — never write reactive state here.
+  if (videoEls[index] === node) return;
+  videoEls[index] = node;
 }
 
 function videoAt(index: number): HTMLVideoElement | null {
-  return videoEls.value[index] ?? null;
+  return videoEls[index] ?? null;
 }
 
 const applyMuteState = () => {
-  for (const el of videoEls.value) {
+  for (const el of videoEls) {
     if (el) el.muted = isMuted.value;
   }
 };
@@ -192,7 +193,7 @@ async function playElement(el: HTMLVideoElement) {
 }
 
 const pauseAllReels = () => {
-  for (const el of videoEls.value) el?.pause();
+  for (const el of videoEls) el?.pause();
   isVideoPlaying.value = false;
 };
 
@@ -336,7 +337,7 @@ watch(
       await nextTick();
       // Warm first frames for all reels, then play the visible one.
       await Promise.all(
-        videoEls.value.map(async (el, index) => {
+        videoEls.map(async (el, index) => {
           if (!el || videoFailed.value[reels[index]?.src ?? '']) return;
           await ensureFirstFrame(el);
         }),
