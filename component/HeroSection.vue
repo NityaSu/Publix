@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Play } from 'lucide-vue-next';
 import { useElementSize, useIntersectionObserver } from '@vueuse/core';
 import ProfileReveal from '~/component/ProfileReveal.vue';
@@ -171,17 +171,59 @@ const wordCloudRowStyle = computed(() => {
 });
 
 const heroRef = ref<HTMLElement | null>(null);
+const heroVideoRef = ref<HTMLVideoElement | null>(null);
 const isVisible = ref(false);
+
+/** iOS/Safari often ignore attribute autoplay — force muted + programmatic play. */
+async function tryPlayHeroVideo() {
+  const el = heroVideoRef.value;
+  if (!el) return;
+
+  el.muted = true;
+  el.defaultMuted = true;
+  el.playsInline = true;
+  el.setAttribute('playsinline', '');
+  el.setAttribute('webkit-playsinline', '');
+
+  if (!el.paused && !el.ended) return;
+
+  try {
+    await el.play();
+  } catch {
+    // Autoplay blocked (Low Power Mode, data saver, etc.) — unlock on gesture below.
+  }
+}
+
+function unlockHeroVideoPlayback() {
+  void tryPlayHeroVideo();
+}
 
 useIntersectionObserver(
   heroRef,
   ([entry]) => {
     if (entry?.isIntersecting) {
       isVisible.value = true;
+      void tryPlayHeroVideo();
     }
   },
   { threshold: 0.1 },
 );
+
+watch(isVisible, (visible) => {
+  if (visible) void tryPlayHeroVideo();
+});
+
+onMounted(() => {
+  void tryPlayHeroVideo();
+  // First user gesture unlocks autoplay on strict mobile browsers.
+  window.addEventListener('touchstart', unlockHeroVideoPlayback, { once: true, passive: true });
+  window.addEventListener('click', unlockHeroVideoPlayback, { once: true });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('touchstart', unlockHeroVideoPlayback);
+  window.removeEventListener('click', unlockHeroVideoPlayback);
+});
 </script>
 
 <template>
@@ -319,14 +361,18 @@ useIntersectionObserver(
       aria-hidden="true"
     >
       <video
+        ref="heroVideoRef"
         class="absolute inset-0 h-full w-full object-cover"
         :src="mediaUrl('videos/ascii-neuron-best-version.mp4')"
         :poster="mediaUrl('images/poster_placeholder.jpg')"
         autoplay
-        muted
+        :muted="true"
         loop
         playsinline
+        webkit-playsinline
         preload="auto"
+        @loadeddata="tryPlayHeroVideo"
+        @canplay="tryPlayHeroVideo"
       />
     </div>
   </section>
