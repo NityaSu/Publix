@@ -175,19 +175,36 @@ const heroRef = ref<HTMLElement | null>(null);
 const heroVideoRef = ref<HTMLVideoElement | null>(null);
 const isVisible = ref(false);
 
-/** High-res master for desktop; iOS-safe banner for phones/tablets (8K fails on iPhone). */
+/**
+ * Always SSR / first paint the iOS-safe banner. Safari will start whatever
+ * src is in the HTML — shipping the 8K master breaks iPhone before hydration.
+ * Upgrade to high-res only after mount on real desktop.
+ */
+const HERO_VIDEO_BANNER = mediaUrl('videos/ascii-neuron-banner.mp4');
+const HERO_VIDEO_DESKTOP = mediaUrl('videos/ascii-neuron-best-version.mp4');
 const isMobileViewport = useMediaQuery('(max-width: 768px)');
-const isIosDevice = computed(() => {
-  if (!import.meta.client) return false;
+const heroVideoSrc = ref(HERO_VIDEO_BANNER);
+
+function isIosDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent;
   return /iPad|iPhone|iPod/.test(ua)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-});
-const heroVideoSrc = computed(() =>
-  isMobileViewport.value || isIosDevice.value
-    ? mediaUrl('videos/ascii-neuron-banner.mp4')
-    : mediaUrl('videos/ascii-neuron-best-version.mp4'),
-);
+}
+
+function resolveHeroVideoSrc(): string {
+  if (isMobileViewport.value || isIosDevice()) return HERO_VIDEO_BANNER;
+  return HERO_VIDEO_DESKTOP;
+}
+
+function applyHeroVideoSrc() {
+  const next = resolveHeroVideoSrc();
+  if (heroVideoSrc.value === next) {
+    void tryPlayHeroVideo();
+    return;
+  }
+  heroVideoSrc.value = next;
+}
 
 /** iOS/Safari often ignore attribute autoplay — force muted + programmatic play. */
 async function tryPlayHeroVideo() {
@@ -245,8 +262,12 @@ watch(heroVideoSrc, () => {
   void tryPlayHeroVideo();
 });
 
+watch(isMobileViewport, () => {
+  if (import.meta.client) applyHeroVideoSrc();
+});
+
 onMounted(() => {
-  void tryPlayHeroVideo();
+  applyHeroVideoSrc();
   // Keep retrying on gesture until play succeeds (iOS often taps before buffer is ready).
   window.addEventListener('touchstart', unlockHeroVideoPlayback, { passive: true });
   window.addEventListener('click', unlockHeroVideoPlayback);
