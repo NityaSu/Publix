@@ -314,11 +314,21 @@ useIntersectionObserver(
     </div>
 
     <div
-      class="hero-cta-bar mt-6 md:mt-8 w-full min-h-[140px] md:min-h-[180px] lg:min-h-[220px] transition-all duration-700 ease-out delay-200"
+      class="hero-cta-bar relative overflow-hidden mt-6 md:mt-8 w-full min-h-[140px] md:min-h-[180px] lg:min-h-[220px] transition-all duration-700 ease-out delay-200"
       :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
-      :style="{ backgroundImage: `url('${mediaUrl('images/bg2.png')}')` }"
       aria-hidden="true"
-    />
+    >
+      <video
+        class="absolute inset-0 h-full w-full object-cover"
+        :src="mediaUrl('videos/ascii-neuron-best-version.mp4')"
+        :poster="mediaUrl('images/poster_placeholder.jpg')"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+      />
+    </div>
   </section>
 </template>
 
@@ -327,11 +337,5 @@ useIntersectionObserver(
   position: relative;
   margin-inline: 0;
   margin-right: auto;
-}
-
-.hero-cta-bar {
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
 }
 </style>
