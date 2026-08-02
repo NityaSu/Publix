@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Play } from 'lucide-vue-next';
-import { useElementSize, useIntersectionObserver } from '@vueuse/core';
+import { useElementSize, useIntersectionObserver, useMediaQuery } from '@vueuse/core';
 import ProfileReveal from '~/component/ProfileReveal.vue';
 import HeroSubtitle from '~/component/HeroSubtitle.vue';
+import { mediaUrl } from '~/utils/media';
 
 interface MeasuredWord {
   text: string;
@@ -174,6 +175,20 @@ const heroRef = ref<HTMLElement | null>(null);
 const heroVideoRef = ref<HTMLVideoElement | null>(null);
 const isVisible = ref(false);
 
+/** High-res master for desktop; iOS-safe banner for phones/tablets (8K fails on iPhone). */
+const isMobileViewport = useMediaQuery('(max-width: 768px)');
+const isIosDevice = computed(() => {
+  if (!import.meta.client) return false;
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+});
+const heroVideoSrc = computed(() =>
+  isMobileViewport.value || isIosDevice.value
+    ? mediaUrl('videos/ascii-neuron-banner.mp4')
+    : mediaUrl('videos/ascii-neuron-best-version.mp4'),
+);
+
 /** iOS/Safari often ignore attribute autoplay — force muted + programmatic play. */
 async function tryPlayHeroVideo() {
   const el = heroVideoRef.value;
@@ -185,17 +200,27 @@ async function tryPlayHeroVideo() {
   el.setAttribute('playsinline', '');
   el.setAttribute('webkit-playsinline', '');
 
-  if (!el.paused && !el.ended) return;
+  if (!el.paused && !el.ended) {
+    stopHeroVideoUnlockListeners();
+    return;
+  }
 
   try {
     await el.play();
+    stopHeroVideoUnlockListeners();
   } catch {
-    // Autoplay blocked (Low Power Mode, data saver, etc.) — unlock on gesture below.
+    // Autoplay blocked until gesture / buffer — unlock listeners keep retrying.
   }
 }
 
 function unlockHeroVideoPlayback() {
   void tryPlayHeroVideo();
+}
+
+function stopHeroVideoUnlockListeners() {
+  if (typeof window === 'undefined') return;
+  window.removeEventListener('touchstart', unlockHeroVideoPlayback);
+  window.removeEventListener('click', unlockHeroVideoPlayback);
 }
 
 useIntersectionObserver(
@@ -213,16 +238,22 @@ watch(isVisible, (visible) => {
   if (visible) void tryPlayHeroVideo();
 });
 
+watch(heroVideoSrc, () => {
+  const el = heroVideoRef.value;
+  if (!el) return;
+  el.load();
+  void tryPlayHeroVideo();
+});
+
 onMounted(() => {
   void tryPlayHeroVideo();
-  // First user gesture unlocks autoplay on strict mobile browsers.
-  window.addEventListener('touchstart', unlockHeroVideoPlayback, { once: true, passive: true });
-  window.addEventListener('click', unlockHeroVideoPlayback, { once: true });
+  // Keep retrying on gesture until play succeeds (iOS often taps before buffer is ready).
+  window.addEventListener('touchstart', unlockHeroVideoPlayback, { passive: true });
+  window.addEventListener('click', unlockHeroVideoPlayback);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('touchstart', unlockHeroVideoPlayback);
-  window.removeEventListener('click', unlockHeroVideoPlayback);
+  stopHeroVideoUnlockListeners();
 });
 </script>
 
@@ -363,7 +394,7 @@ onUnmounted(() => {
       <video
         ref="heroVideoRef"
         class="absolute inset-0 h-full w-full object-cover"
-        :src="mediaUrl('videos/ascii-neuron-best-version.mp4')"
+        :src="heroVideoSrc"
         :poster="mediaUrl('images/poster_placeholder.jpg')"
         autoplay
         :muted="true"
