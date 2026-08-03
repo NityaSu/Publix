@@ -8,15 +8,26 @@ interface Stat {
   label: string;
 }
 
-const journeyPoints: string[] = [
+type JourneyPart = string | { text: string; href: string };
+type JourneyPoint = string | JourneyPart[];
+
+const journeyPoints: JourneyPoint[] = [
   "Born in Cambodia, in a society that didn't put much value on technology. One day, I took a Grab ride and the driver asked what I do for a living. I told him I work in software, but he couldn't understand or picture what that meant—even while using the Grab app right in front of me to run his own business. A little bit sad, but it's ok.",
   'Won a bronze medal at the National Math Olympiad in 2017 — the first real lesson in discipline and deep, sustained focus.',
   'Studied Computer Science at Beijing University of Technology (BJUT), Built foundation in programming, algorithms, AI foundations, NLP, Computer Vision, and Pattern Recognition coursework at the same time, while Chinese students chose only one.',
-  'Wrote a thesis on Semi-Supervised Object Detection by chance, because local students had first priority to choose the easy topics and left the difficult ones to international students like me. We only had 3 months to complete it, and during that same period, I had 4 final examinations—so a total of 4 exams on top of one incredibly difficult thesis. There were only around 14 students back then defending their thesis in AI, and under Supervisor Jia Xibin, only 3 students (me and two local students). Back then, it felt like a PhD-level topic to me, and I felt I couldn\'t do that well, but I managed to push through and finish it in the end. I really wanted to leave Beijing back then and never come back.',
+  [
+    'Wrote a thesis on Semi-Supervised Object Detection by chance, because local students had first priority to choose the easy topics and left the difficult ones to international students like me. We only had 3 months to complete it, and during that same period, I had 4 final examinations—so a total of 4 exams on top of one incredibly difficult thesis. There were only around 14 students back then defending their thesis in AI, and under Supervisor ',
+    { text: 'Jia Xibin', href: 'https://www.researchgate.net/profile/Xibin-Jia' },
+    ', only 3 students (me and two local students). Back then, it felt like a PhD-level topic to me, and I felt I couldn\'t do that well, but I managed to push through and finish it in the end. I really wanted to leave Beijing back then and never come back.',
+  ],
   'Spent years reading books on the side to fulfill my curiosity. No summer breaks, no winter breaks, no parties, no fun at all, rarely going out—read around 50,000 pages while completing 62 subjects in Beijing. My Chinese degraded in the process. In the end, I felt it couldn\'t help me much, so I stopped and refocused back on technical engineering.',
   'Returned to Cambodia and faced a hard lesson. I had always overlooked things like Frontend engineering, but ignoring those details eventually caught up to me through embarrassing failures.',
   'Currently expanding stack: building full-stack web applications from the ground up.',
 ];
+
+function isLinkedPart(part: JourneyPart): part is { text: string; href: string } {
+  return typeof part === 'object';
+}
 
 const stats: Stat[] = [
   { value: '2017', label: 'Math Olympiad Bronze' },
@@ -77,7 +88,11 @@ onUnmounted(() => {
         </h2>
 
         <div class="mt-10 space-y-5">
-          <div v-for="point in journeyPoints" :key="point" class="flex gap-3">
+          <div
+            v-for="(point, pointIndex) in journeyPoints"
+            :key="pointIndex"
+            class="flex gap-3"
+          >
             <img
               src="/supermemory_bullet_split.svg"
               alt=""
@@ -85,7 +100,21 @@ onUnmounted(() => {
               aria-hidden="true"
             />
             <p class="text-muted text-sm md:text-base leading-relaxed">
-              {{ point }}
+              <template v-if="typeof point === 'string'">
+                {{ point }}
+              </template>
+              <template v-else>
+                <template v-for="(part, partIndex) in point" :key="partIndex">
+                  <a
+                    v-if="isLinkedPart(part)"
+                    :href="part.href"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-accent hover:underline"
+                  >{{ part.text }}</a>
+                  <template v-else>{{ part }}</template>
+                </template>
+              </template>
             </p>
           </div>
         </div>
