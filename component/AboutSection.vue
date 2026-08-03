@@ -20,7 +20,7 @@ const journeyPoints: string[] = [
 const stats: Stat[] = [
   { value: '2017', label: 'Math Olympiad Bronze' },
   { value: 'BJUT', label: 'CS Degree, Beijing' },
-  { value: '1.5', label: 'Years Professional Experience' },
+  { value: '3', label: 'Years of experience' },
   { value: '3', label: 'AI Specializations Studied' },
 ];
 
