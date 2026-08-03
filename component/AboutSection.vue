@@ -22,7 +22,7 @@ const journeyPoints: JourneyPoint[] = [
   ],
   'Spent years reading books on the side to fulfill my curiosity. No summer breaks, no winter breaks, no parties, no fun at all, rarely going out—read around 50,000 pages while completing 62 subjects in Beijing. My Chinese degraded in the process. In the end, I felt it couldn\'t help me much, so I stopped and refocused back on technical engineering.',
   'Returned to Cambodia and faced a hard lesson. I had always overlooked things like Frontend engineering, but ignoring those details eventually caught up to me through embarrassing failures.',
-  'Currently expanding stack: building full-stack web applications from the ground up.',
+  'Currently expanding stack: building full-stack web applications from the ground up. Hopefully, I can do something great again.',
 ];
 
 function isLinkedPart(part: JourneyPart): part is { text: string; href: string } {
