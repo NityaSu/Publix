@@ -13,7 +13,8 @@ const journeyPoints: string[] = [
   'Won a bronze medal at the National Math Olympiad in 2017 — the first real lesson in discipline and deep, sustained focus.',
   'Studied Computer Science at Beijing University of Technology (BJUT), Built foundation in programming, algorithms, AI foundations, NLP, Computer Vision, and Pattern Recognition coursework at the same time, while Chinese students chose only one.',
   'Wrote a thesis on Semi-Supervised Object Detection by chance, because local students had first priority to choose the easy topics and left the difficult ones to international students like me. We only had 3 months to complete it, and during that same period, I had 4 final examinations—so a total of 4 exams on top of one incredibly difficult thesis. There were only around 14 students back then defending their thesis in AI, and under Supervisor Jia Xibin, only 3 students (me and two local students). Back then, it felt like a PhD-level topic to me, and I felt I couldn\'t do that well, but I managed to push through and finish it in the end. I really wanted to leave Beijing back then and never come back.',
-  'Spent years reading business and economics on the side, which shaped how I think about systems, not just code.',
+  'Spent years reading books on the side to fulfill my curiosity. No summer breaks, no winter breaks, no parties, no fun at all, rarely going out—read around 50,000 pages while completing 62 subjects in Beijing. My Chinese degraded in the process. In the end, I felt it couldn\'t help me much, so I stopped and refocused back on technical engineering.',
+  'Returned to Cambodia and faced a hard lesson. I had always overlooked things like Frontend engineering, but ignoring those details eventually caught up to me through embarrassing failures.',
   'Currently expanding stack: building full-stack web applications from the ground up.',
 ];
 
