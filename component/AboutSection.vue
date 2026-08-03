@@ -31,7 +31,7 @@ function isLinkedPart(part: JourneyPart): part is { text: string; href: string }
 
 const stats: Stat[] = [
   { value: '2017', label: 'Math Olympiad Bronze' },
-  { value: 'BJUT', label: 'CS Degree, Beijing' },
+  { value: 'BJUT', label: 'Computer Science Degree, Beijing' },
   { value: '3', label: 'Years of experience' },
   { value: '3', label: 'AI Specializations Studied' },
 ];
