@@ -11,10 +11,10 @@ interface Stat {
 const journeyPoints: string[] = [
   "Born in Cambodia, in a society that didn't put much value on technology or engineering as a career path.",
   'Won a bronze medal at the National Math Olympiad in 2017 — the first real lesson in discipline and deep, sustained focus.',
-  'Studied Computer Science at Beijing University of Technology (BJUT), Built foundation in programming, algorithms, NLP, Computer Vision, and Pattern Recognition coursework at the same time.',
+  'Studied Computer Science at Beijing University of Technology (BJUT), Built foundation in programming, algorithms, AI foundations, NLP, Computer Vision, and Pattern Recognition coursework at the same time, while Chinese students chose only one.',
   'Wrote a thesis on Semi-Supervised Object Detection — designed and implemented the model from scratch.',
   'Spent years reading business and economics on the side, which shaped how I think about systems, not just code.',
-  'Currently rebuilding: back to AI/ML fundamentals, shipping code daily.',
+  'Currently expanding stack: building full-stack web applications from the ground up.',
 ];
 
 const stats: Stat[] = [
@@ -23,6 +23,10 @@ const stats: Stat[] = [
   { value: '1.5', label: 'Years Professional Experience' },
   { value: '3', label: 'AI Specializations Studied' },
 ];
+
+const GITHUB_USERNAME = 'NityaSu';
+const GITHUB_CHART_URL = `https://ghchart.rshah.org/2f6bff/${GITHUB_USERNAME}`;
+const GITHUB_PROFILE_URL = `https://github.com/${GITHUB_USERNAME}`;
 
 const sectionRef = ref<HTMLElement | null>(null);
 const navigationStore = useNavigationStore();
@@ -86,7 +90,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="xl:col-span-5 min-w-0">
+      <div class="xl:col-span-5 min-w-0 flex flex-col gap-5 md:gap-6">
         <div class="grid grid-cols-2 gap-5 md:gap-6">
           <div
             v-for="stat in stats"
@@ -96,6 +100,31 @@ onUnmounted(() => {
             <span class="stat-card-label">{{ stat.label }}</span>
             <span class="stat-card-value">{{ stat.value }}</span>
           </div>
+        </div>
+
+        <div class="min-w-0">
+          <a
+            :href="GITHUB_PROFILE_URL"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="github-chart-card group block"
+            aria-label="View GitHub contribution graph for NityaSu"
+          >
+            <div class="github-chart-scroll">
+              <img
+                :src="GITHUB_CHART_URL"
+                alt="GitHub contribution graph for NityaSu"
+                width="663"
+                height="104"
+                class="github-chart-img"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          </a>
+          <p class="mt-3 text-sm text-muted italic">
+            (I'm still in the trenches — writing code, researching before I build)
+          </p>
         </div>
       </div>
     </div>
@@ -167,5 +196,46 @@ onUnmounted(() => {
   mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.35) 30%, black 75%);
   pointer-events: none;
   z-index: 1;
+}
+
+.github-chart-card {
+  padding: 0.75rem 0.875rem 0.625rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #f6f8fa;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.github-chart-card:hover {
+  border-color: rgba(47, 107, 255, 0.45);
+  box-shadow: 0 0 0 1px rgba(47, 107, 255, 0.2);
+}
+
+.github-chart-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #c8cdd3 transparent;
+}
+
+.github-chart-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.github-chart-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.github-chart-scroll::-webkit-scrollbar-thumb {
+  background: #c8cdd3;
+  border-radius: 999px;
+}
+
+.github-chart-img {
+  display: block;
+  width: 663px;
+  max-width: none;
+  height: auto;
 }
 </style>
