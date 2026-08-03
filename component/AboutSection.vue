@@ -12,7 +12,7 @@ const journeyPoints: string[] = [
   "Born in Cambodia, in a society that didn't put much value on technology or engineering as a career path.",
   'Won a bronze medal at the National Math Olympiad in 2017 — the first real lesson in discipline and deep, sustained focus.',
   'Studied Computer Science at Beijing University of Technology (BJUT), Built foundation in programming, algorithms, AI foundations, NLP, Computer Vision, and Pattern Recognition coursework at the same time, while Chinese students chose only one.',
-  'Wrote a thesis on Semi-Supervised Object Detection — designed and implemented the model from scratch.',
+  'Wrote a thesis on Semi-Supervised Object Detection by chance, because local students had first priority to choose the easy topics and left the difficult ones to international students like me. We only had 3 months to complete it, and during that same period, I had 4 final examinations—so a total of 4 exams on top of one incredibly difficult thesis. There were only around 14 students back then defending their thesis in AI, and under Supervisor Jia Xibin, only 3 students (me and two local students). Back then, it felt like a PhD-level topic to me, and I felt I couldn\'t do that well, but I managed to push through and finish it in the end. I really wanted to leave Beijing back then and never come back.',
   'Spent years reading business and economics on the side, which shaped how I think about systems, not just code.',
   'Currently expanding stack: building full-stack web applications from the ground up.',
 ];
