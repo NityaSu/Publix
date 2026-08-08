@@ -8,6 +8,7 @@ import {
   Film,
   Image as ImageIcon,
   Lightbulb,
+  NotebookPen,
 } from 'lucide-vue-next';
 import { useNavigationStore, type MediaFilter } from '~/stores/navigationStore';
 import KimiLogo from '~/component/KimiLogo.vue';
@@ -43,6 +44,7 @@ const navLinks: NavLink[] = [
     type: 'dropdown',
     children: [
       { label: 'My Thoughts', to: '/insights', icon: Lightbulb },
+      { label: 'Build notes', to: '/insights/notes', icon: NotebookPen },
     ],
   },
   { label: 'Projects', type: 'route', to: '/projects' },
@@ -77,7 +79,9 @@ const NAV_LINK_BASE =
 
 const isDropdownActive = (link: NavLink): boolean => {
   if (link.label === 'Media') return navigationStore.isMediaInView;
-  if (link.label === 'Insights') return route.path === '/insights';
+  if (link.label === 'Insights') {
+    return route.path === '/insights' || route.path.startsWith('/insights/');
+  }
   return false;
 };
 

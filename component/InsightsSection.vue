@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InsightCard, { type InsightVariant } from '~/component/InsightCard.vue';
+import { buildNotes, buildNotePath } from '~/data/buildNotes';
 
 interface InsightItem {
   id: string;
@@ -54,6 +55,8 @@ const insights: InsightItem[] = [
     variant: 'campus',
   },
 ];
+
+const latestNotes = buildNotes.slice(0, 2);
 </script>
 
 <template>
@@ -75,6 +78,48 @@ const insights: InsightItem[] = [
         :back-body="insight.backBody"
         :variant="insight.variant"
       />
+    </div>
+
+    <div class="mt-20 md:mt-28">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 class="font-display font-extrabold uppercase text-white text-2xl sm:text-3xl md:text-4xl">
+            Build notes
+          </h2>
+          <p class="mt-3 max-w-2xl text-sm md:text-base text-muted leading-relaxed">
+            Longer write-ups about learning projects — optional, separate from the project cards.
+          </p>
+        </div>
+        <NuxtLink
+          to="/insights/notes"
+          class="font-dm text-xs uppercase tracking-[0.14em] text-muted hover:text-accent transition-colors"
+        >
+          View all →
+        </NuxtLink>
+      </div>
+      <div class="mt-6 h-[2px] w-full bg-accent/40" />
+
+      <ul class="mt-8 space-y-4 max-w-2xl" role="list">
+        <li v-for="note in latestNotes" :key="note.slug">
+          <NuxtLink
+            :to="buildNotePath(note.slug)"
+            class="group block border border-white/10 bg-surface px-6 py-5 transition-colors hover:border-accent/40"
+          >
+            <p class="font-dm text-xs uppercase tracking-[0.16em] text-accent">
+              {{ note.tag }}
+            </p>
+            <h3 class="mt-2 font-display font-bold text-white text-lg md:text-xl group-hover:text-accent transition-colors">
+              {{ note.title }}
+            </h3>
+            <p class="mt-2 text-sm text-muted leading-relaxed">
+              {{ note.summary }}
+            </p>
+            <p class="mt-4 font-dm text-xs uppercase tracking-[0.14em] text-muted group-hover:text-accent transition-colors">
+              Read note →
+            </p>
+          </NuxtLink>
+        </li>
+      </ul>
     </div>
   </section>
 </template>
