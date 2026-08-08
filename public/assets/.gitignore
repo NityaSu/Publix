@@ -1,10 +1,16 @@
 # Local originals kept until uploaded to Supabase "site-media".
 # After `npm run upload:media` succeeds, you can delete these binaries
 # and keep only the .gitkeep placeholders.
-public/assets/images/**
-!public/assets/images/.gitkeep
-!public/assets/images/projects/
-public/assets/images/projects/**
-!public/assets/images/projects/.gitkeep
-public/assets/videos/**
-!public/assets/videos/.gitkeep
+images/**
+!images/.gitkeep
+!images/projects/
+images/projects/**
+!images/projects/.gitkeep
+!images/blog/
+images/blog/**
+!images/blog/**/.gitkeep
+videos/**
+!videos/.gitkeep
+!videos/blog/
+videos/blog/**
+!videos/blog/**/.gitkeep
