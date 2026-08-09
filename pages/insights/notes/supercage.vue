@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BlogDemoMedia from '~/component/BlogDemoMedia.vue';
 import InsightsReadingShell from '~/component/InsightsReadingShell.vue';
+import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import { mediaUrl } from '~/utils/media';
 
 const GITHUB_URL = 'https://github.com/NityaSu/supercage';
@@ -36,9 +37,12 @@ useHead({
       <article class="w-full px-6 md:px-20 lg:px-[160px] py-16 md:py-24">
         <!-- Hero -->
         <header class="max-w-3xl">
-          <p class="flex items-center gap-2 text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
-            Build notes
-          </p>
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <p class="flex items-center gap-2 text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
+              Build notes
+            </p>
+            <InsightsReadingToggle />
+          </div>
           <h1 class="mt-4 font-display font-extrabold ri-ink text-3xl sm:text-4xl md:text-5xl leading-tight">
             Building supercage: caging an AI coding agent
           </h1>

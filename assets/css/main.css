@@ -189,16 +189,10 @@ html:not(.fonts-loading):not(.fonts-loaded) body {
   color-scheme: light;
 }
 
-.insights-shell-bar {
-  background-color: color-mix(in srgb, var(--ri-bg) 92%, transparent);
-  border-color: var(--ri-border);
-  backdrop-filter: blur(8px);
-}
-
 .insights-reading-toggle {
   border-color: var(--ri-toggle-border);
   color: var(--ri-toggle-fg);
-  background-color: var(--ri-toggle-bg);
+  background-color: transparent;
 }
 
 .insights-reading-toggle:hover {

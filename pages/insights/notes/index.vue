@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InsightsReadingShell from '~/component/InsightsReadingShell.vue';
+import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import { buildNotes, buildNotePath } from '~/data/buildNotes';
 
 useHead({
@@ -30,12 +31,17 @@ function formatDate(iso: string) {
   <InsightsReadingShell>
     <main>
       <section class="w-full px-6 md:px-20 lg:px-[160px] py-16 md:py-24">
-        <p class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
-          Insights
-        </p>
-        <h1 class="mt-4 font-display font-extrabold uppercase ri-ink text-4xl sm:text-5xl md:text-6xl">
-          Build notes
-        </h1>
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p class="text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
+              Insights
+            </p>
+            <h1 class="mt-4 font-display font-extrabold uppercase ri-ink text-4xl sm:text-5xl md:text-6xl">
+              Build notes
+            </h1>
+          </div>
+          <InsightsReadingToggle />
+        </div>
         <p class="mt-5 max-w-2xl text-sm md:text-base ri-ink leading-relaxed">
           Longer write-ups about learning projects. New posts show up here — not in the nav.
         </p>

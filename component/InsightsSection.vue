@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InsightCard, { type InsightVariant } from '~/component/InsightCard.vue';
+import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import { buildNotes, buildNotePath } from '~/data/buildNotes';
 
 interface InsightItem {
@@ -61,9 +62,12 @@ const latestNotes = buildNotes.slice(0, 2);
 
 <template>
   <section class="w-full px-6 md:px-20 lg:px-[160px] py-16 md:py-24">
-    <h1 class="font-display font-extrabold uppercase ri-ink text-4xl sm:text-5xl md:text-6xl">
-      My Thoughts
-    </h1>
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <h1 class="font-display font-extrabold uppercase ri-ink text-4xl sm:text-5xl md:text-6xl">
+        My Thoughts
+      </h1>
+      <InsightsReadingToggle />
+    </div>
     <div class="mt-6 h-[2px] w-full ri-rule"></div>
 
     <div class="mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
