@@ -86,7 +86,7 @@ const latestNotes = buildNotes.slice(0, 2);
           <h2 class="font-display font-extrabold uppercase ri-ink text-2xl sm:text-3xl md:text-4xl">
             Build notes
           </h2>
-          <p class="mt-3 max-w-2xl text-sm md:text-base ri-sub leading-relaxed">
+          <p class="mt-3 max-w-2xl text-sm md:text-base ri-ink leading-relaxed">
             Longer write-ups about learning projects — optional, separate from the project cards.
           </p>
         </div>
@@ -111,7 +111,7 @@ const latestNotes = buildNotes.slice(0, 2);
             <h3 class="mt-2 font-display font-bold ri-ink text-lg md:text-xl group-hover:text-accent transition-colors">
               {{ note.title }}
             </h3>
-            <p class="mt-2 text-sm ri-sub leading-relaxed">
+            <p class="mt-2 text-sm ri-ink leading-relaxed">
               {{ note.summary }}
             </p>
             <p class="mt-4 font-dm text-xs uppercase tracking-[0.14em] ri-sub group-hover:text-accent transition-colors">

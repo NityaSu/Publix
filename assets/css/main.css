@@ -172,18 +172,18 @@ html:not(.fonts-loading):not(.fonts-loaded) body {
 
 .insights-shell[data-mode='light'] {
   --ri-bg: #f8f9fa;
-  --ri-ink: #111827;
-  --ri-sub: #4b5563;
+  --ri-ink: #111111;
+  --ri-sub: #6b7280;
   --ri-surface: #ffffff;
   --ri-border: rgba(17, 24, 39, 0.12);
   --ri-card: #ffffff;
   --ri-card-grad-from: #ffffff;
   --ri-card-grad-to: #f3f4f6;
   --ri-meta: #6b7280;
-  --ri-body-soft: #4b5563;
+  --ri-body-soft: #111111;
   --ri-rule: #3b82f6;
   --ri-toggle-border: rgba(17, 24, 39, 0.15);
-  --ri-toggle-fg: #111827;
+  --ri-toggle-fg: #111111;
   --ri-toggle-bg: #ffffff;
   --ri-toggle-hover: rgba(59, 130, 246, 0.08);
   color-scheme: light;

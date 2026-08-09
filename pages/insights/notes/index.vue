@@ -36,7 +36,7 @@ function formatDate(iso: string) {
         <h1 class="mt-4 font-display font-extrabold uppercase ri-ink text-4xl sm:text-5xl md:text-6xl">
           Build notes
         </h1>
-        <p class="mt-5 max-w-2xl text-sm md:text-base ri-sub leading-relaxed">
+        <p class="mt-5 max-w-2xl text-sm md:text-base ri-ink leading-relaxed">
           Longer write-ups about learning projects. New posts show up here — not in the nav.
         </p>
         <div class="mt-6 h-[2px] w-full ri-rule" />
@@ -61,7 +61,7 @@ function formatDate(iso: string) {
               <h2 class="mt-2 font-display font-bold ri-ink text-lg md:text-xl group-hover:text-accent transition-colors">
                 {{ note.title }}
               </h2>
-              <p class="mt-2 text-sm ri-sub leading-relaxed">
+              <p class="mt-2 text-sm ri-ink leading-relaxed">
                 {{ note.summary }}
               </p>
               <div

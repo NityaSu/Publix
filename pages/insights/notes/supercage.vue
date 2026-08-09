@@ -42,7 +42,7 @@ useHead({
           <h1 class="mt-4 font-display font-extrabold ri-ink text-3xl sm:text-4xl md:text-5xl leading-tight">
             Building supercage: caging an AI coding agent
           </h1>
-          <p class="mt-5 text-base md:text-lg ri-sub leading-relaxed">
+          <p class="mt-5 text-base md:text-lg ri-ink leading-relaxed">
             I built an unsafe agent first, then put it in a Docker cage, then connected a real dashboard.
           </p>
           <div class="mt-6 flex flex-wrap gap-2">
@@ -57,7 +57,7 @@ useHead({
           <div class="mt-8 h-[2px] w-full ri-rule" />
         </header>
 
-        <div class="mt-12 md:mt-16 max-w-3xl space-y-6 text-sm md:text-base ri-sub leading-relaxed">
+        <div class="mt-12 md:mt-16 max-w-3xl space-y-6 text-sm md:text-base ri-ink leading-relaxed">
           <section aria-labelledby="why-heading" class="space-y-4">
             <h2 id="why-heading" class="font-display font-bold ri-ink text-xl md:text-2xl">
               Why this exists
@@ -153,15 +153,15 @@ useHead({
               <h2 id="phase1-heading" class="font-display font-bold ri-ink text-2xl md:text-3xl">
                 Unsafe CLI agent
               </h2>
-              <p class="text-sm md:text-base ri-sub leading-relaxed">
+              <p class="text-sm md:text-base ri-ink leading-relaxed">
                 What I built:
               </p>
-              <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-sub leading-relaxed">
+              <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-ink leading-relaxed">
                 <li>Ollama-backed agent with tool calling on the host</li>
                 <li>Tools: <code class="text-accent/90">read_file</code>, <code class="text-accent/90">write_file</code>, <code class="text-accent/90">run_command</code></li>
                 <li>Shell and writes could reach outside any “workspace” idea if the command said so</li>
               </ul>
-              <p class="text-sm md:text-base ri-sub leading-relaxed">
+              <p class="text-sm md:text-base ri-ink leading-relaxed">
                 <strong class="ri-ink font-medium">What it proves:</strong>
                 an agent with unrestricted shell access is not a toy. Path checks on file tools do not matter
                 if <code class="text-accent/90">run_command</code> can do anything your user can do.
@@ -195,12 +195,12 @@ useHead({
               <h2 id="phase2-heading" class="font-display font-bold ri-ink text-2xl md:text-3xl">
                 React dashboard (mock UI)
               </h2>
-              <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-sub leading-relaxed">
+              <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-ink leading-relaxed">
                 <li>Vite + Tailwind shell: chat, terminal, file tree, execution log, policy toggles</li>
                 <li>Still mock data — not wired to the agent</li>
                 <li>Looks like a product; the brains are not connected yet</li>
               </ul>
-              <p class="text-sm md:text-base ri-sub leading-relaxed">
+              <p class="text-sm md:text-base ri-ink leading-relaxed">
                 <strong class="ri-ink font-medium">What it proves:</strong>
                 you can design the control surface before the dangerous parts are live — chat, logs, and
                 policy switches as first-class UI.
@@ -227,13 +227,13 @@ useHead({
               <h2 id="phase3-heading" class="font-display font-bold ri-ink text-2xl md:text-3xl">
                 Docker sandbox (the cage)
               </h2>
-              <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-sub leading-relaxed">
+              <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-ink leading-relaxed">
                 <li><code class="text-accent/90">run_command</code> goes through <code class="text-accent/90">sandbox/runner.py</code></li>
                 <li>Fresh container per command</li>
                 <li>Only <code class="text-accent/90">./workspace</code> mounted; host Desktop not available</li>
                 <li>Network off by default</li>
               </ul>
-              <p class="text-sm md:text-base ri-sub leading-relaxed">
+              <p class="text-sm md:text-base ri-ink leading-relaxed">
                 <strong class="ri-ink font-medium">What it proves:</strong>
                 the same agent can still “succeed” inside the cage, while the host stays untouched.
                 That is different from the model politely refusing — the command may run, just not on your Mac.
@@ -267,12 +267,12 @@ useHead({
               <h2 id="phase4-heading" class="font-display font-bold ri-ink text-2xl md:text-3xl">
                 FastAPI + live dashboard
               </h2>
-              <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-sub leading-relaxed">
+              <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-ink leading-relaxed">
                 <li>Dashboard talks to the real agent via FastAPI + SSE</li>
                 <li>Policy toggles (e.g. Shell Commands off) actually block tools</li>
                 <li>Execution Log shows <code class="text-accent/90">BLOCK</code> when a tool is denied</li>
               </ul>
-              <p class="text-sm md:text-base ri-sub leading-relaxed">
+              <p class="text-sm md:text-base ri-ink leading-relaxed">
                 <strong class="ri-ink font-medium">What it proves:</strong>
                 the full loop works — UI → API → caged agent → live logs and policies.
                 Important distinction:
@@ -314,7 +314,7 @@ useHead({
             <h2 id="learned-heading" class="font-display font-bold ri-ink text-xl md:text-2xl">
               What I learned
             </h2>
-            <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-sub leading-relaxed">
+            <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-ink leading-relaxed">
               <li>Build the unsafe baseline first so the cage’s value is obvious.</li>
               <li>Isolation ≠ model refusal — Docker can let a command succeed without touching the host.</li>
               <li>Policy UI must enforce for real; logs should show BLOCK when a tool is denied.</li>
@@ -325,7 +325,7 @@ useHead({
             <h2 id="next-heading" class="font-display font-bold ri-ink text-xl md:text-2xl">
               What’s next
             </h2>
-            <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-sub leading-relaxed">
+            <ul class="list-disc pl-5 space-y-2 text-sm md:text-base ri-ink leading-relaxed">
               <li>Harden policies and make denial messages clearer in the UI</li>
               <li>Reduce noisy agent retry loops when a tool is blocked</li>
               <li>Better status when Docker is down or the sandbox can’t start</li>
@@ -333,7 +333,7 @@ useHead({
           </section>
 
           <div class="pt-4 space-y-4">
-            <p class="text-sm md:text-base ri-sub leading-relaxed">
+            <p class="text-sm md:text-base ri-ink leading-relaxed">
               Built as a learning project — the cage is the point.
             </p>
             <a

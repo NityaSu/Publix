@@ -94,7 +94,7 @@ function onError() {
 
     <figcaption
       v-if="caption"
-      class="mt-3 text-xs md:text-sm ri-sub leading-relaxed"
+              class="mt-3 text-xs md:text-sm ri-sub leading-relaxed"
     >
       {{ caption }}
     </figcaption>
