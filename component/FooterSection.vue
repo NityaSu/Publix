@@ -8,7 +8,7 @@ const SOCIAL_LINKS: SocialLink[] = [
   { label: 'X', href: 'https://x.com/NityaSuon' },
   { label: 'LinkedIn', href: 'https://www.linkedin.com/in/nityasuon/' },
   { label: 'Instagram', href: 'https://www.instagram.com/nitya_suon/' },
-  { label: 'GitHub', href: '#' },
+  { label: 'GitHub', href: 'https://github.com/NityaSu' },
 ];
 </script>
 
