@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InsightsSection from '~/component/InsightsSection.vue';
+import InsightsReadingShell from '~/component/InsightsReadingShell.vue';
 
 useHead({
   title: 'Insights',
@@ -7,7 +8,9 @@ useHead({
 </script>
 
 <template>
-  <main class="min-h-screen bg-background">
-    <InsightsSection />
-  </main>
+  <InsightsReadingShell>
+    <main>
+      <InsightsSection />
+    </main>
+  </InsightsReadingShell>
 </template>

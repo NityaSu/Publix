@@ -130,3 +130,99 @@ html:not(.fonts-loading):not(.fonts-loaded) body {
     font-family: 'DM Mono', 'DM Mono fallback', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 }
+
+/*
+ * Insights reading mode — scoped to .insights-shell only.
+ * Rest of the site stays on the dark portfolio theme.
+ */
+.insights-shell {
+  --ri-bg: #111111;
+  --ri-ink: #ffffff;
+  --ri-sub: #888888;
+  --ri-surface: #1a1a1a;
+  --ri-border: rgba(255, 255, 255, 0.12);
+  --ri-card: #151515;
+  --ri-card-grad-from: #1e1e1e;
+  --ri-card-grad-to: #151515;
+  --ri-meta: #666666;
+  --ri-body-soft: #a0a0a0;
+  --ri-rule: #4a9eff;
+  --ri-toggle-border: rgba(255, 255, 255, 0.15);
+  --ri-toggle-fg: #ffffff;
+  --ri-toggle-bg: transparent;
+  --ri-toggle-hover: rgba(74, 158, 255, 0.1);
+  --insights-nav-offset: 3.5rem;
+  background-color: var(--ri-bg);
+  color: var(--ri-ink);
+  color-scheme: dark;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+@media (min-width: 640px) {
+  .insights-shell {
+    --insights-nav-offset: 4rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .insights-shell {
+    --insights-nav-offset: 5rem;
+  }
+}
+
+.insights-shell[data-mode='light'] {
+  --ri-bg: #f8f9fa;
+  --ri-ink: #111827;
+  --ri-sub: #4b5563;
+  --ri-surface: #ffffff;
+  --ri-border: rgba(17, 24, 39, 0.12);
+  --ri-card: #ffffff;
+  --ri-card-grad-from: #ffffff;
+  --ri-card-grad-to: #f3f4f6;
+  --ri-meta: #6b7280;
+  --ri-body-soft: #4b5563;
+  --ri-rule: #3b82f6;
+  --ri-toggle-border: rgba(17, 24, 39, 0.15);
+  --ri-toggle-fg: #111827;
+  --ri-toggle-bg: #ffffff;
+  --ri-toggle-hover: rgba(59, 130, 246, 0.08);
+  color-scheme: light;
+}
+
+.insights-shell-bar {
+  background-color: color-mix(in srgb, var(--ri-bg) 92%, transparent);
+  border-color: var(--ri-border);
+  backdrop-filter: blur(8px);
+}
+
+.insights-reading-toggle {
+  border-color: var(--ri-toggle-border);
+  color: var(--ri-toggle-fg);
+  background-color: var(--ri-toggle-bg);
+}
+
+.insights-reading-toggle:hover {
+  background-color: var(--ri-toggle-hover);
+  border-color: rgba(74, 158, 255, 0.45);
+}
+
+.ri-ink {
+  color: var(--ri-ink);
+}
+
+.ri-sub {
+  color: var(--ri-sub);
+}
+
+.ri-surface {
+  background-color: var(--ri-surface);
+}
+
+.ri-border {
+  border-color: var(--ri-border);
+}
+
+.ri-rule {
+  background-color: var(--ri-rule);
+}
+

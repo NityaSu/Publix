@@ -42,7 +42,7 @@ function onError() {
 <template>
   <figure class="blog-demo w-full min-w-0">
     <div
-      class="relative overflow-hidden rounded-xl border border-white/10 bg-surface"
+      class="relative overflow-hidden rounded-xl border ri-border ri-surface"
       :class="showEmpty || (kind === 'image' && !loaded) ? aspectClass : ''"
     >
       <!-- Empty / missing asset -->
@@ -57,10 +57,10 @@ function onError() {
           class="text-accent/60"
           aria-hidden="true"
         />
-        <p class="font-dm text-xs uppercase tracking-[0.14em] text-muted">
+        <p class="font-dm text-xs uppercase tracking-[0.14em] ri-sub">
           {{ kind === 'video' ? 'Demo video coming soon' : 'Demo screenshot coming soon' }}
         </p>
-        <p v-if="src" class="max-w-md break-all text-[11px] text-white/30 font-mono">
+        <p v-if="src" class="max-w-md break-all text-[11px] ri-sub opacity-50 font-mono">
           Drop file at {{ src }}
         </p>
       </div>
@@ -94,7 +94,7 @@ function onError() {
 
     <figcaption
       v-if="caption"
-      class="mt-3 text-xs md:text-sm text-muted leading-relaxed"
+      class="mt-3 text-xs md:text-sm ri-sub leading-relaxed"
     >
       {{ caption }}
     </figcaption>
