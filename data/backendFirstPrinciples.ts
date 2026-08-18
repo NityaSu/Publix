@@ -500,16 +500,194 @@ department = data.get("department", "General")`,
   {
     id: 'auth',
     n: 5,
-    title: 'Authentication and authorization',
+    title: 'What is Auth in Backend? Who You Are vs What You May Do',
     label: 'Auth',
     cluster: 'gate',
     x: 600,
     y: 85,
-    gist: 'Authentication is who. Authorization is what they may do. Mixing them is how I accidentally ship admin to everyone.',
+    gist: 'Authentication is who you are. Authorization is what you may do. Mixing them is how admin leaks to everyone.',
     remember: [
-      'Stateful session vs stateless token (JWT). Cookies vs bearer. API keys for machines. MFA when the blast radius is high.',
-      'Authz is resource + action + actor — not “they logged in.”',
-      'Audit failed logins. CSRF, XSS, MITM are not optional footnotes.',
+      'AuthN proves identity. AuthZ checks permission on a resource. Login is not enough.',
+      'Sessions: the server remembers you. JWT: the token carries the claims; the server verifies the signature.',
+      'Never store passwords in plain text. Hash them. Never put secrets in a JWT payload.',
+    ],
+    sections: [
+      {
+        heading: '1. Authentication vs authorization',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          {
+            type: 'ul',
+            items: [
+              '**Authentication (AuthN)** = *who are you?* Proving identity. Like showing your ID at the airport.',
+              '**Authorization (AuthZ)** = *what are you allowed to do?* Proving permissions. Like a boarding pass that says seat 12A, not first class.',
+            ],
+          },
+          { type: 'quote', text: 'Identity first. Permission second. A valid login does not mean “do anything.”' },
+          { type: 'p', text: 'Example — prove who, then prove what:' },
+          {
+            type: 'pre',
+            lines: `# AUTHENTICATION: checking WHO you are
+def login(username, password):
+    user = database.find_user(username)
+    if bcrypt.checkpw(password, user.hashed_password):
+        return "You are Alice!"   # identity proven
+    return "Invalid credentials"
+
+# AUTHORIZATION: checking WHAT you can do
+def delete_post(user, post_id):
+    post = database.find_post(post_id)
+    if user.id != post.author_id and user.role != "admin":
+        return "Forbidden: you can't delete this!"
+    database.delete(post)
+    return "Post deleted"`,
+          },
+          {
+            type: 'kid',
+            items: [
+              '**Authentication** = showing your student ID. The teacher checks the photo. “Yes, you are Bob.”',
+              '**Authorization** = the teacher saying: “Bob, you can use the computer lab, but you cannot go into the teacher’s lounge.”',
+              'The ID proved who you are. The rules decide where you can go.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Stateful vs stateless authentication',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Stateful (sessions)** = the server *remembers* you. It stores a session ID in memory / Redis / a database. Every request sends a cookie with that ID.',
+              '**Stateless (JWT)** = the server does *not* remember you. It gives you a signed token with your claims. You send it on every request. The server verifies the signature.',
+            ],
+          },
+          { type: 'h3', text: 'Stateful — session / cookie' },
+          {
+            type: 'pre',
+            lines: `Server stores this in Redis / memory:
+  session_id "abc123"  →  user_id: 42, role: "admin"
+
+Client sends cookie:  session_id=abc123
+Server looks it up:   "Oh, this is Alice the admin!"`,
+          },
+          { type: 'h3', text: 'Stateless — JWT' },
+          {
+            type: 'pre',
+            lines: `Server gives the client a token (signed with a secret):
+  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+Decoded:  { "user_id": 42, "role": "admin", "exp": 1234567890 }
+
+Client sends:  Authorization: Bearer <token>
+Server verifies the signature:  "Valid! This is Alice the admin!"
+Server does NOT look the session up in a database.`,
+          },
+          {
+            type: 'kid',
+            items: [
+              '**Stateful (session)** = coat check. You give them your coat, they give you ticket #42. Show the ticket; they look in the back. “Ah yes, the blue jacket.”',
+              '**Stateless (JWT)** = a theme-park wristband. Name, photo, and which rides you may use are *printed on the band*. The ride operator just looks at your wrist. No call to the front desk.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Password hashing',
+        blocks: [
+          { type: 'p', text: 'You **never** store passwords in plain text. If someone steals the database, they would get everyone’s passwords. Store a **hash** — a one-way scramble. Even you cannot reverse it.' },
+          { type: 'quote', text: 'We never know the original password. We only know the new attempt matches the stored hash.' },
+          {
+            type: 'pre',
+            lines: `import bcrypt
+
+# SIGN UP: store the hash, not the password
+password = "supersecret123"
+hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+# looks like: $2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4...
+
+# LOGIN: check the password
+entered = "supersecret123"
+is_valid = bcrypt.checkpw(entered.encode(), stored_hash)
+# True — it matches. The original string is still unknown.`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'A magic blender: apple in, applesauce out. There is no reverse button. You cannot turn sauce back into an apple.',
+              'The server blends your password and stores the sauce. On login you give a new apple. They blend it and ask: does this sauce match the stored sauce?',
+              'If yes, you are in. If someone steals the sauce, they still cannot make the apple.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. JWT — JSON Web Tokens',
+        blocks: [
+          { type: 'p', text: 'A JWT has **3 parts**, separated by dots:' },
+          {
+            type: 'pre',
+            lines: 'header.payload.signature',
+          },
+          {
+            type: 'table',
+            columns: ['Part', 'What it is'],
+            rows: [
+              ['**Header**', 'How it was signed (algorithm, token type). Example: `{ "alg": "HS256", "typ": "JWT" }`'],
+              ['**Payload**', 'Claims — who, what role, when it expires. Anyone can *read* this. Do not put passwords here.'],
+              ['**Signature**', 'Proof the header + payload were not changed. Made with the server’s secret (or private key).'],
+            ],
+          },
+          { type: 'p', text: 'The server does not look up a session. It checks: is the signature valid, and is `exp` still in the future?' },
+          {
+            type: 'pre',
+            lines: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+.
+eyJ1c2VyX2lkIjo0Miwicm9sZSI6ImFkbWluIiwiZXhwIjoxMjM0NTY3ODkwfQ
+.
+signature_bytes_here`,
+          },
+          {
+            type: 'ul',
+            items: [
+              'Change one character in the payload without the secret → signature check fails.',
+              'Stolen token still works until it expires (or you add a denylist). That is the trade for not storing sessions.',
+            ],
+          },
+          {
+            type: 'kid',
+            items: [
+              'The wristband has three stickers: **how it was printed**, **your name and rides**, and a **secret stamp** only the park can make.',
+              'Anyone can read the name sticker. The stamp is what stops a fake wristband.',
+              'If someone copies your band, they can ride until the date on it runs out — unless the park keeps a “stolen bands” list.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Concept', 'Real-world analogy', 'What it does'],
+            rows: [
+              ['Authentication', 'Showing your ID', 'Prove *who* you are'],
+              ['Authorization', 'Boarding pass / room rules', 'Prove *what* you may do'],
+              ['Session', 'Coat-check ticket', 'Server remembers you'],
+              ['JWT', 'Theme-park wristband', 'Token carries claims; server verifies stamp'],
+              ['Password hash', 'Applesauce from a blender', 'Store a one-way scramble, never the password'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**AuthN** answers who.',
+              '**AuthZ** answers what they may do.',
+              '**Hash** the password. **Sign** the token. Never mix “they logged in” with “they may delete this.”',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
