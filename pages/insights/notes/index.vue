@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import InsightsReadingShell from '~/component/InsightsReadingShell.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
-import { buildNotes, buildNotePath } from '~/data/buildNotes';
+import { publicBuildNotes, buildNotePath } from '~/data/buildNotes';
 
 useHead({
   title: 'Build notes',
@@ -48,7 +48,7 @@ function formatDate(iso: string) {
         <div class="mt-6 h-[2px] w-full ri-rule" />
 
         <ul class="mt-12 md:mt-16 space-y-5 max-w-3xl" role="list">
-          <li v-for="note in buildNotes" :key="note.slug">
+          <li v-for="note in publicBuildNotes" :key="note.slug">
             <NuxtLink
               :to="buildNotePath(note.slug)"
               class="group block border ri-border ri-surface px-6 py-5 transition-colors hover:border-accent/40"
