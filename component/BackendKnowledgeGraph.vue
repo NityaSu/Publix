@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Maximize2, Minimize2, RefreshCw, X } from 'lucide-vue-next';
+import { Maximize2, Minimize2, RefreshCw } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import {
@@ -9,9 +9,8 @@ import {
   topicById,
   topicsInOrder,
   type ClusterId,
+  type LessonBlock,
 } from '~/data/backendFirstPrinciples';
-
-type ViewMode = 'graph' | 'split' | 'workbench';
 
 interface SimNode {
   id: string;
@@ -45,13 +44,15 @@ const CLUSTER_DOT: Record<ClusterId, string> = {
   keep: '#9b8cff',
 };
 
-const viewMode = ref<ViewMode>('split');
 const selectedId = ref<string | null>(null);
 const hoverId = ref<string | null>(null);
 const showEdgeLabels = ref(false);
 const activeCluster = ref<ClusterId | null>(null);
+const isFullscreen = ref(false);
 const graphEl = ref<HTMLElement | null>(null);
 const svgEl = ref<SVGSVGElement | null>(null);
+const shellEl = ref<HTMLElement | null>(null);
+const lessonEl = ref<HTMLElement | null>(null);
 const simNodes = ref<SimNode[]>([]);
 const transform = reactive({ x: 0, y: 0, k: 1 });
 
@@ -116,35 +117,67 @@ function edgeActive(edge: SimEdge) {
   return edge.source === selectedId.value || edge.target === selectedId.value;
 }
 
-function clusterOf(id: ClusterId) {
-  return clusters.find((cluster) => cluster.id === id);
-}
-
-const leftStyle = computed(() => {
-  if (viewMode.value === 'graph') return { width: '100%', opacity: 1 };
-  if (viewMode.value === 'workbench') return { width: '0%', opacity: 0 };
-  return { width: '50%', opacity: 1 };
-});
-
-const rightStyle = computed(() => {
-  if (viewMode.value === 'workbench') return { width: '100%', opacity: 1 };
-  if (viewMode.value === 'graph') return { width: '0%', opacity: 0 };
-  return { width: '50%', opacity: 1 };
-});
-
-function setView(mode: ViewMode) {
-  viewMode.value = viewMode.value === mode ? 'split' : mode;
-}
-
 function selectTopic(id: string) {
   selectedId.value = id;
-  if (viewMode.value === 'graph' && window.innerWidth < 900) {
-    viewMode.value = 'split';
+  nextTick(() => {
+    lessonEl.value?.scrollTo({ top: 0 });
+  });
+}
+
+function md(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
+
+function blockText(block: LessonBlock) {
+  return 'text' in block ? block.text ?? '' : '';
+}
+
+function blockItems(block: LessonBlock) {
+  return 'items' in block ? block.items ?? [] : [];
+}
+
+function blockLines(block: LessonBlock) {
+  return 'lines' in block ? (typeof block.lines === 'string' ? block.lines : block.lines.join('\n')) : '';
+}
+
+function blockCallout(block: LessonBlock) {
+  return 'lines' in block && Array.isArray(block.lines) ? block.lines : [];
+}
+
+function blockColumns(block: LessonBlock) {
+  return block.type === 'table' ? block.columns : [];
+}
+
+function blockRows(block: LessonBlock) {
+  return block.type === 'table' ? block.rows : [];
+}
+
+async function toggleFullscreen() {
+  if (isFullscreen.value) {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    isFullscreen.value = false;
+    return;
+  }
+  isFullscreen.value = true;
+  try {
+    await shellEl.value?.requestFullscreen();
+  } catch {
+    /* layout fullscreen still works without the browser API */
   }
 }
 
-function closeInspect() {
-  selectedId.value = null;
+function onFullscreenChange() {
+  if (document.fullscreenElement) {
+    isFullscreen.value = document.fullscreenElement === shellEl.value;
+    return;
+  }
+  isFullscreen.value = false;
 }
 
 function toggleCluster(id: ClusterId) {
@@ -361,209 +394,219 @@ watch(selectedId, (id) => {
   }
 });
 
+watch(isFullscreen, (fs) => {
+  if (!fs) nextTick(() => seedNodes());
+});
+
+let resizeObserver: ResizeObserver | null = null;
+
 onMounted(async () => {
   await nextTick();
   seedNodes();
   const hash = decodeURIComponent(window.location.hash.replace(/^#/, ''));
   if (topicById(hash)) selectedId.value = hash;
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  if (graphEl.value) {
+    let lastW = 0;
+    let lastH = 0;
+    resizeObserver = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentRect;
+      if (!box) return;
+      if (Math.abs(box.width - lastW) < 8 && Math.abs(box.height - lastH) < 8) return;
+      lastW = box.width;
+      lastH = box.height;
+      if (box.width > 0 && box.height > 0) seedNodes();
+    });
+    resizeObserver.observe(graphEl.value);
+  }
 });
 
 onUnmounted(() => {
   if (raf) cancelAnimationFrame(raf);
+  resizeObserver?.disconnect();
+  document.removeEventListener('fullscreenchange', onFullscreenChange);
 });
 </script>
 
 <template>
-  <div class="mf">
+  <div ref="shellEl" class="mf" :class="{ 'is-fs': isFullscreen }">
     <header class="mf-header">
       <NuxtLink to="/insights/notes" class="mf-brand">FIRST PRINCIPLE</NuxtLink>
-      <div class="mf-switch" role="tablist" aria-label="Layout">
-        <button
-          v-for="mode in (['graph', 'split', 'workbench'] as ViewMode[])"
-          :key="mode"
-          type="button"
-          class="mf-switch-btn"
-          :class="{ 'is-on': viewMode === mode }"
-          @click="viewMode = mode"
-        >
-          {{ mode }}
-        </button>
-      </div>
       <div class="mf-meta">
-        <span class="mf-step">Graph · 31 lessons</span>
-        <span class="mf-status">
-          <i class="mf-dot" />
-          Ready
-        </span>
+        <span class="mf-step">31 lessons</span>
+        <button type="button" class="mf-tool" @click="toggleFullscreen">
+          <Minimize2 v-if="isFullscreen" :size="14" />
+          <Maximize2 v-else :size="14" />
+          {{ isFullscreen ? 'Exit' : 'Fullscreen' }}
+        </button>
         <InsightsReadingToggle />
       </div>
     </header>
 
     <div class="mf-body">
-      <section class="mf-pane mf-pane-left" :style="leftStyle" aria-label="Knowledge graph">
-        <div class="mf-graph" ref="graphEl">
-          <div class="mf-graph-head">
-            <p class="mf-graph-title">Knowledge Graph</p>
-            <div class="mf-tools">
-              <button type="button" class="mf-tool" @click="seedNodes">
-                <RefreshCw :size="14" />
-                Reset
-              </button>
-              <button type="button" class="mf-tool" @click="setView('graph')">
-                <Minimize2 v-if="viewMode === 'graph'" :size="14" />
-                <Maximize2 v-else :size="14" />
-              </button>
-            </div>
-          </div>
+      <section v-show="!isFullscreen" class="mf-graph" ref="graphEl" aria-label="Knowledge graph">
+        <div class="mf-graph-head">
+          <p class="mf-graph-title">Map</p>
+          <button type="button" class="mf-tool" @click="seedNodes">
+            <RefreshCw :size="14" />
+            Reset
+          </button>
+        </div>
 
-          <label class="mf-edge-toggle">
-            Show edge labels
-            <span class="mf-switch-mini">
-              <input v-model="showEdgeLabels" type="checkbox" />
-              <span class="mf-slider" />
-            </span>
-          </label>
+        <label class="mf-edge-toggle">
+          Edge labels
+          <span class="mf-switch-mini">
+            <input v-model="showEdgeLabels" type="checkbox" />
+            <span class="mf-slider" />
+          </span>
+        </label>
 
-          <svg
-            ref="svgEl"
-            class="mf-svg"
-            @wheel.prevent="onWheel"
-            @pointerdown="onCanvasDown"
-            @pointermove="onCanvasMove"
-            @pointerup="onCanvasUp"
-            @pointercancel="onCanvasUp"
-          >
-            <defs>
-              <linearGradient id="mf-node-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#8b7cff" />
-                <stop offset="48%" stop-color="#4A9EFF" />
-                <stop offset="100%" stop-color="#ffffff" />
-              </linearGradient>
-            </defs>
-            <g :transform="`translate(${transform.x} ${transform.y}) scale(${transform.k})`">
-              <line
+        <svg
+          ref="svgEl"
+          class="mf-svg"
+          @wheel.prevent="onWheel"
+          @pointerdown="onCanvasDown"
+          @pointermove="onCanvasMove"
+          @pointerup="onCanvasUp"
+          @pointercancel="onCanvasUp"
+        >
+          <defs>
+            <linearGradient id="mf-node-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#8b7cff" />
+              <stop offset="48%" stop-color="#4A9EFF" />
+              <stop offset="100%" stop-color="#ffffff" />
+            </linearGradient>
+          </defs>
+          <g :transform="`translate(${transform.x} ${transform.y}) scale(${transform.k})`">
+            <line
+              v-for="edge in simEdges"
+              :key="edge.id"
+              :x1="nodeById[edge.source]?.x"
+              :y1="nodeById[edge.source]?.y"
+              :x2="nodeById[edge.target]?.x"
+              :y2="nodeById[edge.target]?.y"
+              class="mf-link"
+              :class="{
+                'is-then': edge.kind === 'then',
+                'is-on': edgeActive(edge),
+                'is-dim': selectedId && !edgeActive(edge),
+              }"
+            />
+            <g v-if="showEdgeLabels">
+              <text
                 v-for="edge in simEdges"
-                :key="edge.id"
-                :x1="nodeById[edge.source]?.x"
-                :y1="nodeById[edge.source]?.y"
-                :x2="nodeById[edge.target]?.x"
-                :y2="nodeById[edge.target]?.y"
-                class="mf-link"
-                :class="{
-                  'is-then': edge.kind === 'then',
-                  'is-on': edgeActive(edge),
-                  'is-dim': selectedId && !edgeActive(edge),
-                }"
-              />
-              <g v-if="showEdgeLabels">
-                <text
-                  v-for="edge in simEdges"
-                  :key="`lbl-${edge.id}`"
-                  :x="edgeMid(edge).x"
-                  :y="edgeMid(edge).y - 4"
-                  class="mf-link-label"
-                  text-anchor="middle"
-                >
-                  {{ edge.kind === 'then' ? 'THEN' : 'RELATES' }}
-                </text>
-              </g>
-              <g
-                v-for="node in simNodes"
-                :key="node.id"
-                class="mf-node"
-                :class="{
-                  'is-on': selectedId === node.id,
-                  'is-hot': hoverId === node.id,
-                  'is-dim': isDimmed(node.id),
-                }"
-                @pointerdown="onNodeDown($event, node.id)"
-                @mouseenter="hoverId = node.id"
-                @mouseleave="hoverId = null"
+                :key="`lbl-${edge.id}`"
+                :x="edgeMid(edge).x"
+                :y="edgeMid(edge).y - 4"
+                class="mf-link-label"
+                text-anchor="middle"
               >
-                <circle :cx="node.x" :cy="node.y" r="26" class="mf-hit" />
-                <circle :cx="node.x" :cy="node.y" :r="NODE_R" class="mf-core" />
-                <text :x="node.x" :y="node.y + 4" text-anchor="middle" class="mf-num">
-                  {{ node.n }}
-                </text>
-                <text :x="node.x" :y="node.y + NODE_R + 14" text-anchor="middle" class="mf-label">
-                  {{ node.label }}
-                </text>
-              </g>
+                {{ edge.kind === 'then' ? 'THEN' : 'RELATES' }}
+              </text>
             </g>
-          </svg>
+            <g
+              v-for="node in simNodes"
+              :key="node.id"
+              class="mf-node"
+              :class="{
+                'is-on': selectedId === node.id,
+                'is-hot': hoverId === node.id,
+                'is-dim': isDimmed(node.id),
+              }"
+              @pointerdown="onNodeDown($event, node.id)"
+              @mouseenter="hoverId = node.id"
+              @mouseleave="hoverId = null"
+            >
+              <circle :cx="node.x" :cy="node.y" r="26" class="mf-hit" />
+              <circle :cx="node.x" :cy="node.y" :r="NODE_R" class="mf-core" />
+              <text :x="node.x" :y="node.y + 4" text-anchor="middle" class="mf-num">
+                {{ node.n }}
+              </text>
+              <text :x="node.x" :y="node.y + NODE_R + 14" text-anchor="middle" class="mf-label">
+                {{ node.label }}
+              </text>
+            </g>
+          </g>
+        </svg>
 
-          <aside v-if="selectedTopic && viewMode !== 'workbench'" class="mf-inspect">
-            <div class="mf-inspect-head">
-              <div>
-                <p class="mf-inspect-kicker">Node details</p>
-                <p class="mf-type-badge">{{ selectedCluster?.label }}</p>
-              </div>
-              <button type="button" class="mf-close" aria-label="Close" @click="closeInspect">
-                <X :size="14" />
-              </button>
-            </div>
-            <div class="mf-inspect-body">
-              <p class="mf-inspect-name">{{ selectedTopic.title }}</p>
-              <p class="mf-row"><span>Index</span>{{ selectedTopic.n.toString().padStart(2, '0') }}</p>
-              <p class="mf-row"><span>Cluster</span>{{ selectedCluster?.label }}</p>
-              <p class="mf-section-title">Summary</p>
-              <p class="mf-summary">{{ selectedTopic.gist }}</p>
-              <p class="mf-section-title">Remember</p>
-              <ul class="mf-remember">
-                <li v-for="line in selectedTopic.remember" :key="line">{{ line }}</li>
-              </ul>
-            </div>
-          </aside>
-
-          <div class="mf-legend">
-            <span class="mf-legend-title">Entity types</span>
-            <div class="mf-legend-items">
-              <button
-                v-for="cluster in clusters"
-                :key="cluster.id"
-                type="button"
-                class="mf-legend-item"
-                :class="{ 'is-on': activeCluster === cluster.id }"
-                @click="toggleCluster(cluster.id)"
-              >
-                <i class="mf-legend-dot" :style="{ background: CLUSTER_DOT[cluster.id] }" />
-                {{ cluster.label }}
-              </button>
-            </div>
+        <div class="mf-legend">
+          <span class="mf-legend-title">Clusters</span>
+          <div class="mf-legend-items">
+            <button
+              v-for="cluster in clusters"
+              :key="cluster.id"
+              type="button"
+              class="mf-legend-item"
+              :class="{ 'is-on': activeCluster === cluster.id }"
+              @click="toggleCluster(cluster.id)"
+            >
+              <i class="mf-legend-dot" :style="{ background: CLUSTER_DOT[cluster.id] }" />
+              {{ cluster.label }}
+            </button>
           </div>
         </div>
       </section>
 
-      <section class="mf-pane mf-pane-right" :style="rightStyle" aria-label="Lesson workbench">
-        <div class="mf-work">
-          <div class="mf-work-head">
-            <p class="mf-graph-title">Workbench</p>
-            <button type="button" class="mf-tool" @click="setView('workbench')">
-              <Minimize2 v-if="viewMode === 'workbench'" :size="14" />
-              <Maximize2 v-else :size="14" />
-            </button>
-          </div>
+      <section ref="lessonEl" class="mf-lesson" aria-label="Lesson">
+        <article v-if="selectedTopic" class="mf-page">
+          <p class="mf-kicker">
+            Lesson {{ selectedTopic.n.toString().padStart(2, '0') }}
+            <span v-if="selectedCluster"> · {{ selectedCluster.label }}</span>
+          </p>
+          <h1>{{ selectedTopic.title }}</h1>
+          <p class="mf-lead">{{ selectedTopic.gist }}</p>
 
-          <article v-if="selectedTopic" class="mf-report">
-            <p class="mf-inspect-kicker">Lesson {{ selectedTopic.n.toString().padStart(2, '0') }}</p>
-            <h1>{{ selectedTopic.title }}</h1>
-            <p class="mf-lead">{{ selectedTopic.gist }}</p>
+          <ul v-if="!selectedTopic.sections?.length" class="mf-bullets">
+            <li v-for="line in selectedTopic.remember" :key="line">{{ line }}</li>
+          </ul>
 
-            <ul v-if="!selectedTopic.sections?.length" class="mf-remember">
-              <li v-for="line in selectedTopic.remember" :key="line">{{ line }}</li>
-            </ul>
-
-            <section
-              v-for="(section, sIndex) in selectedTopic.sections"
-              :key="`${selectedTopic.id}-${sIndex}`"
-              class="mf-block"
-            >
-              <h2>{{ section.heading }}</h2>
+          <section
+            v-for="(section, sIndex) in selectedTopic.sections"
+            :key="`${selectedTopic.id}-${sIndex}`"
+            class="mf-block"
+          >
+            <h2>{{ section.heading }}</h2>
+            <template v-if="section.blocks?.length">
+              <template v-for="(block, bIndex) in section.blocks" :key="`${selectedTopic.id}-${sIndex}-${bIndex}`">
+                <h3 v-if="block.type === 'h3'" v-html="md(blockText(block))" />
+                <p v-else-if="block.type === 'p'" v-html="md(blockText(block))" />
+                <blockquote v-else-if="block.type === 'quote'" v-html="md(blockText(block))" />
+                <ul v-else-if="block.type === 'ul'" class="mf-bullets">
+                  <li v-for="item in blockItems(block)" :key="item" v-html="md(item)" />
+                </ul>
+                <pre v-else-if="block.type === 'pre'">{{ blockLines(block) }}</pre>
+                <hr v-else-if="block.type === 'hr'" class="mf-rule" />
+                <div v-else-if="block.type === 'table'" class="mf-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th v-for="col in blockColumns(block)" :key="col" v-html="md(col)" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(row, rIndex) in blockRows(block)" :key="rIndex">
+                        <td v-for="(cell, cIndex) in row" :key="cIndex" v-html="md(cell)" />
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div v-else-if="block.type === 'kid'" class="mf-kid">
+                  <p class="mf-kid-label">Kid version</p>
+                  <ul v-if="blockItems(block).length" class="mf-bullets">
+                    <li v-for="item in blockItems(block)" :key="item" v-html="md(item)" />
+                  </ul>
+                  <p v-else v-html="md(blockText(block))" />
+                </div>
+                <div v-else-if="block.type === 'callout'" class="mf-callout">
+                  <p v-for="line in blockCallout(block)" :key="line" v-html="md(line)" />
+                </div>
+              </template>
+            </template>
+            <template v-else>
               <p v-for="paragraph in section.body" :key="paragraph">{{ paragraph }}</p>
-              <p v-if="section.kid" class="mf-kid">
-                <strong>Kid version</strong>
-                {{ section.kid }}
-              </p>
+              <ul v-if="section.bullets?.length" class="mf-bullets">
+                <li v-for="bullet in section.bullets" :key="bullet">{{ bullet }}</li>
+              </ul>
               <div v-if="section.table?.length" class="mf-table-wrap">
                 <table>
                   <thead>
@@ -586,45 +629,48 @@ onUnmounted(() => {
                 <p v-if="section.code.caption" class="mf-code-cap">{{ section.code.caption }}</p>
                 <pre>{{ section.code.lines }}</pre>
               </div>
-              <ol v-if="section.examples?.length">
+              <ol v-if="section.examples?.length" class="mf-examples">
                 <li v-for="example in section.examples" :key="`${example.method}-${example.path}`">
-                  <p>
+                  <p class="mf-ex-path">
                     <code>{{ example.method }}</code>
                     <code>{{ example.path }}</code>
                   </p>
-                  <p class="mf-muted">{{ example.goesTo }}</p>
-                  <p>{{ example.purpose }}</p>
-                  <p v-if="example.note" class="mf-muted">{{ example.note }}</p>
+                  <p class="mf-ex-to">→ {{ example.goesTo }}</p>
+                  <p>Purpose: {{ example.purpose }}</p>
+                  <p v-if="example.note" class="mf-note">{{ example.note }}</p>
                 </li>
               </ol>
-              <ul v-if="section.bullets?.length">
-                <li v-for="bullet in section.bullets" :key="bullet">{{ bullet }}</li>
+              <ul v-if="section.footer?.length" class="mf-bullets">
+                <li v-for="line in section.footer" :key="line">{{ line }}</li>
               </ul>
-            </section>
+              <div v-if="section.kid" class="mf-kid">
+                <p class="mf-kid-label">Kid version</p>
+                <p>{{ section.kid }}</p>
+              </div>
+            </template>
+          </section>
 
-            <div class="mf-pager">
-              <button
-                v-if="neighbors.prev"
-                type="button"
-                @click="neighbors.prev && selectTopic(neighbors.prev.id)"
-              >
-                ← {{ neighbors.prev.n }}. {{ neighbors.prev.label }}
-              </button>
-              <span v-else />
-              <button
-                v-if="neighbors.next"
-                type="button"
-                @click="neighbors.next && selectTopic(neighbors.next.id)"
-              >
-                {{ neighbors.next.n }}. {{ neighbors.next.label }} →
-              </button>
-            </div>
-          </article>
-
-          <div v-else class="mf-empty">
-            <p class="mf-empty-icon">❖</p>
-            <p>Click a node on the graph to inspect the lesson.</p>
+          <div class="mf-pager">
+            <button
+              v-if="neighbors.prev"
+              type="button"
+              @click="neighbors.prev && selectTopic(neighbors.prev.id)"
+            >
+              ← {{ neighbors.prev.n }}. {{ neighbors.prev.label }}
+            </button>
+            <span v-else />
+            <button
+              v-if="neighbors.next"
+              type="button"
+              @click="neighbors.next && selectTopic(neighbors.next.id)"
+            >
+              {{ neighbors.next.n }}. {{ neighbors.next.label }} →
+            </button>
           </div>
+        </article>
+
+        <div v-else class="mf-empty">
+          <p>Click a node on the map to open that lesson.</p>
         </div>
       </section>
     </div>
@@ -637,8 +683,8 @@ onUnmounted(() => {
   --mf-graph: #fafafa;
   --mf-dot: #d0d0d0;
   --mf-line: #eaeaea;
-  --mf-text: #333333;
-  --mf-muted: #666666;
+  --mf-text: #37352f;
+  --mf-muted: #787774;
   --mf-edge: #c0c0c0;
   --mf-panel: #ffffff;
   height: calc(100vh - var(--insights-nav-offset, 4rem));
@@ -647,6 +693,10 @@ onUnmounted(() => {
   background: var(--mf-bg);
   color: var(--mf-text);
   overflow: hidden;
+}
+
+.mf.is-fs {
+  height: 100vh;
 }
 
 :global(.insights-shell[data-mode='dark']) .mf {
@@ -661,148 +711,41 @@ onUnmounted(() => {
 }
 
 .mf-header {
-  height: 60px;
+  height: 56px;
   border-bottom: 1px solid var(--mf-line);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  position: relative;
+  padding: 0 20px;
   flex-shrink: 0;
   background: var(--mf-bg);
-  z-index: 20;
 }
 
 .mf-brand {
   font-family: 'DM Mono', ui-monospace, monospace;
   font-weight: 800;
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: 1px;
   color: var(--mf-text);
-}
-
-.mf-switch {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  background: color-mix(in srgb, var(--mf-muted) 10%, var(--mf-bg));
-  padding: 4px;
-  border-radius: 6px;
-  gap: 4px;
-}
-
-.mf-switch-btn {
-  border: none;
-  background: transparent;
-  padding: 6px 16px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mf-muted);
-  border-radius: 4px;
-  text-transform: capitalize;
-}
-
-.mf-switch-btn.is-on {
-  background: var(--mf-panel);
-  color: var(--mf-text);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .mf-meta {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .mf-step {
   font-size: 13px;
-  font-weight: 700;
-}
-
-.mf-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--mf-muted);
-  font-weight: 500;
-}
-
-.mf-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #4caf50;
-}
-
-.mf-body {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.mf-pane {
-  height: 100%;
-  overflow: hidden;
-  transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
-}
-
-.mf-pane-left {
-  border-right: 1px solid var(--mf-line);
-}
-
-.mf-graph,
-.mf-work {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background-color: var(--mf-graph);
-  background-image: radial-gradient(var(--mf-dot) 1.5px, transparent 1.5px);
-  background-size: 24px 24px;
-}
-
-.mf-work {
-  background-image: none;
-  background: var(--mf-bg);
-  display: flex;
-  flex-direction: column;
-}
-
-.mf-graph-head,
-.mf-work-head {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: 16px 20px;
-  z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(to bottom, var(--mf-bg), transparent);
-  pointer-events: none;
-}
-
-.mf-graph-title {
-  font-size: 14px;
   font-weight: 600;
-  pointer-events: auto;
-}
-
-.mf-tools {
-  pointer-events: auto;
-  display: flex;
-  gap: 10px;
+  color: var(--mf-muted);
 }
 
 .mf-tool,
-.mf-close,
 .mf-pager button {
   height: 32px;
   padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--mf-muted) 28%, var(--mf-line));
+  border: 1px solid var(--mf-line);
   background: var(--mf-panel);
   border-radius: 6px;
   display: inline-flex;
@@ -810,7 +753,47 @@ onUnmounted(() => {
   gap: 6px;
   color: var(--mf-muted);
   font-size: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.mf-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+}
+
+.mf-graph {
+  position: relative;
+  width: 42%;
+  min-width: 280px;
+  flex: 1 1 42%;
+  min-height: 0;
+  border-right: 1px solid var(--mf-line);
+  background-color: var(--mf-graph);
+  background-image: radial-gradient(var(--mf-dot) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+.mf-graph-head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.mf-graph-title {
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: auto;
+}
+
+.mf-graph-head .mf-tool {
+  pointer-events: auto;
 }
 
 .mf-svg {
@@ -821,61 +804,32 @@ onUnmounted(() => {
   cursor: grab;
 }
 
-.mf-link {
-  stroke: var(--mf-edge);
-  stroke-width: 1.5;
-}
-
-.mf-link.is-then {
-  stroke-width: 2;
-}
-
-.mf-link.is-on {
-  stroke: #7b2d8e;
-  stroke-width: 2.4;
-}
-
-.mf-link.is-dim {
-  opacity: 0.18;
-}
-
+.mf-link { stroke: var(--mf-edge); stroke-width: 1.5; }
+.mf-link.is-then { stroke-width: 2; }
+.mf-link.is-on { stroke: #7b2d8e; stroke-width: 2.4; }
+.mf-link.is-dim { opacity: 0.18; }
 .mf-link-label {
   fill: var(--mf-muted);
   font-size: 9px;
   font-family: 'DM Mono', ui-monospace, monospace;
   pointer-events: none;
 }
-
-.mf-node {
-  cursor: pointer;
-}
-
-.mf-hit {
-  fill: transparent;
-}
-
+.mf-node { cursor: pointer; }
+.mf-hit { fill: transparent; }
 .mf-core {
   fill: url(#mf-node-fill);
   stroke: #ffffff;
   stroke-width: 2.5;
 }
-
 .mf-node.is-on .mf-core,
-.mf-node.is-hot .mf-core {
-  stroke-width: 3.5;
-}
-
-.mf-node.is-dim {
-  opacity: 0.2;
-}
-
+.mf-node.is-hot .mf-core { stroke-width: 3.5; }
+.mf-node.is-dim { opacity: 0.2; }
 .mf-num {
   fill: #1a1440;
   font-family: 'DM Mono', ui-monospace, monospace;
   font-size: 10px;
   pointer-events: none;
 }
-
 .mf-label {
   fill: var(--mf-text);
   font-size: 11px;
@@ -883,161 +837,31 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.mf-inspect {
-  position: absolute;
-  top: 60px;
-  right: 20px;
-  width: 320px;
-  max-height: calc(100% - 100px);
-  background: var(--mf-panel);
-  border: 1px solid var(--mf-line);
-  border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  font-size: 13px;
-}
-
-.mf-inspect-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--mf-graph);
-  border-bottom: 1px solid var(--mf-line);
-}
-
-.mf-inspect-kicker {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mf-muted);
-}
-
-.mf-type-badge {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  font-size: 11px;
-  color: #7b2d8e;
-}
-
-:global(.insights-shell[data-mode='dark']) .mf-type-badge {
-  background: #222;
-  border-color: #333;
-  color: #cbb4ff;
-}
-
-.mf-close {
-  width: 32px;
-  padding: 0;
-  justify-content: center;
-}
-
-.mf-inspect-body,
-.mf-report {
-  padding: 16px;
-  overflow: auto;
-}
-
-.mf-inspect-name,
-.mf-report h1 {
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.35;
-  margin-bottom: 12px;
-}
-
-.mf-report h1 {
-  font-size: 28px;
-  margin: 8px 0 16px;
-}
-
-.mf-report h2 {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 28px 0 12px;
-}
-
-.mf-lead,
-.mf-report p,
-.mf-report li {
-  line-height: 1.65;
-  font-size: 14px;
-}
-
-.mf-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.mf-row span {
-  min-width: 72px;
-  color: var(--mf-muted);
-  font-weight: 500;
-}
-
-.mf-section-title {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--mf-line);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mf-muted);
-  margin-bottom: 10px;
-}
-
-.mf-summary,
-.mf-remember li {
-  line-height: 1.6;
-  color: var(--mf-text);
-  font-size: 12px;
-}
-
-.mf-remember,
-.mf-report ul,
-.mf-report ol {
-  padding-left: 1.1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .mf-legend {
   position: absolute;
-  bottom: 24px;
-  left: 24px;
-  background: color-mix(in srgb, var(--mf-panel) 95%, transparent);
-  padding: 12px 16px;
+  bottom: 12px;
+  left: 12px;
+  background: color-mix(in srgb, var(--mf-panel) 94%, transparent);
+  padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--mf-line);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   z-index: 10;
 }
-
 .mf-legend-title {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #e91e63;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
 .mf-legend-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
-  max-width: 320px;
+  gap: 8px 14px;
+  max-width: 360px;
 }
-
 .mf-legend-item {
   display: flex;
   align-items: center;
@@ -1045,125 +869,227 @@ onUnmounted(() => {
   font-size: 12px;
   color: var(--mf-muted);
 }
-
-.mf-legend-item.is-on {
-  color: var(--mf-text);
-  font-weight: 600;
-}
-
-.mf-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
+.mf-legend-item.is-on { color: var(--mf-text); font-weight: 600; }
+.mf-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
 .mf-edge-toggle {
   position: absolute;
-  top: 60px;
-  right: 20px;
+  top: 12px;
+  right: 96px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--mf-panel);
-  padding: 8px 14px;
+  padding: 6px 12px;
   border-radius: 20px;
-  border: 1px solid color-mix(in srgb, var(--mf-muted) 28%, var(--mf-line));
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--mf-line);
   z-index: 10;
   font-size: 12px;
   color: var(--mf-muted);
 }
-
-.mf-switch-mini {
-  position: relative;
-  width: 40px;
-  height: 22px;
-}
-
-.mf-switch-mini input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
+.mf-switch-mini { position: relative; width: 36px; height: 20px; }
+.mf-switch-mini input { opacity: 0; width: 0; height: 0; }
 .mf-slider {
   position: absolute;
   inset: 0;
   background: #e0e0e0;
   border-radius: 22px;
 }
-
 .mf-slider:before {
   content: '';
   position: absolute;
-  height: 16px;
-  width: 16px;
+  height: 14px;
+  width: 14px;
   left: 3px;
   bottom: 3px;
   background: #fff;
   border-radius: 50%;
   transition: 0.2s;
 }
+.mf-switch-mini input:checked + .mf-slider { background: #7b2d8e; }
+.mf-switch-mini input:checked + .mf-slider:before { transform: translateX(16px); }
 
-.mf-switch-mini input:checked + .mf-slider {
-  background: #7b2d8e;
-}
-
-.mf-switch-mini input:checked + .mf-slider:before {
-  transform: translateX(18px);
-}
-
-.mf-work-head {
-  position: sticky;
+.mf-lesson {
+  flex: 1 1 58%;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
   background: var(--mf-bg);
 }
 
-.mf-report {
-  flex: 1;
-  padding: 72px 28px 40px;
-  max-width: 760px;
+.mf.is-fs .mf-lesson {
+  flex: 1 1 100%;
 }
 
-.mf-block {
-  margin-top: 8px;
+.mf-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 28px 80px;
 }
 
-.mf-kid {
-  border-left: 2px solid #4a9eff;
-  padding-left: 12px;
+@media (max-width: 860px) {
+  .mf-body {
+    flex-direction: column;
+  }
+
+  .mf-graph {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 38vh;
+    min-height: 220px;
+    border-right: none;
+    border-bottom: 1px solid var(--mf-line);
+  }
+
+  .mf-lesson {
+    flex: 1 1 auto;
+  }
+}
+
+.mf-kicker {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7b2d8e;
+}
+
+.mf-page h1 {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin: 10px 0 16px;
+}
+
+.mf-lead {
+  font-size: 17px;
+  line-height: 1.7;
   color: var(--mf-text);
 }
 
-.mf-muted {
+.mf-block { margin-top: 36px; }
+
+.mf-page h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--mf-line);
+}
+
+.mf-page h3 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 22px 0 10px;
+}
+
+.mf-page p {
+  font-size: 15px;
+  line-height: 1.75;
+  margin: 0 0 10px;
+}
+
+.mf-page blockquote {
+  margin: 8px 0 16px;
+  padding: 10px 14px;
+  border-left: 3px solid #8b7cff;
+  background: color-mix(in srgb, #8b7cff 8%, var(--mf-graph));
+  font-size: 15px;
+  line-height: 1.7;
+  font-style: italic;
+}
+
+.mf-rule {
+  border: 0;
+  border-top: 1px solid var(--mf-line);
+  margin: 28px 0;
+}
+
+.mf-callout {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--mf-line);
+  border-radius: 6px;
+  background: var(--mf-graph);
+}
+
+.mf-callout p { margin: 0 0 6px; }
+.mf-callout p:last-child { margin-bottom: 0; }
+.mf-kid .mf-bullets { margin-bottom: 0; }
+
+.mf-bullets,
+.mf-examples {
+  margin: 8px 0 16px;
+  padding-left: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mf-bullets li,
+.mf-examples li {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.mf-ex-path { margin-bottom: 2px; }
+.mf-ex-to,
+.mf-note {
   color: var(--mf-muted);
+  font-size: 14px;
 }
 
-.mf-table-wrap {
-  overflow-x: auto;
+.mf-page :deep(code) {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 0.86em;
+  background: color-mix(in srgb, var(--mf-muted) 10%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
-.mf-report table {
+.mf-page :deep(strong) { font-weight: 700; }
+.mf-page :deep(em) { font-style: italic; }
+
+.mf-kid {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #8b7cff 10%, var(--mf-graph));
+  border-left: 3px solid #8b7cff;
+}
+
+.mf-kid-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7b2d8e;
+  margin-bottom: 4px;
+}
+
+.mf-table-wrap { overflow-x: auto; margin: 12px 0; }
+.mf-page table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
 }
-
-.mf-report th,
-.mf-report td {
+.mf-page th,
+.mf-page td {
   border: 1px solid var(--mf-line);
   padding: 8px 10px;
   text-align: left;
   vertical-align: top;
 }
-
-.mf-report th {
+.mf-page th {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--mf-muted);
 }
-
-.mf-report pre {
+.mf-page pre {
   padding: 12px;
   border: 1px solid var(--mf-line);
   background: var(--mf-graph);
@@ -1171,52 +1097,29 @@ onUnmounted(() => {
   font-size: 12px;
   overflow-x: auto;
   white-space: pre;
+  border-radius: 6px;
 }
-
 .mf-code-cap {
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--mf-muted);
-  margin-bottom: 6px;
-}
-
-.mf-report code {
-  font-family: 'DM Mono', ui-monospace, monospace;
-  font-size: 0.9em;
-  color: #7b2d8e;
-  margin-right: 6px;
 }
 
 .mf-pager {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 36px;
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--mf-line);
 }
 
 .mf-empty {
-  flex: 1;
   display: grid;
   place-content: center;
-  text-align: center;
+  min-height: 200px;
   color: var(--mf-muted);
-  padding: 80px 24px;
-}
-
-.mf-empty-icon {
-  font-size: 48px;
-  opacity: 0.2;
-  margin-bottom: 12px;
-}
-
-@media (max-width: 900px) {
-  .mf-switch {
-    display: none;
-  }
-  .mf-inspect {
-    width: min(320px, calc(100% - 24px));
-    right: 12px;
-  }
+  font-size: 15px;
 }
 </style>
