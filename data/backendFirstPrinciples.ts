@@ -693,16 +693,195 @@ signature_bytes_here`,
   {
     id: 'validation',
     n: 6,
-    title: 'Validation and transformation',
+    title: 'What is Validation in Backend? How Garbage Stops at the Door',
     label: 'Validation',
     cluster: 'gate',
     x: 840,
     y: 90,
-    gist: 'The outside world sends strings. I decide what is legal, then I normalize it so the domain never sees garbage.',
+    gist: 'After the route matches and before any real work: check the payload, then shape it. Client checks are UX. Server checks are integrity and security.',
     remember: [
-      'Syntactic (shape), type (int not "abc"), semantic (age ≥ 0). All three, server-side.',
-      'Client checks are UX. Server checks are security. Never skip the second.',
-      'Transform: trim, lowercase email, parse numbers. Conditional rules (if married, partner name). Clear errors, no stack traces.',
+      'Validate at the entry — JSON, query, path, headers — before the service or the database.',
+      'Three checks: type (string vs number), syntactic (looks like an email), semantic (birthday not in the future).',
+      'Transform so the domain sees one shape: query strings become numbers, emails become lowercase.',
+    ],
+    sections: [
+      {
+        heading: '1. Where it sits — and why',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'A typical call goes **controller → service → repository**. HTTP status and shape live in the controller. Business rules live in the service. The database lives in the repository.' },
+          { type: 'quote', text: 'Validations and transformations run after the route matches, and *before* any significant controller or service work.' },
+          {
+            type: 'ul',
+            items: [
+              'Anything from the client: **JSON body**, **query params**, **path params**, **headers**.',
+              'If the API needs a `name` string between 5 and 100 characters, prove that **at the door**.',
+              'Skip the gate and bad data walks into the service and the SQL. The user gets a **500** (“something unexpected”). That is a poor form experience. Fail at the door with **400** and a field list they can fix.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `POST /signup   body: {}
+→ 400  [
+     { "field": "email", "message": "required" },
+     { "field": "phone", "message": "required" },
+     { "field": "date",  "message": "required" }
+   ]
+
+POST /signup   body: { "email": "not-an-email", "phone": 12345, "date": "..." }
+→ 400  [
+     { "field": "email", "message": "invalid email format" },
+     { "field": "phone", "message": "expected string, got number" }
+   ]`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'The coat check is *before* the party, not after someone is already on the dance floor.',
+              'If the ticket is wrong, you say so at the door (400). You do not let them in and then explode the kitchen (500).',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Three kinds of validation',
+        blocks: [
+          { type: 'p', text: 'These are not the only kinds. They are the three you will see most while designing APIs. How strict you are is a product choice — keep the three in mind.' },
+          {
+            type: 'table',
+            columns: ['Kind', 'Question', 'Example'],
+            rows: [
+              ['**Type**', 'Is this the right *kind* of value?', '`phone` must be a string, not a number. `married` a boolean.'],
+              ['**Syntactic**', 'Does the *shape* match?', 'Email looks like an email. Phone matches a pattern. Date parses.'],
+              ['**Semantic**', 'Does this *make sense*?', 'Birthday not in the future. Age 365 is not a person (yet).'],
+            ],
+          },
+          { type: 'h3', text: 'Type' },
+          { type: 'p', text: 'String, number, boolean, array, nested object. Query params arrive as **strings** even when they look like numbers — type checks and transforms often travel together.' },
+          { type: 'h3', text: 'Syntactic' },
+          { type: 'p', text: '“Does this string *look like* what we asked for?” Email regex / parser. Phone pattern. A date that can actually be read as a date.' },
+          { type: 'h3', text: 'Semantic' },
+          { type: 'p', text: 'The value is the right type and the right shape — and still nonsense. Date of birth `2025-13-01` when today is `2025-11-01`. Age `365`. The pipeline should reject it.' },
+          { type: 'quote', text: 'Type = kind. Syntactic = shape. Semantic = meaning.' },
+          {
+            type: 'kid',
+            items: [
+              '**Type** = you asked for a written phone number and they handed you a brick.',
+              '**Syntactic** = they wrote a phone number but it is random scribbles, not digits in a phone shape.',
+              '**Semantic** = they wrote a perfect date of birth… for next year. A baby cannot be born tomorrow’s tomorrow.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Transformation — shape it for the domain',
+        blocks: [
+          { type: 'p', text: 'Validation asks “is this allowed?” **Transformation** runs operations on the value so the service always sees **one** shape — often after (or as part of) the pipeline.' },
+          { type: 'h3', text: 'Query params are always strings' },
+          { type: 'p', text: '`GET /bookmarks?page=2&limit=20` looks numeric in the URL. On the server, `page` and `limit` are still **strings** `"2"` and `"20"`. If the rule is “page is a number, `> 0` and `< 500`,” you **cast** first, then check the range. Cast fails → tell the client, do not crash.' },
+          {
+            type: 'pre',
+            lines: `// arrives as strings
+page  = "2"
+limit = "20"
+
+// transform, then validate
+page  = int("2")     # 2
+limit = int("20")    # 20
+# then: 0 < page < 500,  0 < limit < 10000`,
+          },
+          { type: 'h3', text: 'Normalize what users type wildly' },
+          {
+            type: 'ul',
+            items: [
+              'Email `Test@Example.COM` → **lowercase** `test@example.com` before lookup.',
+              'Phone missing `+` → prefix it so the service always stores one form.',
+              'Dates in mixed formats → one canonical form for the database.',
+            ],
+          },
+          { type: 'p', text: 'Chain it when you must: lowercase → strip junk → then check length. Fail a bad JSON body or a date that will not parse with a **clear 400**, not a 500.' },
+          {
+            type: 'kid',
+            items: [
+              'Kids write their name as `  BoB  `. You trim and lowercase to `bob` so the name list does not have three Bobs.',
+              'The permission slip says “age: 9” as words on paper. You turn it into the number 9 before you check “must be under 12.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Fields that depend on other fields',
+        blocks: [
+          { type: 'p', text: 'Some rules are not “this one field.” They are **relationships**.' },
+          {
+            type: 'ul',
+            items: [
+              '**Match:** `password` and `passwordConfirmation` must be equal. Password itself may also need a minimum length (e.g. 8).',
+              '**Conditional:** if `married` is `true`, `partner` (partner name) is **required**. If `married` is `false`, skip it.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `{ "married": false }           // ok without partner
+{ "married": true }            // 400  partner name is required
+{ "married": true, "partner": "Sam" }  // ok`,
+          },
+          { type: 'p', text: 'Return **all** field errors in one response when you can, so the client can paint every broken input at once — not a painful one-field-at-a-time loop. Return **early** on cheap failures (missing required, bad JSON) so you do not burn CPU on the rest.' },
+          {
+            type: 'kid',
+            items: [
+              'If you say you have a sibling, you must write their name. If you say you do not, leave that line blank.',
+              '“New locker code” and “type it again” must match. One wrong digit and the lock does not change.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. Frontend vs backend — both, for different jobs',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Frontend validation** = **UX**. Immediate “this email looks wrong” so the user is not surprised after submit.',
+              '**Backend validation** = **security and data integrity**. This is the real gate.',
+            ],
+          },
+          { type: 'quote', text: 'A browser form is one client. Postman is another. A mobile app is another. The server must not trust any of them.' },
+          { type: 'p', text: 'If the API “depends” on the web form to be strict, the day someone hits the same URL from an API client with no UI, the server breaks — or worse, stores garbage. Design the API as if the client might do **zero** checks.' },
+          {
+            type: 'kid',
+            items: [
+              'The hall monitor reminding you to zip your bag is nice (frontend).',
+              'The lock on the school safe is what actually protects the lunch money (backend). Do not remove the lock because a monitor exists.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Concept', 'Real-world analogy', 'What it does'],
+            rows: [
+              ['Entry pipeline', 'Coat check before the party', 'After route match, before service / DB'],
+              ['Type check', 'Asked for a ticket, got a brick', 'Right kind of value'],
+              ['Syntactic', 'Ticket must look like a ticket', 'Shape / format'],
+              ['Semantic', 'Ticket dated next year', 'Meaning that can be true'],
+              ['Transform', 'Trim the name, lowercase the email', 'One shape for the domain'],
+              ['Frontend vs backend', 'Reminder vs lock', 'UX vs security — never skip the lock'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Validate** at the door. **Transform** into one shape. Then call the service.',
+              '**400** with field errors when the client is wrong. **500** is not a form validator.',
+              'The web form is optional. The server gate is not.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -918,16 +1097,242 @@ signature_bytes_here`,
   {
     id: 'errors',
     n: 18,
-    title: 'Error handling',
+    title: 'What is Error Handling in Backend? How Systems Fail Without Lying',
     label: 'Errors',
     cluster: 'keep',
     x: 1000,
     y: 525,
-    gist: 'Fail in a way a human and a machine can both use. Swallowing an error is how production becomes folklore.',
+    gist: 'Errors will happen. The question is not whether — it is how you detect them, contain them, and answer without lying to the user or leaking secrets.',
     remember: [
-      'Syntax vs runtime vs logic. Fail-fast when continuing would corrupt data; fail-safe when the user can continue.',
-      'Typed errors. Map to HTTP statuses. Messages for users ≠ stack traces.',
-      'Catch early, log with request ID, never empty `except:` / catch-all that returns 200.',
+      'Best error handling starts before the error: health checks that prove the system is actually doing its job.',
+      'Bubble every error to one mapper. Unique conflict → 400. Missing row → 404. Unknown crash → 500 with a safe message.',
+      'Login errors stay vague. Logs use user id + request id, never passwords, cards, or emails.',
+    ],
+    sections: [
+      {
+        heading: '1. The fault-tolerant mindset',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Errors are a normal part of a backend. Database queries will fail. External APIs will time out. Users will send bad data. Business logic will hit an edge case.' },
+          { type: 'quote', text: 'The question is not whether errors will happen. It is how you handle them when they do.' },
+          {
+            type: 'ul',
+            items: [
+              'Be ready to **detect** them.',
+              'Be ready to **contain** them so they do not corrupt money or data.',
+              'Be ready to **answer** in a way a human and a machine can both use.',
+            ],
+          },
+          { type: 'p', text: 'This is a mindset, not a framework. You are responsible for every transaction going through. Prepare for the worst, then watch for it.' },
+          {
+            type: 'kid',
+            items: [
+              'A kitchen will burn a pan sometimes. You do not pretend the stove is perfect.',
+              'You keep a fire extinguisher, you notice smoke early, and you do not serve a burnt dish as if it is fine.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Types of errors',
+        blocks: [
+          { type: 'p', text: 'Five kinds show up in day-to-day backend work:' },
+          {
+            type: 'table',
+            columns: ['Kind', 'What it does', 'Why it hurts'],
+            rows: [
+              ['**Logic**', 'Code runs. The *result* is wrong.', 'Does not crash. Can steal money for weeks.'],
+              ['**Database**', 'Cannot talk to the store, or the store says no.', 'Can take the whole app down.'],
+              ['**External service**', 'A payment / mail / cache / sign-in vendor fails.', 'A point of failure you do not control.'],
+              ['**Validation**', 'The user sent data that breaks the rules.', 'First line of defense at the door.'],
+              ['**Configuration**', 'A required env var is missing or wrong between environments.', 'App should refuse to start — not fail on the first real user.'],
+            ],
+          },
+          { type: 'h3', text: 'Logic errors — the sneaky ones' },
+          { type: 'p', text: 'The app does not crash. It does the **wrong thing**. Example: a shop applies a discount twice and shipping goes negative. Every order loses money. These hide for weeks if nobody is watching.' },
+          { type: 'quote', text: 'Wrong result with a 200 is worse than a loud crash.' },
+          { type: 'h3', text: 'Database errors' },
+          {
+            type: 'ul',
+            items: [
+              'Cannot connect — network down, DB overloaded, **connection pool empty** → users see empty screens and 500s.',
+              '**Unique constraint** — insert a catalog title that already exists. If you do not map this, it bubbles as a 500.',
+              '**Foreign key** — insert an order for a customer id that is not in the customer table.',
+              'Deadlocks and transaction fights under load.',
+            ],
+          },
+          { type: 'h3', text: 'External service errors' },
+          { type: 'p', text: 'Payments, email, object storage, cache, a hosted sign-in vendor — each one can time out, rate-limit you (`429`), reject credentials, or go down. You cannot abandon them. You **plan** for them: timeouts, backoff, and a fallback that does not break checkout.' },
+          { type: 'h3', text: 'Validation errors' },
+          { type: 'p', text: 'Users send bad data. Catch it at the **entry**. Format (email looks like an email), type, and meaning. This is the first wall against garbage and attacks.' },
+          { type: 'h3', text: 'Configuration errors' },
+          { type: 'p', text: 'You added `OPENAI_API_KEY` in local `.env`, merged the PR, forgot production. Prefer: **crash at boot** if a required variable is missing — not a 500 after users arrive. Validate config before the server starts serving.' },
+          {
+            type: 'kid',
+            items: [
+              '**Logic** = the recipe is wrong. The oven still works. The cake tastes like salt.',
+              '**Database** = the pantry is locked, or the jar already has that label.',
+              '**External** = the bakery next door is closed. You still need bread.',
+              '**Validation** = a guest brings rotten fruit. You stop it at the door.',
+              '**Config** = you forgot the oven key. Better to notice before dinner, not when guests sit down.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Prevention — find it before it spreads',
+        blocks: [
+          { type: 'quote', text: 'The best error handling starts before the error happens.' },
+          { type: 'p', text: 'Find the failure the moment it starts — before it damages data or money.' },
+          { type: 'h3', text: 'Health checks' },
+          {
+            type: 'ul',
+            items: [
+              'Expose `/health` or `/status`. **The status code matters.** `200` = running. `4xx` / `5xx` = not okay.',
+              'A ping that only proves the process is up is **not enough**.',
+              '**Database health:** can we connect? Does a real query still return in a normal time? (500ms yesterday, 5s today = something is wrong.)',
+              '**External health:** can we still reach the payment or mail vendor — not just our own process?',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `GET /health
+  → 200  process is up  (necessary, not sufficient)
+
+GET /health/ready
+  → ping the database with a cheap query
+  → 200 if connect + query is healthy
+  → 503 if the store is gone or too slow`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'Checking that the restaurant lights are on is not the same as checking that the kitchen can still cook.',
+              'Knock on the pantry. Time how long it takes to get one tomato. If that used to be fast and now it is five minutes — stop seating tables.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Recovery — retries, fallbacks, boundaries',
+        blocks: [
+          { type: 'p', text: 'Some failures are **temporary**: network blip, empty connection pool, a vendor saying `429`. Retries with **exponential backoff** help: wait 1 minute, then 2, then 4… until success — without hammering a system that is already on fire.' },
+          {
+            type: 'pre',
+            lines: `got 429 from the mail vendor
+wait 1 min  → retry
+wait 2 min  → retry
+wait 4 min  → retry
+... until a 2xx, or give up and queue it`,
+          },
+          { type: 'p', text: 'The retry logic itself must not add more load to an already stressed dependency.' },
+          { type: 'h3', text: 'Fallback' },
+          { type: 'p', text: 'If the cache node dies, fall back to in-memory cache or a second node so **checkout still works**. Degrade the nice-to-have, keep the money path.' },
+          { type: 'h3', text: 'Error boundaries' },
+          { type: 'p', text: 'Stop a failure from jumping process to process. Separate processes, **timeouts** at the edge of a service, **queues** so two services are not one crash. A bug in mail should not take down orders.' },
+          {
+            type: 'kid',
+            items: [
+              'The bakery is busy. You wait a bit longer each time you knock — you do not bang on the door every second.',
+              'If the fancy dessert fridge dies, you still serve the main course from the other fridge.',
+              'A fire in the pastry room should not burn the whole restaurant. Close that door.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. Global error handling — one mapper',
+        blocks: [
+          { type: 'p', text: 'Errors can start in the **handler** (validation), the **service** (business rule), or the **repository** (database). Do not format HTTP in every layer. **Bubble** the error up to one middleware that sees every request and every response.' },
+          {
+            type: 'ul',
+            items: [
+              'Languages with exceptions: **throw**, catch in the final handler.',
+              'Languages like Go: **return** the error from repo → service → handler → middleware.',
+              'You stay in control of the bubble. A raw unique-constraint must not become an uncaught 500 with a stack trace.',
+            ],
+          },
+          { type: 'p', text: 'The mapper **reads the error type** and picks status + body:' },
+          {
+            type: 'table',
+            columns: ['What happened', 'HTTP', 'Message the client sees'],
+            rows: [
+              ['Validation / unique title already exists', '`400`', '`title already exists` (+ field errors if needed)'],
+              ['Select by id, no row', '`404`', '`catalog item 123 does not exist`'],
+              ['Foreign key: author id not in the table', '`400`', 'safe “this author is not valid” — not a SQL dump'],
+              ['Unknown crash', '`500`', 'generic “something went wrong” — details stay in logs'],
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `POST /catalog
+  insert hits unique constraint
+  → mapper: 400  { "code": 400, "message": "title already exists" }
+
+GET /catalog/123
+  select returns no row
+  → mapper: 404  { "code": 404, "message": "item 123 does not exist" }`,
+          },
+          { type: 'p', text: 'A typical error body: **code**, **message**, and maybe an array of field errors. Machines and UIs can both use that.' },
+          {
+            type: 'kid',
+            items: [
+              'Every kitchen mistake goes to one person at the pass — not every cook shouting a different story at the table.',
+              '“That dish is already on the menu” is a 400. “We never had dish 123” is a 404. “The stove exploded” is a 500 — you do not describe the explosion to the guest.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. Security in errors and logs',
+        blocks: [
+          { type: 'h3', text: 'Do not help an attacker enumerate accounts' },
+          { type: 'p', text: 'On sign-in, if there is no user for that email, **do not** say “no user with this email.” If the password is wrong, **do not** say “password is incorrect.” Both answers teach a stranger which emails exist. Always the same line:' },
+          {
+            type: 'pre',
+            lines: `// naive — leaks whether the email is registered
+"user with this email does not exist"
+"password is incorrect"
+
+// safe — same message either way
+"invalid email or password"`,
+          },
+          { type: 'h3', text: 'Logs are a leak if you put secrets in them' },
+          { type: 'p', text: 'Companies ship logs to storage, search, and observability vendors. Those dumps get stolen. Do **not** log passwords, API keys, card numbers, or emails. Log **user id** and a **correlation / request id** so you still have enough context.' },
+          {
+            type: 'kid',
+            items: [
+              'If someone guesses at the classroom door, do not say “there is no student named Maya” vs “Maya’s password is wrong.” Say “wrong name or password” every time.',
+              'The diary of mistakes should not contain everyone’s home address. Write the student number and the hall pass id.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Concept', 'Real-world analogy', 'What it does'],
+            rows: [
+              ['Fault-tolerant mindset', 'Kitchen will burn a pan', 'Assume failure; plan the response'],
+              ['Logic error', 'Wrong recipe, oven still works', 'Silent wrong result — watch it'],
+              ['Health / ready check', 'Pantry knock + timed tomato', 'Prove the system can still do the job'],
+              ['Backoff retry', 'Knock, wait longer, knock again', 'Survive blips without a stampede'],
+              ['Global mapper', 'One person at the pass', 'One HTTP shape for every layer’s error'],
+              ['Vague login error', 'Same reply to every guess', 'Do not confirm which emails exist'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Detect** early. **Contain** the blast. **Map** to a status the client can use.',
+              'A unique clash is not a 500. A missing row is a 404. A crash is a 500 with a boring message.',
+              '**User id + request id** in logs. Never the password, the card, or the email.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
