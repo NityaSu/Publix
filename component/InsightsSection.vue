@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import InsightCard, { type InsightVariant } from '~/component/InsightCard.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
-import { buildNotes, buildNotePath } from '~/data/buildNotes';
+import { publicBuildNotes, buildNotePath } from '~/data/buildNotes';
 
 interface InsightItem {
   id: string;
@@ -57,7 +57,7 @@ const insights: InsightItem[] = [
   },
 ];
 
-const latestNotes = buildNotes.slice(0, 2);
+const latestNotes = publicBuildNotes.slice(0, 2);
 </script>
 
 <template>
