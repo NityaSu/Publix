@@ -23,6 +23,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseKey: process.env.SUPABASE_KEY || '',
+    draftSecret: process.env.DRAFT_SECRET || '',
   },
   vite: {
     server: {
