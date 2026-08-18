@@ -18,6 +18,17 @@ export interface LessonExample {
   note?: string;
 }
 
+export type LessonBlock =
+  | { type: 'h3'; text: string }
+  | { type: 'p'; text: string }
+  | { type: 'ul'; items: string[] }
+  | { type: 'quote'; text: string }
+  | { type: 'pre'; lines: string }
+  | { type: 'table'; columns: string[]; rows: string[][] }
+  | { type: 'hr' }
+  | { type: 'kid'; text?: string; items?: string[] }
+  | { type: 'callout'; lines: string[] };
+
 export interface LessonSection {
   heading: string;
   body?: string[];
@@ -26,6 +37,8 @@ export interface LessonSection {
   code?: { caption?: string; lines: string };
   examples?: LessonExample[];
   bullets?: string[];
+  footer?: string[];
+  blocks?: LessonBlock[];
 }
 
 export interface TopicNode {
@@ -142,347 +155,106 @@ export const topics: TopicNode[] = [
     cluster: 'wire',
     x: 400,
     y: 140,
-    gist: 'Routing is a table: HTTP method (intent) + URL path (where) → one function. A phone screen never talks to a database. It sends one request; the map walks it to one worker.',
+    gist: 'Routing = map (method + path) → one handler method (business logic). Method is the what. Path is the where.',
     remember: [
-      'Method = intent. Path = which resource. Together they pick exactly one function.',
-      'The live map is the registration lines, not comments above them.',
-      'Two 404s: nobody registered that address vs the address matched and the row was missing.',
+      'HTTP method = intent. URL path = resource. Together they pick one handler.',
+      'Static route when the target never changes. Dynamic route when it changes per request.',
+      'Controller owns the routes. Handler is one route’s method. Fetch is just the job of a GET /{id} handler.',
     ],
     sections: [
       {
-        heading: 'How I picture it',
-        body: [
-          'The API I keep in mind is a Go service with a Gin-style router. The map lives in `routes/`. The work lives in `endpoints/`. There are no Spring `@GetMapping` stickers. Comments can describe a path; the live map is still the `.GET` / `.POST` lines, like `desk.GET("", h.ListMembers)`.',
-          'Pretend I am rebuilding a workplace-ops API from zero. A phone or a desk UI never “calls a database.” It sends one HTTP request: a method (what it wants) plus a URL (which drawer). My job is to write a table that says “this method + this path goes to this one Go function.” That table is routing.',
-          'I would start the same way `BuildEngine` does: one engine, then `/api`, then `/v1`, then `/desk` vs `/mobile`, then one resource group per file (`/member`, `/time-off`, `/check-in`). After that, each line like `POST /create` is one endpoint method. If two URLs look similar, they are still two map entries — `GET /api/v1/desk/member` lists people; `POST /api/v1/desk/member/create` adds one.',
-        ],
-        kid: 'Routing is a receptionist. Someone says “GET member list” or “POST create member.” The receptionist looks at the words (method) and the room number (URL), then walks them to one person (endpoint).',
-      },
-      {
-        heading: 'Words I use (so “controller ≠ handler ≠ fetch”)',
-        table: [
+        heading: '1. What is Routing?',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
           {
-            term: 'Intent',
-            here: 'Purpose. GET means read, POST means create/do, PUT/PATCH means change, DELETE means remove.',
-            kid: 'What you want to happen.',
+            type: 'ul',
+            items: [
+              '**HTTP method** = the *what* (intent): read, create, update, delete. The `method` tells the server your *purpose*: “I want to read,” “I want to create,” “I want to change,” or “I want to delete.”',
+              '**URL path** = the *where* (resource), **Resource** = the *thing* you care about (addresses, bids, products…).',
+              '**Routing** = map `(method + path)` → one **handler method** (business logic)',
+            ],
           },
+          { type: 'p', text: 'In backend talk, “**intent**” just means:' },
+          { type: 'quote', text: 'What is the client *trying* to do with this request?' },
+          { type: 'p', text: 'So in:' },
+          { type: 'quote', text: 'HTTP method = the what (**intent**)' },
+          { type: 'p', text: 'it means the method shows the request’s **intention**: read, create, update, or delete.' },
           {
-            term: 'Controller',
-            here: 'The struct that groups related routes, e.g. `MemberEndpoint` in `endpoints/member.go`. This codebase names it Endpoint, not Controller.',
-            kid: 'The office (people office, time-off office).',
-          },
-          {
-            term: 'Handler / endpoint method',
-            here: 'One method for one route, e.g. `ListMembers`, `AddMember`, `Punch`.',
-            kid: 'One worker who does one job.',
-          },
-          {
-            term: 'Fetch / lookup',
-            here: 'Only some GET methods load records. `Punch` is POST and writes a check-in. `BuildPayMonth` is POST and builds a file.',
-            kid: 'Fetch = “go get it.” Not every door is a “go get it” door.',
-          },
-        ],
-        body: [
-          'Request flow in that codebase: HTTP request → engine (`BuildEngine`) → group prefixes (`/api/v1/desk` or `/api/v1/mobile`) → resource group (`/member`) → one registered method+path → one endpoint method → service → store.',
-        ],
-      },
-      {
-        heading: '1. What is routing?',
-        body: [
-          'Routing = map (HTTP method + URL path) → one endpoint method.',
-          'HTTP method = intent. Same path with a different method is a different job. URL path = where / which resource. `/member` is people, `/time-off` is leave-from-work, `/check-in` is punch data.',
-          'The framework builds the map in `routes/*.go`. OpenAPI comments document it, but the live map is the `.GET` / `.POST` / `.PUT` / `.PATCH` / `.DELETE` lines.',
-        ],
-        kid: 'Method = what you want. Path = which drawer. Routing = the label that sends you to the right worker.',
-        examples: [
-          {
-            method: 'POST',
-            path: '/api/v1/mobile/auth/session',
-            goesTo: 'routes/auth.go → AuthEndpoint.OpenMemberSession',
-            purpose: 'A teammate signs in (creates a session/token). Not a fetch of a list.',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/member',
-            goesTo: 'routes/member.go → MemberEndpoint.ListMembers',
-            purpose: 'Desk UI looks up a paginated member list. This GET really is a fetch.',
-          },
-          {
-            method: 'POST',
-            path: '/api/v1/desk/member/create',
-            goesTo: 'routes/member.go → MemberEndpoint.AddMember',
-            purpose: 'Desk UI creates a member. Same resource family as the list, opposite intent.',
-            note: 'Tiny compare: GET …/member (list) vs POST …/member/create (create). Same struct, two methods, two intents. Swap them and listing tries to insert.',
-          },
-          {
-            method: 'PUT',
-            path: '/api/v1/desk/time-off/decide/:id',
-            goesTo: 'routes/time_off.go → TimeOffEndpoint.SetDecision',
-            purpose: 'Desk UI changes status of one time-off row (accept/decline). Path names which row; this is not “fetch the list.”',
-          },
-          {
-            method: 'POST',
-            path: '/api/v1/mobile/check-in/punch',
-            goesTo: 'routes/check_in.go → CheckInEndpoint.Punch',
-            purpose: 'Teammate punches in or out. A write. Proof that “endpoint” does not mean “fetch.”',
+            type: 'pre',
+            lines: 'GET  /api/books     → `intent` = "show me all books"     (read)\nPOST /api/books     → `intent` = "add a new book"         (create)\nDELETE /api/books/5 → `intent` = "remove book #5"         (remove)',
           },
         ],
       },
       {
         heading: '2. Types of routes',
-        body: [
-          'Static route: every piece of the path is fixed (`/session`, `/list`, `/export`). Dynamic route: a slot in the path changes per request. In this stack the slot is written `:id` (or `:date`, `:user-id`, `:member_id`). The endpoint reads it with `c.Param("id")`. Docs often write the same slot as `{id}` — that is docs only, not the live router.',
-          'This stack does not use `@PathVariable`. It uses path slots in the registration string, then `c.Param` with the same name.',
-        ],
-        kid: 'Static = a door with a painted name. Dynamic = a door with a blank where you write the person’s number.',
-        code: {
-          caption: 'routes/site.go + endpoints/site.go',
-          lines: `desk.GET("/:id", h.ReadSite)
-desk.POST("/create", h.AddSite)
-desk.PUT("/update/:id", h.EditSite)
-desk.DELETE("/delete/:id", h.RemoveSite)
-
-func (h *SiteEndpoint) ReadSite(c *gin.Context) {
-    id := c.Param("id")
-}`,
-        },
-        examples: [
+        blocks: [
           {
-            method: 'GET',
-            path: '/api/v1/desk/home',
-            goesTo: 'HomeEndpoint.LoadHome (routes/home.go)',
-            purpose: 'Load the desk home screen. No ID in the URL. Static.',
+            type: 'ul',
+            items: [
+              '**Static Routes — use when the target never changes.**',
+              '**Dynamic Routes — use when the target changes per request**',
+            ],
+          },
+          { type: 'p', text: 'Example:' },
+          {
+            type: 'pre',
+            lines: 'Static:  kimichat.com/settings      → same page, everyone sees their own settings\nStatic:  kimichat.com/pricing       → same marketing page for all visitors\nDynamic: kimichat.com/chat/abc123   → YOUR conversation about backend engineering\nDynamic: kimichat.com/chat/def456   → YOUR conversation about cooking recipes',
           },
           {
-            method: 'GET',
-            path: '/api/v1/mobile/member/me',
-            goesTo: 'MemberEndpoint.ReadMyCard',
-            purpose: 'The signed-in teammate reads their own card. Identity comes from the token (`c.GetUint("UserId")`), not from the path.',
+            type: 'table',
+            columns: ['Route type', 'Example URL', 'What happens'],
+            rows: [
+              ['**Static**', '`/settings`', 'Same page for everyone — your profile settings'],
+              ['**Static**', '`/help`', 'Same help center for every user'],
+              ['**Dynamic**', '`/chat/abc123xyz`', '**This specific conversation** — the `:id` part changes per chat'],
+              ['**Dynamic**', '`/chat/def456uvw`', '**A different conversation** — different ID, different messages'],
+            ],
+          },
+          { type: 'hr' },
+          { type: 'p', text: '`GET /p/biding/price/88` means:' },
+          { type: 'quote', text: '“Please **read** the **bid record whose id is 88**.”' },
+          { type: 'p', text: 'It does **not** place a bid. It only **fetches details** of one existing bid.' },
+          { type: 'h3', text: 'Break the URL into pieces' },
+          {
+            type: 'table',
+            columns: ['Part', 'Meaning'],
+            rows: [
+              ['`GET`', 'Intent = read / look up'],
+              ['`/p/biding/price`', 'Go to the bidding-price area'],
+              ['`/88`', 'The specific bid row id is `88`'],
+            ],
+          },
+          { type: 'p', text: 'So `88` is like a ticket number for one bid in the database.' },
+          { type: 'hr' },
+          { type: 'h3', text: 'Quick decision tree' },
+          {
+            type: 'pre',
+            lines: "Is the resource you're targeting the same for every request?\n│\n├── YES → Static route  (/health, /about, /login)\n│\n└── NO  → Dynamic route (/users/:id, /books/:bookId)",
+          },
+          { type: 'hr' },
+          { type: 'p', text: '**Handler = in One word: fetch** (or **lookup**)' },
+          {
+            type: 'kid',
+            items: [
+              '**Controller** = the whole room (example: `BiddingPriceController`)',
+              '**Handler** = one worker in that room (example: `getInfo(...)`)',
+              '**Fetch / lookup** = what *that one worker* is doing right now',
+            ],
           },
           {
-            method: 'GET',
-            path: '/api/v1/desk/member/card/:id',
-            goesTo: 'MemberEndpoint.ReadCardByID',
-            purpose: 'Desk reads one named teammate. `:id` is the resource identity.',
-            note: 'Same struct, two card routes — “me” (static) vs “this person” (dynamic).',
+            type: 'callout',
+            lines: [
+              '**Controller** owns the routes.',
+              '**Handler** is one route’s method.',
+              '**Fetch** is just the job of this specific GET /{id} handler.',
+            ],
           },
-          {
-            method: 'POST',
-            path: '/api/v1/desk/pay-run/build/:date',
-            goesTo: 'PayRunEndpoint.BuildMonth',
-            purpose: 'Build pay for one month. The slot is `:date` (e.g. 2025-08-01), read with `c.Param("date")`. Dynamic params are not only IDs.',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/operator/access/:user-id',
-            goesTo: 'OperatorEndpoint.ReadAccess',
-            purpose: 'Read that operator’s access role. The slot is literally `user-id`, so the code calls `c.Param("user-id")`, not `c.Param("id")`. The name in the route string must match.',
-          },
-        ],
-      },
-      {
-        heading: '3. Path parameters vs query parameters',
-        body: [
-          'Path params (`:id` in the URL) = who / which record. Required for identity. Query params (`?page=1&name=Sok`) = how to filter, search, paginate, or pick a period. Optional extras after `?`.',
-          'This codebase reads them differently: path via `c.Param("id")`; query via `c.Query("searchDate")` or `c.DefaultQuery("page", "1")`; shared list helper `BindListQuery` reads `page` and `limit`.',
-          'Honest finding: almost no live endpoint mixes both on one URL. Identity goes in the path; filters hang on list URLs. That is a design choice, not a textbook mix.',
-        ],
-        kid: 'Path param = the locker number. Query param = “show me page 2, only late people, 10 per page.”',
-        examples: [
-          {
-            method: 'GET',
-            path: '/api/v1/desk/member?teamID=&name=&page=1&limit=10',
-            goesTo: 'MemberEndpoint.ListMembers',
-            purpose: 'List members, optionally filtered by team and name, paginated. Query only.',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/member/card/:id',
-            goesTo: 'MemberEndpoint.ReadCardByID',
-            purpose: 'Load that member. `c.Param("id")`. Collection + query vs one resource + path.',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/extra-shift?status=pending&name=&kind=&page=1&limit=10',
-            goesTo: 'ExtraShiftEndpoint.DeskList',
-            purpose: 'Desk extra-shift list filtered by status, name, and kind. `c.DefaultQuery("status"|"name"|"kind")`.',
-          },
-          {
-            method: 'POST',
-            path: '/api/v1/desk/time-bank/settle-member/:member_id',
-            goesTo: 'TimeBankEndpoint.SettleForMember',
-            purpose: 'Run settlement for one person. `c.Param("member_id")`. Path = which person.',
-          },
-          {
-            method: 'POST',
-            path: '/api/v1/desk/time-bank/settle-month?year=2026&month=8',
-            goesTo: 'TimeBankEndpoint.SettleForMonth',
-            purpose: 'Run settlement for a year/month. `c.Query("year")` and `c.Query("month")`.',
-            note: 'Same feature family as the previous row. “Which person?” → path. “Which month?” → query. Closest mix this repo has: two sibling routes, two param styles.',
-          },
-        ],
-        bullets: [
-          'Another query-heavy list: GET `/api/v1/desk/planner/items?title=&type=&start_date=&end_date=&yearly=&monthly=&weekly=&today=true&page=&limit=` → `PlannerEndpoint.ListItems`. Detail is a different route: GET `/api/v1/desk/planner/items/:id`.',
-          'Docs trap: one decide-endpoint comment said status was a query param and id was a path param, but the live route is `PUT /api/v1/desk/time-off/decide/:id` and status comes from the JSON body. Trust the router file over stale comments.',
-        ],
-      },
-      {
-        heading: '4. Nested routing',
-        body: [
-          'Nested routing = URL hierarchy: parent resource, then child, then maybe an action. In this stack, nesting is groups, then extra path segments: `/api` → `/v1` → `/desk` or `/mobile`, then e.g. `desk.Group("/planner")` + `/items/:id`.',
-        ],
-        kid: 'Address = country / city / street / house number. `/api/v1/desk/planner/items/12` is “API → edition 1 → desk → planner → item 12.”',
-        code: {
-          caption: 'routes/boot.go',
-          lines: `api := engine.Group("/api")
-v1 := api.Group("/v1")
-desk := v1.Group("/desk")
-mobile := v1.Group("/mobile")`,
-        },
-        examples: [
-          {
-            method: 'GET',
-            path: '/api/v1/desk/planner/items/:id',
-            goesTo: 'PlannerEndpoint.ReadItem (routes/planner.go)',
-            purpose: 'One planner item under the planner module. Family: POST/GET /items, GET/PUT/DELETE /items/:id.',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/access-roles/:id/grants-group',
-            goesTo: 'AccessRoleEndpoint.ReadWithGrants',
-            purpose: 'Grants grouped for that role. Child path hangs off `:id`. Compare: `GET …/access-roles/:id` is the role itself.',
-          },
-          {
-            method: 'POST',
-            path: '/api/v1/desk/pay-run/stub/build/:date',
-            goesTo: 'PayRunEndpoint.BuildMonthWithStubs',
-            purpose: 'Build pay and stubs for a month. Nested under pay-run, then stub, then build. Sibling: `POST /api/v1/desk/pay-run/build/:date` (pay only).',
-          },
-          {
-            method: 'PATCH',
-            path: '/api/v1/desk/operator/update/access/:user-id',
-            goesTo: 'OperatorEndpoint.ChangeAccess',
-            purpose: 'Change that operator’s role (a sub-resource). Sibling: `PATCH …/operator/update/grants/:user-id`.',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/check-in/monthly/export',
-            goesTo: 'CheckInEndpoint.MonthlyExport',
-            purpose: 'Spreadsheet export of the monthly check-in report. Nested action under `/check-in/monthly`. JSON sibling: `GET …/check-in/monthly`.',
-          },
-        ],
-        bullets: [
-          'Time-off kinds vs time-off rows (`/time-off-kind` vs `/time-off`) are sibling resources, not nested URLs. Nesting is when one URL contains the other (`/access-roles/:id/grants-group`), not when two modules are merely related in the store.',
-        ],
-      },
-      {
-        heading: '5. Route versioning and deprecation',
-        body: [
-          'There is no `/v2`. Versioning here is one prefix plus parallel APIs (audience), not old-vs-new editions. From boot: `@BasePath /api/v1`, then `/api` + `/v1` + `/desk` or `/mobile`.',
-        ],
-        kid: 'Version = “this is edition 1 of the menu.” Desk vs mobile = staff kitchen vs customer menu. Same restaurant, different doors.',
-        examples: [
-          {
-            method: 'GET',
-            path: '/api/v1/desk/home',
-            goesTo: 'HomeEndpoint.LoadHome',
-            purpose: 'Every live business route sits under `/api/v1`. There is no `/api/v2/...` in `BuildEngine`. If I rebuilt, `/v1` is where I would later add `/v2` without breaking phones on v1.',
-          },
-          {
-            method: 'POST',
-            path: '/api/v1/desk/auth/session',
-            goesTo: 'AuthEndpoint.OpenOperatorSession',
-            purpose: 'Desk / operator sign-in.',
-          },
-          {
-            method: 'POST',
-            path: '/api/v1/mobile/auth/session',
-            goesTo: 'AuthEndpoint.OpenMemberSession',
-            purpose: 'Teammate sign-in. Same `/auth/session` suffix, different group. Wrong door = wrong function (or 404 if the path only exists on the other side).',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/time-off  vs  /api/v1/mobile/time-off/mine',
-            goesTo: 'TimeOffEndpoint.DeskList vs ReadMine',
-            purpose: 'Desk sees a permission-filtered list; the phone sees only mine. Same module, two contracts.',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/time-bank/open-report  vs  /api/v1/ops/time-bank/open-report',
-            goesTo: 'TimeBankEndpoint.OpenReport (routes/time_bank.go)',
-            purpose: 'Desk can also POST settle routes; `/ops/...` is a read-only report door. Parallel prefix, not a version.',
-          },
-        ],
-        bullets: [
-          'Dead map: `routes/sandbox.go` defines `GET /desk/sandbox/data` → `SandboxEndpoint.Ping`, but `BuildEngine` never calls `MountSandbox`. Those URLs 404 even though the files exist.',
-          'Ghost comment: one check-in endpoint still documents `@Router /mobile/check-in/request-punch [POST]`, but `routes/check_in.go` only registers `/punch`, `/history`, `/status`. Live map wins.',
-        ],
-      },
-      {
-        heading: '6. Catch-all / not found',
-        body: [
-          'Two different “not found”s. Route miss: nothing in the map matches method+path — the endpoint is never called. Resource miss: the route matched, the function ran, the store had no row.',
-          'This service has no custom `NoRoute`. The default engine gives logger + recovery. An unknown URL gets the framework’s plain `404 page not found`. Recovery is the panic net: a crash becomes HTTP 500 instead of killing the process.',
-          'The only true wildcard is the spec UI: `engine.GET("/spec/*any", …)`. `*any` means anything under `/spec/`. That is a matched route, not a 404.',
-        ],
-        kid: 'Route miss = no room with that number (receptionist shrugs). Resource miss = the room exists, but the folder inside is empty. Catch-all `/spec/*any` = “any paper in the docs cabinet.”',
-        examples: [
-          {
-            method: 'GET',
-            path: '/api/v1/desk/books',
-            goesTo: 'No endpoint. Map miss.',
-            purpose: 'Prove the map is exact. This API has no books resource. 404 happens before any `endpoints/*.go` code runs.',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/sandbox/data',
-            goesTo: 'SandboxEndpoint.Ping exists, but MountSandbox is never called',
-            purpose: 'A file is not a route. Only registration makes a path live.',
-          },
-          {
-            method: 'GET',
-            path: '/spec/index.html',
-            goesTo: '`GET /spec/*any` (non-production)',
-            purpose: 'One pattern serves the whole spec UI. A missing member is not this route.',
-          },
-          {
-            method: 'GET',
-            path: '/api/v1/desk/site/99999',
-            goesTo: 'SiteEndpoint.ReadSite → service → store',
-            purpose: 'If the store returns record-not-found, the error helper maps it to JSON 404. The map found the function; the site row did not exist. Not the framework’s plain 404 page.',
-          },
-          {
-            method: 'PUT',
-            path: '/api/v1/desk/access-roles/:id',
-            goesTo: 'AccessRoleEndpoint.Edit',
-            purpose: 'Missing role → structured “role not found.” Same idea as GET `/api/v1/desk/operator/:id` → operator not found. Matched route, missing record.',
-            note: 'Also not a route miss: auth middleware can abort with 401 before the endpoint. The route did match; access failed. Example: GET `/api/v1/desk/member` without a token still hit the member group.',
-          },
-        ],
-        bullets: [
-          'Wrong method: this engine does not enable method-not-allowed. `POST /api/v1/desk/home` (home is GET-only) is treated like no match → 404, not 405. When I rebuild, decide whether I want 405 for “path exists, method wrong.”',
-        ],
-      },
-      {
-        heading: 'Rebuild checklist',
-        bullets: [
-          'One engine, then groups. Copy `BuildEngine`: `/api` → `/v1` → `/desk` and `/mobile`.',
-          'One file per resource. `routes/member.go` owns member paths; `endpoints/member.go` owns the methods.',
-          'Method = intent, path = resource. `GET ""` list, `POST /create` create, `PUT /update/:id` change, `DELETE /delete/:id` remove — this project’s style (verb in the path, not only REST-pure `/members/:id`).',
-          '`:name` in the route must match `c.Param("name")`. `:id`, `:date`, `:user-id`, `:member_id` are all used on purpose.',
-          'Path = identity, query = filter/page/period. Do not put `teamID` in the path for a list; this repo puts it in `?teamID=`. Do not put member id in query for “this person”; this repo uses `/card/:id`.',
-          'Nest only when it is a child. `/planner/items/:id`, `/access-roles/:id/grants-group`, `/pay-run/stub/build/:date`.',
-          'Audience is not version. Desk vs mobile vs `/ops` are parallel doors. Keep `/v1` until I truly need `/v2`.',
-          'Register or it does not exist. `sandbox.go` is the warning. Wire every `MountX` I care about.',
-          'Handle two 404s. Unknown URL (framework default) vs missing row (store not-found → JSON). Users feel both as “not found”; the code must treat them differently.',
-          'Trust the router file over `@Router` comments. Decide path, pay-run stub path, and `request-punch` already drifted. The live map is `routes/*.go`.',
-        ],
-        body: [
-          'That is routing in this backend: a method plus a path, registered once, pointing at one function. Everything else (filters, nesting, desk vs phone, 404s) is how I keep that map honest as the product grows.',
+          { type: 'p', text: 'This project is a **Gin (Go)** API. The map lives in `routers/`, the work lives in `handlers/`.' },
         ],
       },
     ],
   },
+
   {
     id: 'serde',
     n: 4,
