@@ -470,31 +470,253 @@ department = data.get("department", "General")`,
   {
     id: 'middleware',
     n: 7,
-    title: 'Middleware',
+    title: 'What is Middleware in Backend? The Hallway Around Every Request',
     label: 'Middleware',
     cluster: 'wire',
     x: 250,
     y: 355,
-    gist: 'A pipeline around every request. Order is behavior. Fat middleware is a hidden god object.',
+    gist: 'Middleware is code in the middle of the request lifecycle — before (and sometimes after) the handler. Order is behavior. Keep it small; it is not the product.',
     remember: [
-      'Typical order: log → auth → validate → handler → error. Swap it and you ship bugs.',
-      'Use it for CORS, security headers, request IDs — not for core business rules.',
-      'Keep each layer small. If it needs the whole domain, it is not middleware.',
+      'A middleware gets req, res, and next(). Call next() to pass the request along — or stop and answer.',
+      'Use it for CORS, auth, rate limits, logs, compression, global errors — not for core business rules.',
+      'Auth before the handler. Error mapper last so it can catch everything.',
+    ],
+    sections: [
+      {
+        heading: '1. What middleware is',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'In the request lifecycle (see **9 · Handlers**), middleware sits **around** routing and the handler. The name is literal: it runs *in the middle*.' },
+          { type: 'quote', text: 'Optional extra handlers that can change the request, change the response, call `next()`, or answer the client and stop.' },
+          {
+            type: 'pre',
+            lines: `Request
+  → middleware 1
+  → middleware 2
+  → route → handler → service → repository
+  → (sometimes middleware after, e.g. compress / error mapper)
+Response`,
+          },
+          { type: 'p', text: 'A typical middleware receives three things:' },
+          {
+            type: 'ul',
+            items: [
+              '**`req`** — the incoming request.',
+              '**`res`** — the outgoing response.',
+              '**`next`** — a function. Call it to pass control to the **next** middleware or to the handler.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `function auth(req, res, next) {
+  const user = verify(req.headers.authorization)
+  if (!user) return res.status(401).json({ message: "unauthorized" })
+  req.context.userId = user.id   // stash for later — see Context
+  next()                         // let the handler run
+}`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'A hallway of checkpoints before reception. Each guard can stamp the envelope, send you back, or wave you to the next door.',
+              '`next()` = “go to the next guard.” No `next()` = you were turned away at this door.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Why not just a normal function in every handler?',
+        blocks: [
+          { type: 'p', text: 'You *could* call `log(req)` and `auth(req)` at the top of every handler. After ten routes, you have copied the same three lines ten times — and forgotten them on the eleventh.' },
+          { type: 'p', text: 'Middleware **centralizes** that work. One auth check covers a whole group of routes. Handlers stay about *this* resource, not about CORS headers.' },
+          {
+            type: 'ul',
+            items: [
+              '**CORS** — is this origin allowed? If yes, add the headers.',
+              '**Auth** — verify the token; put the user on context. Fail → 401, no handler.',
+              '**Rate limit** — count calls per IP; too many → 429.',
+              '**Logging / monitoring** — method + path on the way in.',
+              '**Compression** — gzip a large body on the way out.',
+              '**Parse / serde** — JSON body into an object so handlers stay clean.',
+              '**Global errors** — last in the stack; catch whatever bubbled and return a structured body.',
+            ],
+          },
+          {
+            type: 'kid',
+            items: [
+              'Instead of every teacher checking IDs, one guard at the school gate checks once.',
+              'The classroom can teach math. It does not also run security.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Order is behavior',
+        blocks: [
+          { type: 'p', text: 'The order you **register** middleware is the order it **runs**. Swap it and you ship bugs.' },
+          {
+            type: 'pre',
+            lines: `typical order
+  1. log            (see the request even if later steps fail)
+  2. CORS / parse
+  3. auth           (before any business)
+  4. validate       (optional, or in the handler)
+  5. handler
+  6. error mapper   LAST — so it can see every failure`,
+          },
+          { type: 'p', text: 'Security-related middleware should run **before** the handler. The error mapper should be **last** so a throw in auth or in the handler still becomes a clean JSON 400/500 — not a crash page.' },
+          {
+            type: 'kid',
+            items: [
+              'Check the badge *before* you let someone into the office. Do not teach the class first and ask for ID after.',
+              'The principal who handles “something went wrong” letters sits at the *end* of the hallway, so every complaint reaches them.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Concept', 'Real-world analogy', 'What it does'],
+            rows: [
+              ['Middleware', 'Checkpoint in the hallway', 'Runs around the handler'],
+              ['`next()`', 'Wave to the next guard', 'Pass the request along'],
+              ['Stop without `next()`', 'Turned away at the gate', '401 / 429 / CORS reject'],
+              ['Error mapper last', 'Principal at the end of the hall', 'One shape for every failure'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              'Middleware is **shared hallway work**, not the product.',
+              '**Order matters.** Auth before the handler. Errors last.',
+              'Trusted facts it learns (user id) go on **request context** — node 8.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
     id: 'context',
     n: 8,
-    title: 'Request context',
+    title: 'What is Request Context? The Sticky Note for This Call Only',
     label: 'Context',
     cluster: 'wire',
     x: 400,
     y: 280,
-    gist: 'Per-request memory: who, what, which request. Not a global. Not a leftover from the previous caller.',
+    gist: 'Per-request memory: who, which request, when to give up. Not a global. Not a leftover from the previous caller. Not a user id the client typed.',
     remember: [
-      'Carry method, path, headers, body, user, request ID through the stack.',
-      'Request ID is how I stitch logs, traces, and errors into one story.',
-      'Never stash request state on a singleton. Two concurrent requests will lie to each other.',
+      'Context is a bag attached to one request. Middleware writes; handler and service read.',
+      'Put the verified user id here — never trust body.userId from the client.',
+      'Request id / UUID stitches logs across services. Cancellation / deadline stops hung downstream calls.',
+    ],
+    sections: [
+      {
+        heading: '1. What context is',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Middleware, handler, and service all need to share a few facts for **this one request**. A **request context** is scoped storage tied to that lifecycle — then it dies.' },
+          { type: 'quote', text: 'Shared state for this call. Loose coupling: auth does not return a user object through every function argument by hand, but it also is not a process-wide global.' },
+          {
+            type: 'ul',
+            items: [
+              'Lives for **one** request. Two requests in flight at once each have their **own** bag.',
+              'Never stash this on a singleton / module variable. Concurrent callers will swap identities.',
+              'This is the rest of the same video as **9 · Handlers** and **7 · Middleware**.',
+            ],
+          },
+          {
+            type: 'kid',
+            items: [
+              'A sticky note on *this visitor’s* folder: badge number, visit id, “must leave by 3pm.”',
+              'When they walk out, you throw the note away. You do not pin it on the front door for the next stranger.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Trusted user — not the id in the body',
+        blocks: [
+          { type: 'p', text: 'When execution reaches the handler, you often need “who is doing this?” — user id, role — to insert a catalog row **as that user**.' },
+          { type: 'p', text: 'If you read `userId` from the JSON body, a hostile client sends someone else’s id. **Auth middleware** already verified the token. It should put **that** user on context. The handler reads context, not the body, for identity.' },
+          {
+            type: 'pre',
+            lines: `// auth middleware (earlier in the hallway)
+ctx.userId = token.sub
+ctx.role   = token.role
+next()
+
+// handler — identity from context, payload from body
+item = {
+  title:  body.title,
+  owner:  ctx.userId,    // trusted
+}
+service.create(item)
+
+// never
+item.owner = body.userId  // attacker chooses the owner`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'The visitor writes “I am the principal” on their form. You do not believe the form.',
+              'You believe the **badge the gate already checked**, copied onto the sticky note.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Request id, tracing, cancel',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Request id (UUID)** — generated at the edge, stored on context, logged everywhere. One id stitches this call across services. Audit: where did it go?',
+              '**Cancellation / deadline** — “give up at T.” Passed downstream so a hung vendor does not hang *you* forever.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `ctx.requestId = uuid()          // log this on every line
+ctx.deadline  = now + 3s        // cancel slow downstream work
+
+log.info("create item", { requestId: ctx.requestId, userId: ctx.userId })`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'Every hall pass gets a unique number. If something goes missing, you follow that number through every classroom.',
+              '“Be back by 3pm” is a deadline. The library does not keep you until midnight.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Concept', 'Real-world analogy', 'What it does'],
+            rows: [
+              ['Request context', 'Sticky note for this visit', 'State for one request only'],
+              ['Verified user id', 'Badge number, not the form', 'Identity after auth middleware'],
+              ['Request id', 'Hall-pass number', 'Stitch logs across services'],
+              ['Deadline / cancel', 'Be back by 3pm', 'Stop hung downstream calls'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              'Context is **this request’s bag**. Not a global. Not the previous caller.',
+              '**Write** trusted facts in middleware. **Read** them in the handler / service.',
+              'Never take `userId` from the client body when you already have a token.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -714,11 +936,54 @@ signature_bytes_here`,
           {
             type: 'ul',
             items: [
-              'Anything from the client: **JSON body**, **query params**, **path params**, **headers**.',
+              'Anything from the client: **JSON body**, **query params**, **path params**, **headers**. All four are untrusted. All four get checked at the door.',
               'If the API needs a `name` string between 5 and 100 characters, prove that **at the door**.',
               'Skip the gate and bad data walks into the service and the SQL. The user gets a **500** (“something unexpected”). That is a poor form experience. Fail at the door with **400** and a field list they can fix.',
             ],
           },
+          { type: 'h3', text: 'What those four look like on one request' },
+          { type: 'p', text: 'One HTTP call can carry all of them at once. The path slot, the `?` extras, the headers, and the JSON body are four different bags of data:' },
+          {
+            type: 'pre',
+            lines: `PUT /api/v1/catalog/items/88?draft=true HTTP/1.1
+Host: api.example.com
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+X-Request-Id: req-7f3a
+
+{
+  "title": "  Quiet Hours  ",
+  "price": "12.50",
+  "email": "Sam@Shop.COM"
+}`,
+          },
+          {
+            type: 'table',
+            columns: ['Where', 'In this request', 'What it is'],
+            rows: [
+              ['**Path param**', '`/items/88` — the `:id` is `88`', '**Which** record. Required identity. In the URL path, not after `?`.'],
+              ['**Query param**', '`?draft=true`', '**How** to treat this call — filter, flag, page. Optional extras after `?`.'],
+              ['**Header**', '`Authorization`, `Content-Type`, `X-Request-Id`', '**Meta** about the call — who, what format, which request id. Not the resource itself.'],
+              ['**JSON body**', '`{ "title", "price", "email" }`', '**The payload** — fields you are creating or updating. Only on methods that send a body (POST / PUT / PATCH).'],
+            ],
+          },
+          { type: 'p', text: 'Tiny reads so you can picture each bag on its own:' },
+          {
+            type: 'pre',
+            lines: `JSON body     POST /signup
+              { "email": "a@b.com", "age": 30 }
+
+Query params  GET /catalog?page=2&limit=20&q=quiet
+              page="2"  limit="20"  q="quiet"     ← always strings
+
+Path params   GET /catalog/items/88
+              c.Param("id") → "88"               ← identity of one item
+
+Headers       Authorization: Bearer <token>
+              Content-Type: application/json
+              X-Request-Id: req-7f3a`,
+          },
+          { type: 'p', text: 'Empty or junk body → **400** with fields to fix, not a 500:' },
           {
             type: 'pre',
             lines: `POST /signup   body: {}
@@ -756,12 +1021,44 @@ POST /signup   body: { "email": "not-an-email", "phone": 12345, "date": "..." }
               ['**Semantic**', 'Does this *make sense*?', 'Birthday not in the future. Age 365 is not a person (yet).'],
             ],
           },
-          { type: 'h3', text: 'Type' },
+          { type: 'h3', text: 'Type — example' },
           { type: 'p', text: 'String, number, boolean, array, nested object. Query params arrive as **strings** even when they look like numbers — type checks and transforms often travel together.' },
-          { type: 'h3', text: 'Syntactic' },
+          {
+            type: 'pre',
+            lines: `// sent
+{ "phone": 855123456, "married": "yes" }
+
+// check
+phone    expected string,  got number   → 400
+married  expected boolean, got string   → 400
+
+// ok
+{ "phone": "855123456", "married": true }`,
+          },
+          { type: 'h3', text: 'Syntactic — example' },
           { type: 'p', text: '“Does this string *look like* what we asked for?” Email regex / parser. Phone pattern. A date that can actually be read as a date.' },
-          { type: 'h3', text: 'Semantic' },
-          { type: 'p', text: 'The value is the right type and the right shape — and still nonsense. Date of birth `2025-13-01` when today is `2025-11-01`. Age `365`. The pipeline should reject it.' },
+          {
+            type: 'pre',
+            lines: `{ "email": "sam-at-shop", "date": "next friday" }
+→ 400  email: invalid email format
+       date:  not a date
+
+{ "email": "sam@shop.com", "date": "1998-04-12" }
+→ ok (shape is legal — meaning is a later check)`,
+          },
+          { type: 'h3', text: 'Semantic — example' },
+          { type: 'p', text: 'The value is the right type and the right shape — and still nonsense. Date of birth in the future. Age `365`. The pipeline should reject it.' },
+          {
+            type: 'pre',
+            lines: `today = 2025-11-01
+
+{ "birthDate": "2026-01-13", "age": 365 }
+→ 400  birthDate: cannot be in the future
+       age:      not a realistic age
+
+{ "birthDate": "1998-04-12", "age": 27 }
+→ ok`,
+          },
           { type: 'quote', text: 'Type = kind. Syntactic = shape. Semantic = meaning.' },
           {
             type: 'kid',
@@ -777,27 +1074,37 @@ POST /signup   body: { "email": "not-an-email", "phone": 12345, "date": "..." }
         heading: '3. Transformation — shape it for the domain',
         blocks: [
           { type: 'p', text: 'Validation asks “is this allowed?” **Transformation** runs operations on the value so the service always sees **one** shape — often after (or as part of) the pipeline.' },
-          { type: 'h3', text: 'Query params are always strings' },
-          { type: 'p', text: '`GET /bookmarks?page=2&limit=20` looks numeric in the URL. On the server, `page` and `limit` are still **strings** `"2"` and `"20"`. If the rule is “page is a number, `> 0` and `< 500`,” you **cast** first, then check the range. Cast fails → tell the client, do not crash.' },
+          { type: 'p', text: '**Validation** answers “reject or accept?” **Transformation** answers “rewrite it so the service always sees one shape.” You often do both on the same field: cast, then range-check.' },
+          { type: 'h3', text: 'Example 1 — query strings become numbers' },
+          { type: 'p', text: '`GET /bookmarks?page=2&limit=20` looks numeric in the URL. On the server, `page` and `limit` are still **strings** `"2"` and `"20"`. Cast first, then check the range. Cast fails → 400, do not crash.' },
           {
             type: 'pre',
-            lines: `// arrives as strings
-page  = "2"
-limit = "20"
+            lines: `GET /bookmarks?page=2&limit=20
 
-// transform, then validate
-page  = int("2")     # 2
-limit = int("20")    # 20
-# then: 0 < page < 500,  0 < limit < 10000`,
+before (wire)     page = "2"      limit = "20"     // strings
+transform         page = 2        limit = 20       // int()
+validate          0 < page < 500  0 < limit < 10000
+after (service)   page = 2        limit = 20
+
+GET /bookmarks?page=abc
+transform fails   int("abc") → 400  { "field": "page", "message": "must be a number" }`,
           },
-          { type: 'h3', text: 'Normalize what users type wildly' },
+          { type: 'h3', text: 'Example 2 — email, phone, title' },
+          { type: 'p', text: 'Users type wildly. The service should not have to know every spelling. Normalize, then (if needed) validate length / format on the cleaned value.' },
           {
-            type: 'ul',
-            items: [
-              'Email `Test@Example.COM` → **lowercase** `test@example.com` before lookup.',
-              'Phone missing `+` → prefix it so the service always stores one form.',
-              'Dates in mixed formats → one canonical form for the database.',
-            ],
+            type: 'pre',
+            lines: `before (body)
+  title  = "  Quiet Hours  "
+  email  = "Sam@Shop.COM"
+  phone  = "855123456"
+
+transform
+  title  = title.trim()           → "Quiet Hours"
+  email  = email.lower()          → "sam@shop.com"
+  phone  = "+" + phone            → "+855123456"
+
+after (service / DB)
+  { "title": "Quiet Hours", "email": "sam@shop.com", "phone": "+855123456" }`,
           },
           { type: 'p', text: 'Chain it when you must: lowercase → strip junk → then check length. Fail a bad JSON body or a date that will not parse with a **clear 400**, not a 500.' },
           {
@@ -902,16 +1209,214 @@ limit = int("20")    # 20
   {
     id: 'handlers',
     n: 9,
-    title: 'Handlers, controllers, and services',
+    title: 'What is the Request Lifecycle? Controllers, Services, Repositories',
     label: 'Handlers',
     cluster: 'surface',
     x: 1040,
     y: 90,
-    gist: 'The HTTP adapter is thin. The service owns the use-case. If the route file is 400 lines, the design already leaked.',
+    gist: 'Inside the server, a request is not “hit the database.” It is handler → service → repository — HTTP at the edge, rules in the middle, SQL at the bottom.',
     remember: [
-      'Handler: parse HTTP, call service, map result to status + body.',
-      'Service/controller: the use-case. Domain stays here or below, not in Express/FastAPI decorators.',
-      'Middleware can strip duplication (auth, IDs) so handlers stay boring.',
+      'Handler / controller: req + res. Bind, validate, call the service, pick the status code.',
+      'Service: business rules. No HTTP. Usable from a job or a CLI, not only from a route.',
+      'Repository: one focused DB move. Service orchestrates; repo does not invent the product.',
+    ],
+    sections: [
+      {
+        heading: '1. The request lifecycle inside the server',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'A client sends HTTP. The OS forwards that packet to your port (`3000`, `4000`, …). From **entry** until a **response** leaves, that is the **request lifecycle inside the server** — not the DNS/TLS hops outside.' },
+          { type: 'quote', text: 'These layers were going to be separate lessons. They only make sense **together**, so they live as one picture — then Middleware and Context zoom in.' },
+          {
+            type: 'pre',
+            lines: `Request
+  → middleware (optional, around everything)
+  → route match
+  → handler / controller     HTTP boundary
+  → service                  business rules
+  → repository               database
+  → database
+Response  (handler picks the status + body)`,
+          },
+          {
+            type: 'table',
+            columns: ['Layer', 'Job', 'Knows about'],
+            rows: [
+              ['**Handler / controller**', 'In and out of HTTP', '`req`, `res`, status codes, JSON'],
+              ['**Service**', 'What the product *means*', 'Rules, workflows — **not** status codes'],
+              ['**Repository**', 'Talk to the store', 'SQL / queries — one job per method'],
+              ['**Middleware**', 'Shared work around every call', 'Auth, CORS, logs, errors — see node 7'],
+              ['**Request context**', 'Trusted bag for *this* call only', 'User id, request id — see node 8'],
+            ],
+          },
+          {
+            type: 'kid',
+            items: [
+              'A letter arrives at a building. **Reception** (handler) reads the envelope and writes the reply.',
+              '**Office** (service) decides what the letter *means*. **Filing cabinet** (repository) is the only one who opens the drawers.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Handler / controller — the HTTP door',
+        blocks: [
+          { type: 'p', text: 'After routing picks a function, that function is the **handler** (many teams say **controller**). Same job: it is the first code that *owns* HTTP for this route.' },
+          { type: 'p', text: 'It receives two objects from the runtime:' },
+          {
+            type: 'ul',
+            items: [
+              '**Request (`req`)** — headers, query, path params, body, cookies. Everything the client sent.',
+              '**Response (`res`)** — how you send data and a status back.',
+            ],
+          },
+          { type: 'h3', text: 'What you pull depends on the method' },
+          {
+            type: 'pre',
+            lines: `GET     → query params + path params     (list / one record)
+POST    → JSON body                      (create)
+PUT/PATCH → JSON body + path id          (update)
+DELETE  → path id (sometimes body)       (remove)`,
+          },
+          { type: 'p', text: 'Then, still at this door — **before** the service:' },
+          {
+            type: 'ul',
+            items: [
+              '**Deserialize** JSON into a native object / struct. Fail → **400**, do not enter the service.',
+              '**Validate** required fields and types (the gate from lesson 6).',
+              '**Transform** — defaults if the client omitted a sort, lowercase an email, cast `page` from `"2"` to `2`.',
+            ],
+          },
+          { type: 'p', text: 'The controller **controls the data flow**: client → server → client. It does **not** invent the product. It calls the service, then picks **200 / 201 / 204** on success, **400** on a client mistake, **500** on a crash, plus the body.' },
+          {
+            type: 'pre',
+            lines: `GET /catalog
+handler
+  1. (nothing to bind — GET list)
+  2. catalogService.list()
+  3. 200 + array of items
+
+POST /catalog
+handler
+  1. JSON → object   (fail → 400)
+  2. validate + transform
+  3. catalogService.create(input)
+  4. 201 + created item`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'Reception opens the envelope, checks the form is filled in, stamps the date, hands it to the office, and later puts the answer in a return envelope with a stamp (200 vs 400).',
+              'Reception does not rewrite the company’s prices. That is the office.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Service — the brain (no HTTP)',
+        blocks: [
+          { type: 'p', text: 'The **service** is business logic. It should not know JSON, status codes, or that a browser exists. A good service is a function you could also call from a **background job** or a **CLI**.' },
+          {
+            type: 'ul',
+            items: [
+              'What operations should happen.',
+              'Which rules apply (unique title? enough stock?).',
+              'How to **orchestrate** — maybe two repository calls, then send mail.',
+            ],
+          },
+          { type: 'quote', text: 'The service does not format the response. The handler does. Swap them and SQL leaks into the route, and HTTP leaks into the rules.' },
+          {
+            type: 'pre',
+            lines: `// service — no req, no res
+func createItem(input) {
+  if repo.existsTitle(input.title) { return error "title taken" }
+  row = repo.insert(input)
+  return row
+}`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'The office decides: “We already have a book with that name — refuse.” or “File it, then mail a receipt.”',
+              'The office never writes “HTTP 409” on the form. Reception picks the stamp.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Repository — one drawer at a time',
+        blocks: [
+          { type: 'p', text: 'The **repository** is the only layer that speaks database. It builds the query from parameters the service passed, runs it, returns rows or an error.' },
+          { type: 'p', text: 'Each method should do **one** thing: fetch all, fetch one, insert, update, delete. Not “fetch plus send email plus charge a card.”' },
+          {
+            type: 'pre',
+            lines: `repo.list()              → SELECT * FROM items
+repo.getById(88)         → SELECT * FROM items WHERE id = 88
+repo.insert(row)         → INSERT INTO items ...
+repo.update(88, patch)   → UPDATE items SET ... WHERE id = 88`,
+          },
+          { type: 'p', text: 'Swap Postgres for another store later and you want to rewrite **this** layer — not the service rules, and not the HTTP door.' },
+          {
+            type: 'kid',
+            items: [
+              'The filing cabinet only files and fetches. It does not decide prices and it does not talk to the mailman.',
+              'One drawer, one job: “get folder 88,” not “get folder 88 and also rewrite the company handbook.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. Where middleware and context sit',
+        blocks: [
+          { type: 'p', text: 'The three layers above are the **spine**. Two more pieces wrap that spine. They are the rest of this video — and their own nodes on the map.' },
+          {
+            type: 'ul',
+            items: [
+              '**Middleware (node 7)** — optional handlers *in the middle*. `req`, `res`, `next()`. Auth, CORS, rate limit, logs, compression, global errors. Order is behavior. Auth before the handler; error mapper last.',
+              '**Request context (node 8)** — a bag that lives only for **this** request. Auth middleware puts a verified user id in it. The handler must **not** trust `body.userId` from the client.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `// wrong — client can send someone else's id
+createItem({ ...body, userId: body.userId })
+
+// right — id came from the token, stored on context
+createItem({ ...body, userId: ctx.userId })`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'Security at the gate (middleware) checks the badge **before** reception.',
+              'The badge number is written on a sticky note for *this visit only* (context). Do not believe the number the visitor wrote on their own form.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Concept', 'Real-world analogy', 'What it does'],
+            rows: [
+              ['Handler / controller', 'Reception', 'HTTP in/out, status, JSON'],
+              ['Service', 'The office', 'Rules and orchestration — no HTTP'],
+              ['Repository', 'Filing cabinet', 'One focused database move'],
+              ['Middleware', 'Guards and stamps in the hallway', 'Shared work before/after the handler'],
+              ['Request context', 'Sticky note for this visit', 'Trusted state for this request only'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Handler** talks HTTP. **Service** talks product. **Repository** talks SQL.',
+              'Middleware is the hallway. Context is the sticky note — never a global.',
+              'Open **7 · Middleware** and **8 · Context** for the rest of this same video.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
