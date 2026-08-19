@@ -16,6 +16,16 @@ export interface BuildNote {
  */
 export const buildNotes: BuildNote[] = [
   {
+    slug: 'docker-for-kids',
+    title: 'Docker in Kid Version',
+    summary:
+      'Image is the recipe, Docker is the kitchen, container is the cookie — map on the left, lesson on the right.',
+    tag: 'Private review',
+    date: '2026-08-19',
+    stack: ['Docker', 'Containers', 'Kid version'],
+    draft: true,
+  },
+  {
     slug: 'state-in-visualization',
     title: 'State in Visualization',
     summary:
