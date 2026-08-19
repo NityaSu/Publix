@@ -135,16 +135,355 @@ export const topics: TopicNode[] = [
   {
     id: 'http',
     n: 2,
-    title: 'HTTP protocol',
+    title: 'HTTP Status Codes: How the Server Answers Without Words',
     label: 'HTTP',
     cluster: 'wire',
     x: 270,
     y: 70,
-    gist: 'HTTP is the shared language. If I do not know the message shape, I am guessing at APIs.',
+    gist: 'Every request gets a 3-digit answer first. That status code tells the whole story — before the body, before the JSON. Pick the family, then the exact code.',
     remember: [
-      'Raw message: start line, headers, optional body. Methods carry meaning (GET safe, POST not).',
-      'Header families: request, representation, general, security. CORS preflight is a real extra round trip.',
-      'Status codes are a contract. Caching (ETag, max-age), compression, HTTP/1.1 vs 2 vs 3, TLS — all HTTP-shaped.',
+      '1xx chatter · 2xx check · 3xx change direction · 4xx client’s fault · 5xx crash.',
+      'Cheat sheet: 200, 201, 301, 304, 400, 401, 403, 404, 429, 500, 502, 503.',
+      'Debug tip: read the status first — it tells you who to blame before you waste hours.',
+    ],
+    sections: [
+      {
+        heading: '1. Why a number?',
+        blocks: [
+          {
+            type: 'p',
+            text: 'Every time you click a link, submit a form, or load an image, your browser sends a request to a server. The server cannot write you a paragraph back — it sends a **3-digit number** instead. That number is an **HTTP status code**, and it tells the whole story.',
+          },
+          {
+            type: 'kid',
+            items: [
+              'You are at a restaurant (the **server**) and you order a burger (the **request**).',
+              '**200** = “Here’s your burger, enjoy!”',
+              '**404** = “Sorry, we don’t have that on the menu.”',
+              '**500** = “The kitchen is on fire. Not your fault.”',
+              '**301** = “We moved. The new address is…”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. The 5 families (moods)',
+        blocks: [
+          {
+            type: 'p',
+            text: 'Status codes are grouped by their **first digit**. Think of them as moods:',
+          },
+          {
+            type: 'table',
+            columns: ['Family', 'Mood', 'Means'],
+            rows: [
+              ['**1xx**', 'Chatter', 'Informational — hold on, I’m working on it.'],
+              ['**2xx**', 'Check', 'Success — everything went great.'],
+              ['**3xx**', 'Change direction', 'Redirection — go over there instead.'],
+              ['**4xx**', 'Client’s fault', 'You (or your app) made a mistake.'],
+              ['**5xx**', 'Crash', 'Server messed up — not your fault.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**How to remember:** 1xx Chatter · 2xx Check · 3xx Change direction · 4xx Client’s fault · 5xx Crash.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. 1xx — Informational',
+        blocks: [
+          {
+            type: 'p',
+            text: '“Hold on, I’m working on it…” Rarely seen by users. The server says “I got your message, keep sending.”',
+          },
+          {
+            type: 'pre',
+            lines: `GET /upload  (chunk 1 of 5)
+→ 100 Continue`,
+          },
+        ],
+      },
+      {
+        heading: '4. 2xx — Success',
+        blocks: [
+          {
+            type: 'p',
+            text: '“Everything went great!” The golden standard. Your request worked and the server delivered.',
+          },
+          {
+            type: 'pre',
+            lines: `GET /blog/http-status-codes
+→ 200 OK          (page loads perfectly)
+
+POST /api/users   (create new account)
+→ 201 Created     (new user born!)`,
+          },
+          {
+            type: 'table',
+            columns: ['Code', 'Name', 'One-liner'],
+            rows: [
+              ['**200**', 'OK', 'Here’s your stuff.'],
+              ['**201**', 'Created', 'It’s alive! New resource exists.'],
+              ['**204**', 'No Content', 'Done — empty body (often DELETE).'],
+            ],
+          },
+          {
+            type: 'kid',
+            text: '200 = here’s the dish. 201 = we put a **new** dish on the menu. 204 = order handled, nothing left on the tray.',
+          },
+        ],
+      },
+      {
+        heading: '5. 3xx — Redirection',
+        blocks: [
+          {
+            type: 'p',
+            text: '“Go over there instead.” The resource moved or has a new address. Your browser usually handles this automatically.',
+          },
+          {
+            type: 'pre',
+            lines: `GET /old-blog-post
+→ 301 Moved Permanently → /new-blog-post
+
+GET /temporary-sale-page
+→ 302 Found   (temporary redirect)`,
+          },
+          {
+            type: 'ul',
+            items: [
+              '**301** Moved Permanently — update your address book (and search engines will).',
+              '**302** Found — temporary redirect.',
+              '**304** Not Modified — nothing changed since last time (cache win).',
+              '**308** Permanent Redirect — like 301 with stricter method rules.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. 4xx — Client error',
+        blocks: [
+          {
+            type: 'p',
+            text: '“You made a mistake.” The server understood your request, but you asked for something impossible or unauthorized.',
+          },
+          {
+            type: 'pre',
+            lines: `GET /admin-panel          (without logging in)
+→ 401 Unauthorized
+
+GET /secret-vault         (logged in, but not allowed)
+→ 403 Forbidden
+
+GET /page-that-never-existed
+→ 404 Not Found`,
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Important:** 4xx means the *client* (browser/app) sent a bad request. It is not always the human’s fault — sometimes the app itself sends malformed data. But it always means: **fix the request, not the server**.',
+              '**401 vs 403:** 401 = “Who are you?” (need to log in). 403 = “I know who you are. You still can’t come in.”',
+            ],
+          },
+          {
+            type: 'table',
+            columns: ['Code', 'Name', 'One-liner'],
+            rows: [
+              ['**400**', 'Bad Request', 'I can’t understand what you’re saying.'],
+              ['**401**', 'Unauthorized', 'Who are you? (Need to log in.)'],
+              ['**403**', 'Forbidden', 'I know you — still no.'],
+              ['**404**', 'Not Found', 'I looked everywhere. It’s not here.'],
+              ['**413**', 'Payload Too Large', 'That file is way too big.'],
+              ['**415**', 'Unsupported Media', 'Wrong file type.'],
+              ['**422**', 'Unprocessable', 'JSON is fine; the meaning is not.'],
+              ['**429**', 'Too Many Requests', 'Stop spamming me.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. 5xx — Server error',
+        blocks: [
+          {
+            type: 'p',
+            text: '“I messed up. Not your fault.” The request was fine, but the server crashed, timed out, or broke internally.',
+          },
+          {
+            type: 'pre',
+            lines: `GET /checkout     (database is down)
+→ 500 Internal Server Error
+
+GET /search       (server overloaded)
+→ 503 Service Unavailable`,
+          },
+          {
+            type: 'table',
+            columns: ['Code', 'Name', 'One-liner'],
+            rows: [
+              ['**500**', 'Internal Server Error', 'It’s not you, it’s me.'],
+              ['**502**', 'Bad Gateway', 'My friend who I asked let me down.'],
+              ['**503**', 'Service Unavailable', 'Come back later, I’m napping.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: '8. Real-world scenes',
+        blocks: [
+          {
+            type: 'h3',
+            text: 'Online shopping — `POST /api/orders` (“Buy Now”)',
+          },
+          {
+            type: 'table',
+            columns: ['Status', 'What happened'],
+            rows: [
+              ['**200 OK**', 'Order placed successfully'],
+              ['**400 Bad Request**', 'You forgot to enter your credit card CVV'],
+              ['**401 Unauthorized**', 'Your login session expired'],
+              ['**422 Unprocessable**', 'The item is out of stock'],
+              ['**500 Server Error**', 'The payment gateway crashed'],
+            ],
+          },
+          {
+            type: 'h3',
+            text: 'Social media — `GET /api/timeline` (open the app)',
+          },
+          {
+            type: 'table',
+            columns: ['Status', 'What happened'],
+            rows: [
+              ['**200 OK**', 'Fresh posts loaded'],
+              ['**304 Not Modified**', 'No new posts since last check (cached)'],
+              ['**429 Too Many Requests**', 'You scrolled too fast — slow down'],
+              ['**503 Service Unavailable**', 'The platform is down'],
+            ],
+          },
+          {
+            type: 'h3',
+            text: 'File upload — `POST /upload/avatar`',
+          },
+          {
+            type: 'table',
+            columns: ['Status', 'What happened'],
+            rows: [
+              ['**201 Created**', 'Image saved, profile updated'],
+              ['**413 Payload Too Large**', 'Your 50MB photo exceeds the 5MB limit'],
+              ['**415 Unsupported Media**', 'You tried to upload a `.exe` as an image'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: '9. Developer’s cheat sheet',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Code', 'Meaning', 'One-liner memory'],
+            rows: [
+              ['**200**', 'OK', 'Here’s your stuff.'],
+              ['**201**', 'Created', 'It’s alive!'],
+              ['**301**', 'Moved Permanently', 'We moved. Update your address book.'],
+              ['**304**', 'Not Modified', 'Nothing changed since last time.'],
+              ['**400**', 'Bad Request', 'I can’t understand what you’re saying.'],
+              ['**401**', 'Unauthorized', 'Who are you? (Need to log in.)'],
+              ['**403**', 'Forbidden', 'I know who you are. You still can’t come in.'],
+              ['**404**', 'Not Found', 'I looked everywhere. It’s not here.'],
+              ['**429**', 'Too Many Requests', 'Stop spamming me.'],
+              ['**500**', 'Internal Server Error', 'It’s not you, it’s me.'],
+              ['**502**', 'Bad Gateway', 'My friend who I asked let me down.'],
+              ['**503**', 'Service Unavailable', 'Come back later, I’m napping.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: '10. Quick quiz',
+        blocks: [
+          {
+            type: 'h3',
+            text: 'Q1 — Bank statement, session expired',
+          },
+          {
+            type: 'ul',
+            items: [
+              '403 Forbidden',
+              '**401 Unauthorized** ✅',
+              '404 Not Found',
+              '500 Server Error',
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Answer: 401** — you need to log in again. **403** would mean you’re logged in but not allowed.',
+            ],
+          },
+          {
+            type: 'h3',
+            text: 'Q2 — Upload a 100MB video to a 10MB limit',
+          },
+          {
+            type: 'ul',
+            items: [
+              '400 Bad Request',
+              '**413 Payload Too Large** ✅',
+              '429 Too Many Requests',
+              '415 Unsupported Media',
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Answer: 413** — the request body is too big. **415** is for wrong file types.',
+            ],
+          },
+          {
+            type: 'h3',
+            text: 'Q3 — Site moved to a new domain permanently',
+          },
+          {
+            type: 'ul',
+            items: [
+              '302 Found',
+              '**301 Moved Permanently** ✅',
+              '304 Not Modified',
+              '308 Permanent Redirect',
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Answer: 301** — classic permanent redirect. Search engines will update their links. (308 is a stricter cousin.)',
+            ],
+          },
+          {
+            type: 'h3',
+            text: 'Q4 — Database crashed during payment',
+          },
+          {
+            type: 'ul',
+            items: [
+              '400 Bad Request',
+              '404 Not Found',
+              '**500 Internal Server Error** ✅',
+              '503 Service Unavailable',
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Answer: 500** — something broke inside the server. Not your fault, but the payment did not go through. **503** is closer to “temporarily closed / overloaded.”',
+            ],
+          },
+          {
+            type: 'quote',
+            text: 'Pro tip: when debugging, always check the status code first. It tells you who to blame — yourself (4xx) or the server (5xx) — before you waste hours searching.',
+          },
+        ],
+      },
     ],
   },
   {
