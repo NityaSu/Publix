@@ -16,6 +16,16 @@ export interface BuildNote {
  */
 export const buildNotes: BuildNote[] = [
   {
+    slug: 'state-in-visualization',
+    title: 'State in Visualization',
+    summary:
+      'A chart is several clocks on one picture — hover, selection, filter, camera, derived. Mixing them is why it feels haunted.',
+    tag: 'Private review',
+    date: '2026-08-19',
+    stack: ['State', 'Visualization', 'Interaction'],
+    draft: true,
+  },
+  {
     slug: 'backend-from-first-principle',
     title: 'Backend From First Principle',
     summary:
