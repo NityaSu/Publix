@@ -158,6 +158,11 @@ html:not(.fonts-loading):not(.fonts-loaded) body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* Fill viewport below sticky nav — avoids extra scroll gap under split shells */
+.insights-shell-fill {
+  min-height: calc(100dvh - var(--insights-nav-offset));
+}
+
 @media (min-width: 640px) {
   .insights-shell {
     --insights-nav-offset: 4rem;

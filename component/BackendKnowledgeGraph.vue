@@ -714,7 +714,7 @@ onUnmounted(() => {
   --mf-muted: #787774;
   --mf-edge: #c0c0c0;
   --mf-panel: #ffffff;
-  height: calc(100vh - var(--insights-nav-offset, 4rem));
+  height: calc(100dvh - var(--insights-nav-offset, 4rem));
   display: flex;
   flex-direction: column;
   background: var(--mf-bg);
@@ -723,7 +723,7 @@ onUnmounted(() => {
 }
 
 .mf.is-fs {
-  height: 100vh;
+  height: 100dvh;
 }
 
 :global(.insights-shell[data-mode='dark']) .mf {

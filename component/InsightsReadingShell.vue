@@ -5,7 +5,7 @@ const { mode } = useInsightsReadingMode();
 </script>
 
 <template>
-  <div class="insights-shell min-h-screen" :data-mode="mode">
+  <div class="insights-shell insights-shell-fill" :data-mode="mode">
     <slot />
   </div>
 </template>
