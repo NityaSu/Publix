@@ -6,27 +6,27 @@ import { useInsightsSplit } from '~/composables/useInsightsSplit';
 
 type SectionId = 'recipe' | 'kitchen' | 'cookies';
 
-const DK = '/assets/images/docker-lesson';
+const DK = '/docker-lesson';
 
-function icon(folder: 'ingredient emojis' | 'box cards' | 'summary notes', file: string) {
-  return `${DK}/${encodeURIComponent(folder)}/${file}`;
+function icon(folder: 'icons' | 'boxes' | 'notes', file: string) {
+  return `${DK}/${folder}/${file}`;
 }
 
 const icons = {
-  whale: icon('ingredient emojis', 'whale.svg'),
-  recipe: icon('ingredient emojis', 'recipe.svg'),
-  cookie: icon('ingredient emojis', 'cookie.svg'),
-  bulb: icon('ingredient emojis', 'bulb.svg'),
-  arrow: icon('ingredient emojis', 'arrow_right.svg'),
-  flour: icon('ingredient emojis', 'flour.svg'),
-  butter: icon('ingredient emojis', 'butter.svg'),
-  chocolate: icon('ingredient emojis', 'chocolate_chips.svg'),
-  eggs: icon('ingredient emojis', 'eggs.svg'),
-  sugar: icon('ingredient emojis', 'sugar.svg'),
-  oven: icon('ingredient emojis', 'oven.svg'),
-  hubBox: icon('box cards', 'docker_hub_box_plain.svg'),
-  kitchenBox: icon('box cards', 'docker_kitchen_box_plain.svg'),
-  containerBox: icon('box cards', 'container_box_plain.svg'),
+  whale: icon('icons', 'whale.svg'),
+  recipe: icon('icons', 'recipe.svg'),
+  cookie: icon('icons', 'cookie.svg'),
+  bulb: icon('icons', 'bulb.svg'),
+  arrow: icon('icons', 'arrow_right.svg'),
+  flour: icon('icons', 'flour.svg'),
+  butter: icon('icons', 'butter.svg'),
+  chocolate: icon('icons', 'chocolate_chips.svg'),
+  eggs: icon('icons', 'eggs.svg'),
+  sugar: icon('icons', 'sugar.svg'),
+  oven: icon('icons', 'oven.svg'),
+  hubBox: icon('boxes', 'docker_hub_box_plain.svg'),
+  kitchenBox: icon('boxes', 'docker_kitchen_box_plain.svg'),
+  containerBox: icon('boxes', 'container_box_plain.svg'),
 } as const;
 
 interface LessonSection {
