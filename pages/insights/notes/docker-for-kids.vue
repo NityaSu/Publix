@@ -8,9 +8,8 @@ useHead({
     {
       name: 'description',
       content:
-        'Private review: Docker as a cookie kitchen — image is the recipe, Docker is the kitchen, container is the cookie.',
+        'Docker as a cookie kitchen — image is the recipe, Docker is the kitchen, container is the cookie.',
     },
-    { name: 'robots', content: 'noindex, nofollow, noarchive' },
   ],
 });
 </script>

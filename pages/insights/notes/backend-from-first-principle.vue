@@ -7,9 +7,9 @@ useHead({
   meta: [
     {
       name: 'description',
-      content: 'Private review map of backend systems, from the request path to what keeps a machine alive.',
+      content:
+        'A 31-node map of how a backend is actually built — request path, data, async work, and what keeps it alive.',
     },
-    { name: 'robots', content: 'noindex, nofollow, noarchive' },
   ],
 });
 </script>
