@@ -681,7 +681,7 @@ onUnmounted(() => {
   --dk-mono: 'DM Mono', 'DM Mono fallback', ui-monospace, monospace;
   box-sizing: border-box;
   width: 100%;
-  max-width: 22.5rem;
+  max-width: 38rem;
   border: 1px solid color-mix(in srgb, var(--dk-purple) 40%, var(--dk-blue));
   border-radius: 12px;
   background: linear-gradient(180deg, #8b7cff 0%, #4a9eff 48%, #ffffff 100%);
@@ -691,6 +691,9 @@ onUnmounted(() => {
 }
 
 .dk-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   margin-bottom: 0.7rem;
 }
@@ -716,13 +719,14 @@ onUnmounted(() => {
 }
 
 .dk-hero-sub {
-  margin-top: 0.25rem;
+  margin: 0.35rem 0 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.95);
+  width: 100%;
 }
 
 .dk-inline-icon {
