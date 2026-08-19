@@ -2,6 +2,8 @@
 import { Maximize2, Minimize2, RefreshCw } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
+import { useInsightsSplit } from '~/composables/useInsightsSplit';
 import {
   clusters,
   graphEdges,
@@ -55,6 +57,15 @@ const shellEl = ref<HTMLElement | null>(null);
 const lessonEl = ref<HTMLElement | null>(null);
 const simNodes = ref<SimNode[]>([]);
 const transform = reactive({ x: 0, y: 0, k: 1 });
+
+const {
+  bodyEl,
+  leftPct,
+  leftStyle,
+  dragging,
+  onHandlePointerDown,
+  onHandleKeydown,
+} = useInsightsSplit({ storageKey: 'backend-first-principle', defaultPct: 42 });
 
 const selectedTopic = computed(() =>
   selectedId.value ? topicById(selectedId.value) ?? null : null,
@@ -443,8 +454,14 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <div class="mf-body">
-      <section v-show="!isFullscreen" class="mf-graph" ref="graphEl" aria-label="Knowledge graph">
+    <div ref="bodyEl" class="mf-body" :class="{ 'is-dragging': dragging }">
+      <section
+        v-show="!isFullscreen"
+        class="mf-graph"
+        ref="graphEl"
+        :style="leftStyle"
+        aria-label="Knowledge graph"
+      >
         <div class="mf-graph-head">
           <p class="mf-graph-title">Map</p>
           <button type="button" class="mf-tool" @click="seedNodes">
@@ -546,6 +563,16 @@ onUnmounted(() => {
           </div>
         </div>
       </section>
+
+      <InsightsSplitHandle
+        v-show="!isFullscreen"
+        :dragging="dragging"
+        :value="leftPct"
+        :min="28"
+        :max="68"
+        @pointerdown="onHandlePointerDown"
+        @keydown="onHandleKeydown"
+      />
 
       <section ref="lessonEl" class="mf-lesson" aria-label="Lesson">
         <article v-if="selectedTopic" class="mf-page">
@@ -762,13 +789,16 @@ onUnmounted(() => {
   min-height: 0;
 }
 
+.mf-body.is-dragging {
+  cursor: col-resize;
+}
+
 .mf-graph {
   position: relative;
   width: 42%;
-  min-width: 280px;
+  min-width: 0;
   flex: 1 1 42%;
   min-height: 0;
-  border-right: 1px solid var(--mf-line);
   background-color: var(--mf-graph);
   background-image: radial-gradient(var(--mf-dot) 1.5px, transparent 1.5px);
   background-size: 24px 24px;
@@ -910,7 +940,7 @@ onUnmounted(() => {
 .mf-switch-mini input:checked + .mf-slider:before { transform: translateX(16px); }
 
 .mf-lesson {
-  flex: 1 1 58%;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   overflow: auto;
@@ -933,11 +963,9 @@ onUnmounted(() => {
   }
 
   .mf-graph {
-    width: 100%;
-    min-width: 0;
-    flex: 0 0 38vh;
+    width: 100% !important;
+    flex: 0 0 38vh !important;
     min-height: 220px;
-    border-right: none;
     border-bottom: 1px solid var(--mf-line);
   }
 
