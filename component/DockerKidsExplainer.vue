@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Maximize2, Minimize2 } from 'lucide-vue-next';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
+import { useInsightsSplit } from '~/composables/useInsightsSplit';
 
 type SectionId = 'recipe' | 'kitchen' | 'cookies';
 
@@ -112,6 +114,15 @@ const isFullscreen = ref(false);
 const shellEl = ref<HTMLElement | null>(null);
 const lessonEl = ref<HTMLElement | null>(null);
 
+const {
+  bodyEl,
+  leftPct,
+  leftStyle,
+  dragging,
+  onHandlePointerDown,
+  onHandleKeydown,
+} = useInsightsSplit({ storageKey: 'docker-for-kids', defaultPct: 42 });
+
 const active = computed(() => lessons.find((l) => l.id === activeId.value)!);
 const activeIndex = computed(() => lessons.findIndex((l) => l.id === activeId.value));
 const neighbors = computed(() => ({
@@ -200,8 +211,13 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <div class="mf-body">
-      <section v-show="!isFullscreen" class="mf-graph" aria-label="Cookie kitchen map">
+    <div ref="bodyEl" class="mf-body" :class="{ 'is-dragging': dragging }">
+      <section
+        v-show="!isFullscreen"
+        class="mf-graph"
+        :style="leftStyle"
+        aria-label="Cookie kitchen map"
+      >
         <div class="mf-graph-head">
           <p class="mf-graph-title">Kitchen</p>
         </div>
@@ -333,6 +349,16 @@ onUnmounted(() => {
           </div>
         </div>
       </section>
+
+      <InsightsSplitHandle
+        v-show="!isFullscreen"
+        :dragging="dragging"
+        :value="leftPct"
+        :min="28"
+        :max="68"
+        @pointerdown="onHandlePointerDown"
+        @keydown="onHandleKeydown"
+      />
 
       <section ref="lessonEl" class="mf-lesson" aria-label="Lesson">
         <article class="mf-page">
@@ -495,13 +521,16 @@ onUnmounted(() => {
   min-height: 0;
 }
 
+.mf-body.is-dragging {
+  cursor: col-resize;
+}
+
 .mf-graph {
   position: relative;
   width: 42%;
-  min-width: 280px;
+  min-width: 0;
   flex: 1 1 42%;
   min-height: 0;
-  border-right: 1px solid var(--mf-line);
   background-color: var(--mf-graph);
   background-image: radial-gradient(var(--mf-dot) 1.5px, transparent 1.5px);
   background-size: 24px 24px;
@@ -533,7 +562,7 @@ onUnmounted(() => {
 }
 
 .mf-lesson {
-  flex: 1 1 58%;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   overflow: auto;
@@ -1038,11 +1067,9 @@ onUnmounted(() => {
   }
 
   .mf-graph {
-    width: 100%;
-    min-width: 0;
-    flex: 0 0 46vh;
+    width: 100% !important;
+    flex: 0 0 46vh !important;
     min-height: 260px;
-    border-right: none;
     border-bottom: 1px solid var(--mf-line);
   }
 
