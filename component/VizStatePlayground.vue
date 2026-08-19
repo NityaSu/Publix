@@ -2,7 +2,9 @@
 import { Maximize2, Minimize2, RefreshCw } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import VizCartDemo from '~/component/VizCartDemo.vue';
+import { useInsightsSplit } from '~/composables/useInsightsSplit';
 import {
   KIND_LABEL,
   clusters,
@@ -50,6 +52,15 @@ const chartEl = ref<HTMLElement | null>(null);
 const svgEl = ref<SVGSVGElement | null>(null);
 const lessonEl = ref<HTMLElement | null>(null);
 const chartSize = reactive({ width: 640, height: 360 });
+
+const {
+  bodyEl,
+  leftPct,
+  leftStyle,
+  dragging,
+  onHandlePointerDown,
+  onHandleKeydown,
+} = useInsightsSplit({ storageKey: 'state-in-visualization', defaultPct: 46 });
 
 const hoverId = ref<string | null>(null);
 const selectedId = ref<string | null>(null);
@@ -450,8 +461,14 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <div class="mf-body">
-      <section v-show="!isFullscreen" ref="graphEl" class="mf-graph vz-graph" aria-label="Live chart">
+    <div ref="bodyEl" class="mf-body" :class="{ 'is-dragging': dragging }">
+      <section
+        v-show="!isFullscreen"
+        ref="graphEl"
+        class="mf-graph vz-graph"
+        :style="leftStyle"
+        aria-label="Live chart"
+      >
         <div class="vz-graph-head mf-graph-head">
           <div>
             <p class="mf-graph-title">The chart</p>
@@ -661,6 +678,16 @@ onUnmounted(() => {
         </div>
       </section>
 
+      <InsightsSplitHandle
+        v-show="!isFullscreen"
+        :dragging="dragging"
+        :value="leftPct"
+        :min="28"
+        :max="68"
+        @pointerdown="onHandlePointerDown"
+        @keydown="onHandleKeydown"
+      />
+
       <section ref="lessonEl" class="mf-lesson" aria-label="Lesson">
         <article v-if="selectedTopic" class="mf-page">
           <p class="mf-kicker">
@@ -830,13 +857,16 @@ onUnmounted(() => {
   min-height: 0;
 }
 
+.mf-body.is-dragging {
+  cursor: col-resize;
+}
+
 .mf-graph {
   position: relative;
   width: 46%;
-  min-width: 280px;
+  min-width: 0;
   flex: 1 1 46%;
   min-height: 0;
-  border-right: 1px solid var(--mf-line);
   background-color: var(--mf-graph);
   background-image: radial-gradient(var(--mf-dot) 1.5px, transparent 1.5px);
   background-size: 24px 24px;
@@ -1055,7 +1085,7 @@ onUnmounted(() => {
 .mf-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
 .mf-lesson {
-  flex: 1 1 54%;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   overflow: auto;
@@ -1075,11 +1105,9 @@ onUnmounted(() => {
 @media (max-width: 860px) {
   .mf-body { flex-direction: column; }
   .mf-graph {
-    width: 100%;
-    min-width: 0;
-    flex: 0 0 48vh;
+    width: 100% !important;
+    flex: 0 0 48vh !important;
     min-height: 280px;
-    border-right: none;
     border-bottom: 1px solid var(--mf-line);
   }
   .mf-lesson { flex: 1 1 auto; }
