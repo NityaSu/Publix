@@ -1821,16 +1821,587 @@ createItem({ ...body, userId: ctx.userId })`,
   {
     id: 'databases',
     n: 12,
-    title: 'Databases',
+    title: 'What is a Database? How Postgres Remembers After the Server Dies',
     label: 'Databases',
     cluster: 'core',
     x: 280,
     y: 515,
-    gist: 'Where truth is supposed to live. ACID vs “available and partitioned.” Schema, indexes, and migrations are the craft.',
+    gist: 'A database is persistence plus CRUD — data that survives the process. Postgres on disk is the usual backend “database.” RAM (Redis) is a cache, not the ledger.',
     remember: [
-      'Relational: transactions, joins, constraints. Document/KV: flexibility, different consistency story. CAP is a trade, not a slogan.',
-      'Index what you query. Migrations are how schema changes without folklore.',
-      'ORMs speed CRUD and hide N+1. Know the SQL. N+1 is a default bug.',
+      'Disk is cheaper and bigger; RAM is faster and forgets on power-off. Backend databases live on disk.',
+      'A DBMS organizes, accesses, protects integrity, and secures. A text file does none of that well.',
+      'Migrations version the schema. DECIMAL for money. TEXT over VARCHAR(255) theater. JSONB for flexible bits. Parameterize every user value. Index what you filter — writes get a little slower.',
+    ],
+    sections: [
+      {
+        heading: '1. Why we need a database — persistence',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'At its core a database is a way to **persist** information **across sessions**. Persistence means the data **survives after the program that created it has stopped** — and is still there after a long time, or when you open the app from a different place.' },
+          {
+            type: 'pre',
+            lines: `// in the process — gone on restart
+todos = [{ title: "Learn Postgres" }]
+
+restart the server
+todos = []     // the app forgot`,
+          },
+          { type: 'p', text: 'A to-do app is the simple picture: you add items, check some off, close it. Open it again — the list is still there, in the same state. Accounts, orders, payments, comments: they must still be there **tomorrow, in another city, after a deploy**. Without persistence, every open is a blank page. That is why this lesson exists — it is the memory of the backend.' },
+          {
+            type: 'kid',
+            items: [
+              'Writing on a whiteboard is RAM. Wipe the board (restart) and the list is gone.',
+              'Writing in a notebook you put on the shelf is the database. Tomorrow the list is still there — even if you open the notebook in another room.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. What “a database” even is',
+        blocks: [
+          { type: 'p', text: 'The word is **surprisingly broad**. In the simplest sense, **any structured storage you can come back to** is a database: a phone contact list, browser `localStorage` / session storage / cookies (a key–value store), even a text file of notes. The shared shape: a **persistent system that offers Create, Read, Update, Delete**.' },
+          { type: 'p', text: 'That generic meaning is **not** limited to servers. In **backend talk**, though, “the database” almost always means a **disk-based DBMS** (Postgres, MySQL, Mongo, …) — not Redis, not a `.txt`. Same word, tighter meaning.' },
+          {
+            type: 'kid',
+            items: [
+              'A shoebox of paper is a database in the wide sense.',
+              'When we say “the database” at work, we mean the **library with a librarian** (Postgres), not the shoebox.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Disk-based databases — vs RAM',
+        blocks: [
+          { type: 'p', text: 'Backend databases sit on **disk** (HDD / SSD — secondary storage). Disk is **cheaper** than RAM, so you can keep **far more** data. Check a laptop: maybe 8–32 GB of RAM, but 512 GB to 2 TB of disk. That ratio is the whole point.' },
+          { type: 'p', text: 'RAM (main / primary memory) is **much faster** to read and write. That is why **caching** (Redis, in-memory caches) lives there. RAM is also **volatile**: power off, data gone. Disk is slower — how it stores and fetches — but **survives**.' },
+          {
+            type: 'table',
+            columns: ['Store', 'Speed', 'Size / cost', 'Power off'],
+            rows: [
+              ['**RAM** (Redis, process memory)', 'Fast', 'Expensive, smaller', '**Gone**'],
+              ['**Disk** (Postgres, MySQL, Mongo)', 'Slower', 'Cheap, huge', '**Survives**'],
+            ],
+          },
+          { type: 'quote', text: 'Traditional databases pick **capacity and survival** over raw speed. That is the point of the ledger. The cache is the other trade. How the engine lays bytes on disk is a deep topic — as a backend engineer you only need the application-level split: cache in RAM, database on disk.' },
+          {
+            type: 'kid',
+            items: [
+              'The desk (RAM) is instant and small. The warehouse (disk) is slower and holds everything.',
+              'You do not keep the company’s money only on the desk. The desk forgets when the lights go out.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. DBMS — the software, not the disk',
+        blocks: [
+          { type: 'p', text: 'Dumping bytes on a disk is not enough. You need **efficient CRUD** over hundreds of gigabytes. That software is a **DBMS** (database management system). Postgres **is** a DBMS. SQL is the language you speak to it. High-level jobs:' },
+          {
+            type: 'ul',
+            items: [
+              '**Organization** — tables, rows, indexes so you are not rereading a giant file. Fetch / update / create stay feasible at scale.',
+              '**Access** — create / read / update / delete with a query language, for clients and users.',
+              '**Integrity** — accuracy and validity. A payment field is a **number**, not `"hello"`. The DBMS **refuses** garbage so the data stays consistent.',
+              '**Security** — users and roles; not everyone may drop the payments table. Protect from unauthorized access.',
+            ],
+          },
+          { type: 'p', text: 'Products also talk about scaling and load balancing. For this lesson: **store** + **efficient CRUD** + those four responsibilities.' },
+          {
+            type: 'kid',
+            items: [
+              'The warehouse needs a **librarian**: find the box, refuse a fake label, lock the vault.',
+              'A pile of unlabeled boxes is a disk without a DBMS.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. Why not just text files?',
+        blocks: [
+          { type: 'p', text: 'Before DBMS products, people **did** store customers in text files. Three problems show up as soon as the file grows:' },
+          {
+            type: 'ul',
+            items: [
+              '**Parse / find** — “customer 824,251” in a million lines means **scan and split** in application code. Slow (especially in JS / Python vs a tight systems language), easy to mis-parse, easy to **corrupt** a line and show the wrong customer.',
+              '**No structure** — `John,25` vs `Jane` vs `Bob,hello`. Nothing enforces “age is a number.” Everything is a string; the file will take anything.',
+              '**Concurrency** — two people edit the same value at once. Both **read** `amount = 40`. One adds 20 → writes 60. One subtracts 20 → writes 20. Last write wins. You cannot tell which. There is **no consistent result**. A DBMS is built to manage simultaneous updates; a plain file is not.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `users.txt
+John,25
+Jane
+Bob,hello     // what is this?
+
+two writers, both read amount = 40
+  A: 40 + 20 → write 60
+  B: 40 - 20 → write 20
+file has no transaction  →  60 or 20, not 40`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'A class notebook everyone writes in at the same time: pages tear, two people overwrite the same line.',
+              'The librarian (DBMS) hands out one pen per page, or uses a rule so the total still makes sense.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. Relational vs non-relational',
+        blocks: [
+          { type: 'p', text: 'Two big families of DBMS. **Relational**: data in **tables, rows, columns**. Relationships use **foreign keys**. You **define the schema first** — every column and type — then insert. You cannot dump an arbitrary blob into a table that has no matching shape. That strictness is the feature: at any moment you **know** the types and the links. Integrity is the bet.' },
+          { type: 'p', text: 'Examples: Postgres, MySQL, SQL Server. You talk to them with **SQL** (structured query language).' },
+          { type: 'p', text: '**Non-relational** (often “NoSQL”; Mongo is the famous one): no forced schema. Side-by-side words: table → **collection**, row → **document**. Two documents in the same collection **need not share a shape**. That is the primary advantage — and sometimes the disadvantage.' },
+          {
+            type: 'ul',
+            items: [
+              '**CRM-shaped data** (contacts, deals, relationships you will query hard) → **relational**. You want constraints and joins.',
+              '**CMS-shaped data** (an article that might have an image, a code block, an embed — you do not know the shape up front) → people often pick Mongo to move fast.',
+              'The cost of “just dump JSON”: **integrity lives in application code**. App code changes a lot; it is easy to miss a rule. Inconsistencies sneak in because the database will not refuse them.',
+            ],
+          },
+          { type: 'quote', text: 'Flexible schema is a prototype superpower. It is also how you ship three spellings of the same field. If the data has a real shape, write the shape down in Postgres.' },
+          {
+            type: 'kid',
+            items: [
+              'Relational = every student card has the **same boxes**. The office can trust “age is a number.”',
+              'Document = each kid hands in a scrap of paper in whatever layout they like. Fast to collect. Hard to add up.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Why Postgres (for most backends)',
+        blocks: [
+          { type: 'p', text: 'Lots of products can scale. Unless you already have a **specific bottleneck** at millions of users, **start with Postgres**. Reasons from the video:' },
+          {
+            type: 'ul',
+            items: [
+              '**Open source and free** — not proprietary. Companies can **host it themselves**.',
+              '**SQL standard** — queries behave like they do on MySQL / SQL Server *if you stay standard*. Switching later is “some work,” not a rewrite of every sentence.',
+              '**Huge feature set** (the docs are enormous) plus **extensions** you can add. Reliability and scalability are the reputation.',
+              '**JSON / JSONB** — flexible documents **inside** a relational DB, with **indexing and querying**. You do **not** need Mongo *only* because some user content has no rigid schema. A CMS blob can be a JSONB column.',
+            ],
+          },
+          { type: 'quote', text: 'Need a CMS blob with no fixed columns? `JSONB` in Postgres. Do not switch database family for that alone. MySQL-vs-Postgres micro-benchmarks can wait until you have a real, measured bottleneck.' },
+          {
+            type: 'kid',
+            items: [
+              'Postgres is the Swiss army knife: tables **and** a pocket for weird sticky notes (JSON).',
+              'Do not buy a second house just to store the sticky notes.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '8. SQL vs Postgres — and what this video skips',
+        blocks: [
+          { type: 'p', text: '**SQL** = the language you use to query. **Postgres** = the program that runs it. `CREATE TABLE`, `SELECT`, `ORDER BY`, `GROUP BY` are assumed — there are a thousand free primers. Pause and learn those on the side if needed. This lesson is the **backend craft** around that: types, migrations, constraints, joins, parameters, indexes, triggers.' },
+          { type: 'p', text: 'A GUI SQL client (the video uses one) is just a window to run SQL. The ideas do not depend on the app. In production you will talk through a **driver** (or an ORM on top of a driver) from your language — not by clicking forever in a GUI.' },
+        ],
+      },
+      {
+        heading: '9. Data types — numbers and money',
+        blocks: [
+          { type: 'p', text: 'A high-level tour — pick the type that matches the **truth**, not “string for everything.”' },
+          {
+            type: 'ul',
+            items: [
+              '**SERIAL / BIGSERIAL** — integer that **increments** on insert if you omit the id. Usual cheap primary key. **BIGSERIAL** for production (more room). A **primary key** uniquely identifies the row.',
+              '**SMALLINT / INTEGER / BIGINT** — whole numbers, different max values. Pick the size you need.',
+              '**DECIMAL / NUMERIC** — treated as the same. **Exact**. `NUMERIC(10,2)` = 10 digits **total**, 2 after the point (so `12345678.90` fits; a third decimal digit does not). **Price, money, anything you calculate.**',
+              '**REAL / DOUBLE PRECISION / FLOAT** — binary floating point. Fast. **Not the same number on every system.** Tiny representation gaps. Fine for “area of a field” where 67.8987 vs 67.8967 does not matter. **Never money.**',
+            ],
+          },
+          { type: 'quote', text: 'If accuracy matters (price), DECIMAL. FLOAT is faster — that is why science likes it. If you use FLOAT for money, two systems will disagree and finance will find you.' },
+          {
+            type: 'kid',
+            items: [
+              'Money in a jar of **exact coins** (DECIMAL), not a “about this much” guess (FLOAT).',
+              'SERIAL is a ticket machine: next person gets the next number. BIGSERIAL is a ticket machine that will not run out at a stadium.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '10. Data types — text, time, UUID, JSONB',
+        blocks: [
+          { type: 'h3', text: 'Text' },
+          {
+            type: 'ul',
+            items: [
+              '**CHAR(n)** — **only** if length is **always** fixed (e.g. two-letter day codes). If you insert `"AB"` into `CHAR(10)`, Postgres **pads** eight spaces. Old. Skip it unless the length is truly constant.',
+              '**VARCHAR(n)** — max length `n`, no padding. `VARCHAR(255)` is a **MySQL habit**. In Postgres, 255 is often a **random number with no meaning**. A new teammate will hunt the codebase for why 255. Prefer not to.',
+              '**TEXT** — any length (practically huge). Official Postgres advice: **use TEXT**. No performance gap vs VARCHAR. Length limits that are **product rules** belong in **validation** (the gate), so you are not forced into a risky column-widen migration later. Backend engineers talk to SQL through a **driver** — you can enforce length in app code and keep migrations readable.',
+            ],
+          },
+          { type: 'h3', text: 'Time, ids, documents, extras' },
+          {
+            type: 'ul',
+            items: [
+              '**BOOLEAN** — true / false.',
+              '**DATE** — calendar day. **TIME** — clock. **TIMESTAMP** — both. **TIMESTAMPTZ** — timestamp **plus time zone** when “when in the real world” matters.',
+              '**INTERVAL** — a duration (“10 days”, “one week”), not a clock time.',
+              '**UUID** — native type. Unique, hard to guess (`/users/1`, `/users/2` is a gift to attackers). Common as a **primary key**; Postgres can `DEFAULT gen_random_uuid()` so you omit the id on insert.',
+              '**JSON vs JSONB** — JSON is stored as **text**. **JSONB is binary** (Postgres serializes it for query/index speed). JSONB is **not** the SQL standard — it is a Postgres strength. **Prefer JSONB.**',
+              '**ARRAY** — `INTEGER[]`, arrays of JSON, timestamps, … when a list really is a list.',
+              'Also: inet / MAC, geometry, XML — exist; look them up when you need them.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `CREATE TABLE items (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title      TEXT NOT NULL,
+  price      NUMERIC(10, 2) NOT NULL,   -- not FLOAT
+  metadata   JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);`,
+          },
+          {
+            type: 'kid',
+            items: [
+              '`VARCHAR(255)` is a ruler you glued on because another school used it. **TEXT** is a page; the form (validation) still says “title max 100.”',
+              'JSON is a sticky note in handwriting. **JSONB** is the same note typed into a card catalog so you can search it.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '11. Inserting a row',
+        blocks: [
+          { type: 'p', text: 'Write `INSERT INTO table (cols) VALUES (...)`. Column list order matches values order. Optional `RETURNING *` (or selected columns) gives the new row back — id, defaults, generated UUID — what an API often needs after create.' },
+          {
+            type: 'pre',
+            lines: `INSERT INTO items (title, price)
+VALUES ('Quiet Hours', 12.50)
+RETURNING *;`,
+          },
+        ],
+      },
+      {
+        heading: '12. Migrations — git for the schema',
+        blocks: [
+          { type: 'p', text: 'In production you do **not** click around in a GUI to add columns. There is no trail of *what* changed, *when*, or *who*. You **version** schema changes: SQL files that run **in order**. A CLI tool (the video uses **dbmate**; **golang-migrate** is the same idea) applies them and records what ran in a **`schema_migrations`** table (a `version` column). That way the next `up` starts **after** the last applied file — re-running `CREATE TABLE users` would error “already exists.”' },
+          {
+            type: 'ul',
+            items: [
+              '**Up** — apply: `CREATE TABLE`, `CREATE TYPE`, `CREATE INDEX`, `CREATE TRIGGER`, …',
+              '**Down** — **undo** that up (drop what you created, **reverse order**: tables before types). So a bad deploy can roll back. Some modern shops skip downs; the standard still teaches them.',
+              'File names: **sequence or timestamp** so order is obvious (`001_users.sql`, `20260101_add_index.sql`). Live next to the app in git.',
+            ],
+          },
+          { type: 'p', text: '`dbmate new create_users_table` writes a file with `-- migrate:up` / `-- migrate:down` sections. The tool reads `DATABASE_URL` from the environment. `dbmate up` runs pending ups. Every environment — laptop, staging, prod — should replay the same files and look the same.' },
+          { type: 'quote', text: 'Relational DBs are strict schema. Random “just insert a new shape” is a Mongo habit. Here, a new column = a new migration. You cannot dump arbitrary rows and hope.' },
+          {
+            type: 'kid',
+            items: [
+              'Migrations are **numbered recipe cards** for the kitchen. Card 1: build the shelf. Card 2: add a hook. Everyone cooks from the same cards, committed next to the code.',
+              '**Down** = “unscrew the hook” if card 2 was a mistake. The stamp on the fridge (`schema_migrations`) says which card you last finished.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '13. Enums — allowed values, written down',
+        blocks: [
+          { type: 'p', text: 'An **enum** is a type whose values are a **fixed list**. Example: project status is only `active` | `completed` | `archived`. Task status: `pending` | `in_progress` | `completed` | `cancelled`. Member role: `owner` | `admin` | `member`.' },
+          {
+            type: 'pre',
+            lines: `CREATE TYPE project_status AS ENUM ('active', 'completed', 'archived');
+
+ALTER TABLE projects
+  ADD COLUMN status project_status NOT NULL DEFAULT 'active';`,
+          },
+          {
+            type: 'ul',
+            items: [
+              '**Integrity** — a random string in `status` is a **database error**, not a silent bad row. You can still validate in the app (smaller blast radius); the enum is the backstop.',
+              '**Documentation** — often the bigger win. A new teammate reading migrations sees the allowed list **in one glance**. If `status` were `TEXT` and the three values lived only in handlers, they would have to hunt the whole codebase.',
+            ],
+          },
+          { type: 'p', text: 'Changing the list later is another migration — that is the trade for safety. Enums often get a **DEFAULT** so insert code does not have to pass the starting state every time.' },
+        ],
+      },
+      {
+        heading: '14. Tables, constraints, and naming',
+        blocks: [
+          { type: 'p', text: 'The video models a **project-management** app: users, profiles, projects, tasks, members. Patterns that show up in almost every backend:' },
+          {
+            type: 'ul',
+            items: [
+              '**PRIMARY KEY** — unique + **NOT NULL** (those two are implied). The row’s identity. Convention: a column named `id`.',
+              '**UUID PK** — `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`. You usually **omit** id on insert and let Postgres fill it.',
+              '**NOT NULL** — in Postgres, columns are nullable **unless you say otherwise**. The video’s rule of thumb: **most** columns should be `NOT NULL`. Nulls from a buggy script are a nightmare. Only skip it when the field is truly optional (bio, phone).',
+              '**UNIQUE** — one email per user. Second insert with the same email → database error.',
+              '**CHECK** — a custom rule. Task `priority INTEGER NOT NULL DEFAULT 1` plus `CHECK (priority BETWEEN 1 AND 5)` so nobody stores `55`.',
+              '**password_hash** — store a **hash**, never the plaintext password. The column name is the reminder.',
+              '**created_at / updated_at** — `TIMESTAMPTZ NOT NULL DEFAULT now()`. `created_at` is “when this row was born.” `updated_at` is “last change” (see triggers). Useful for `ORDER BY`.',
+            ],
+          },
+          { type: 'h3', text: 'Names' },
+          {
+            type: 'ul',
+            items: [
+              '**Plural tables** — `users`, `projects`, `tasks`. Some teams use singular; pick one. Industry default is plural.',
+              '**lowercase + snake_case** — `full_name`, `created_at`. Postgres is **case-insensitive** unless you `"Quote"` identifiers. CamelCase forces ugly quotes in every query. Do not.',
+            ],
+          },
+          {
+            type: 'kid',
+            items: [
+              'A primary key is the student’s **ID card number**. Two kids cannot share it. It cannot be blank.',
+              'Snake_case is the class rule so nobody has to put the name in quotation marks every time they speak.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '15. Relationships and ON DELETE',
+        blocks: [
+          { type: 'h3', text: 'One-to-one — users ↔ profiles' },
+          { type: 'p', text: 'Why a second table? Profile fields (bio, avatar, phone, later social links…) **grow** and get edited often. Keep the **users** row small (email, name, password hash) so you are not constantly migrating and rewriting the identity table. Common also for preferences / metadata.' },
+          { type: 'p', text: 'Implement: **no extra `id`**. `user_id` is both **PRIMARY KEY and FOREIGN KEY** to `users`. Optional columns skip `NOT NULL`.' },
+          { type: 'h3', text: 'One-to-many — project → tasks' },
+          { type: 'p', text: '`tasks.project_id` is a **FK only** (not the PK). Many tasks can share one `project_id`. `NOT NULL` means **no orphan task**. FK also means you cannot insert a `project_id` that is not a real project — even a well-formed UUID that does not exist **fails**.' },
+          { type: 'h3', text: 'Many-to-many — users ↔ projects' },
+          { type: 'p', text: 'A user can be in many projects; a project has many users. That needs a **linking table** (`project_members`): `project_id` + `user_id`, **composite PRIMARY KEY** of those two FKs (so the same pair cannot appear twice), plus extras that belong to the *membership* (`role` enum, default `member`). Extra indexes on each FK still help joins (see indexes).' },
+          { type: 'h3', text: 'ON DELETE — referential integrity' },
+          {
+            type: 'ul',
+            items: [
+              '**RESTRICT** — cannot delete a user who still **owns** a project. Delete the project first (or transfer ownership).',
+              '**CASCADE** — delete the project → delete its **tasks** (and membership rows). Useful when the child has no meaning without the parent.',
+              '**SET NULL** — delete the user → task `assigned_to` becomes NULL (assignee gone, task remains). Only works if that column **allows** null.',
+              '**SET DEFAULT** — put the column’s DEFAULT in. Fails if there is no default or it would violate NOT NULL.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `-- 1:1  user_id is PK and FK
+-- 1:N  tasks.project_id REFERENCES projects ON DELETE CASCADE
+-- M:N  PRIMARY KEY (project_id, user_id)
+
+-- restrict: cannot delete a user who still owns projects
+owner_id UUID NOT NULL REFERENCES users ON DELETE RESTRICT`,
+          },
+          {
+            type: 'kid',
+            items: [
+              '**One-to-one** = one locker per student. The locker number **is** the student id.',
+              '**One-to-many** = one class, many homework sheets. Each sheet stamped with the class id.',
+              '**Many-to-many** = a sign-up sheet: (club, student). That pair is unique. Role (“captain”) lives on the sign-up, not on the student card.',
+              '**RESTRICT** = you cannot shred the teacher’s file while the class still exists. **CASCADE** = cancel the class, throw away the homework. **SET NULL** = the homework stays; “who it was assigned to” goes blank.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '16. Apply, then seed',
+        blocks: [
+          { type: 'p', text: '`dbmate up` runs pending files. Refresh the GUI: tables exist, empty. You also see **`schema_migrations`** — the tool’s bookmark, not your product data.' },
+          { type: 'p', text: '**Seed** = insert **dev/test** rows so the app is not empty. In production, real users sign up through forms. On a laptop you need fake users, projects, tasks **to test**. Best practice: a **separate** migration (or seed file) for seeds — timestamp after the schema so it runs second. You *can* mix seeds into the same file; do not do that blindly for production.' },
+          { type: 'p', text: 'A readable seed uses a **CTE** (`WITH inserted_users AS (INSERT … RETURNING id, email)`) so the next insert can **join** on those new ids (profiles, projects) without guessing UUIDs.' },
+          {
+            type: 'kid',
+            items: [
+              'Schema migrations build the empty shelves. Seeding puts **practice books** on them so you can rehearse the library.',
+              'Do not ship the practice books to the real library unless you mean to.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '17. Joins for APIs — LEFT JOIN and to_jsonb',
+        blocks: [
+          { type: 'p', text: 'List users **and** their profile in **one** API (`GET /v1/users`) so the client does not make a second call. Start the SQL from **`FROM`** (where data comes from), then `SELECT`.' },
+          { type: 'p', text: '**LEFT JOIN** `user_profiles`: keep **all** users. If someone **never edited a profile**, there is no profile row. **INNER JOIN** would **drop** those users. You still want the user — so LEFT JOIN. `ON u.id = up.user_id`. Short **aliases** (`u`, `up`) keep the query readable.' },
+          { type: 'p', text: '`u.*` is all user columns. `to_jsonb(up.*)` (Postgres built-in) turns the profile **row** into a JSON object nested as `profile`. One round-trip, nested shape for the frontend. Then **`ORDER BY u.created_at DESC`** — result row order is otherwise undefined; list APIs should sort (usually newest first).' },
+          {
+            type: 'pre',
+            lines: `SELECT u.*, to_jsonb(up.*) AS profile
+FROM users u
+LEFT JOIN user_profiles up ON up.user_id = u.id
+ORDER BY u.created_at DESC;
+
+-- INNER JOIN would hide users with no profile row
+-- LEFT JOIN keeps them; profile is NULL`,
+          },
+          { type: 'p', text: 'The handler still only speaks HTTP. Service / repository run this query; then serialize to JSON on the wire (cheap in JS; in Go you map into a struct first). Same idea as the handlers lesson.' },
+          {
+            type: 'kid',
+            items: [
+              'Class list (left) + optional hobby sheet (right).',
+              '**Left join** = every student, hobby blank if they never turned in the sheet. **Inner join** = only students who turned in a sheet.',
+              '`to_jsonb` = staple the hobby sheet to the student card as one packet before you hand it to the office.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '18. Parameterized queries — not string glue',
+        blocks: [
+          { type: 'p', text: '`GET /v1/users/:userId` adds `WHERE u.id = …`. That id is a **user-controlled** value. A **parameterized query** leaves a **slot** (`$1`, or a named placeholder in a GUI). You send the value **separately**. The DBMS treats it as **data**, not SQL. It is **escaped** — even if someone pastes `DELETE FROM users` into the id, it is just a string, not a command.' },
+          { type: 'p', text: 'If you **concatenate** (`"... WHERE id = \'" + id + "\'"`), an attacker sends `\' OR 1=1 --` (or worse) and your `WHERE` becomes true for everyone — or runs extra statements. That is **SQL injection**.' },
+          {
+            type: 'pre',
+            lines: `-- bad
+"SELECT * FROM users WHERE id = '" + id + "'"
+
+-- good
+SELECT u.*, to_jsonb(up.*) AS profile
+FROM users u
+LEFT JOIN user_profiles up ON up.user_id = u.id
+WHERE u.id = $1
+-- run with params: [userId]`,
+          },
+          { type: 'p', text: 'Drivers and ORMs in every language know how to fill slots. Still **know the SQL** — the ORM is not a reason to skip this lesson. Dynamic filters still use slots, not `+`.' },
+          {
+            type: 'kid',
+            items: [
+              'Do not let a visitor **write on the librarian’s instruction card**.',
+              'Hand them a **form field**. The librarian copies the value into the right box. They cannot rewrite the verb “FIND.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '19. Filters, sort, and pagination',
+        blocks: [
+          { type: 'p', text: 'List APIs almost always take **query params**: page, limit, optional filter, optional sort. **Build the SQL in code**: if `letter` was not sent, **do not** add that `WHERE`. If it was, add `WHERE u.full_name ILIKE $1` with the value `J%` (`ILIKE` = case-insensitive `LIKE`; `%` = “anything after”). Do not default a dummy filter that matches everything unless you mean to.' },
+          { type: 'p', text: '**Do not let the client sort by any column.** Whitelist (`full_name` | `email` | `created_at`). Missing `sort_by` → `created_at`. Missing `sort_order` → `DESC`. Defaults in the video: page 1, limit 10 (or 20), sort `created_at DESC`.' },
+          { type: 'p', text: '**LIMIT** = page size. **OFFSET** = how many to skip. In SQL, **offset starts at 0**. Product page “1” is offset `0`; page 2 with page size 20 is offset `20`. Map in the backend: `(page - 1) * limit`. Deep offsets get expensive on huge tables (the engine still walks skipped rows). Fine for this lesson; later you may use keyset / `WHERE id > last`.' },
+          {
+            type: 'pre',
+            lines: `-- user thinks page 1, 20 per page
+LIMIT 20 OFFSET 0
+
+-- user thinks page 2
+LIMIT 20 OFFSET 20
+
+WHERE u.full_name ILIKE $1   -- param: 'J%'
+ORDER BY u.created_at DESC   -- whitelist the column in code`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'Do not dump the whole yearbook on the table. Hand over **20 photos**, starting after the ones you already showed.',
+              'Page 1 starts at photo **0** in the pile, not photo 1. Humans and SQL count differently.',
+              '“Names starting with J” = a sticker on the spine (`J%`). The librarian does not let you invent a new sticker that rewrites the catalog.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '20. Create and update — RETURNING and PATCH',
+        blocks: [
+          { type: 'h3', text: 'POST — insert + RETURNING' },
+          { type: 'p', text: '`INSERT INTO users (email, full_name, password_hash) VALUES ($1, $2, $3) RETURNING *`. Hash the password in **application** code; the SQL only stores the hash. `RETURNING *` is the JSON you send back from `POST /v1/users`.' },
+          { type: 'h3', text: 'PATCH — only the fields they sent' },
+          { type: 'p', text: 'Profile update is **partial**. The client may send bio, or bio + phone, or all three. In code, from an **allowed set**, include only present fields in `SET`. Missing `avatar_url` → **do not touch** that column. Always `WHERE user_id = $n`. Always `RETURNING *` if the API returns the new row. **WHERE** is what stops you from rewriting every row.' },
+          {
+            type: 'pre',
+            lines: `-- after the handler saw only bio + phone in the body
+UPDATE user_profiles
+SET bio = $1, phone = $2
+WHERE user_id = $3
+RETURNING *;`,
+          },
+          { type: 'p', text: 'After this update, `updated_at` will still equal `created_at` **unless** you set it in SQL or use a **trigger** (next two sections).' },
+        ],
+      },
+      {
+        heading: '21. Indexes — the book index',
+        blocks: [
+          { type: 'p', text: 'Rows on disk are **not** a neat list. Without an index, `WHERE id = …` is a **sequential scan**: walk every row, compare, maybe find it at the end. Fine for 6 rows. Painful for a million. An **index** is a **lookup table**: column value → **where that row lives on disk**, like a book’s index: chapter → page. You jump instead of flipping every page. (B-trees and friends are the internals — look them up later; the job is the lookup.)' },
+          { type: 'p', text: '**Primary keys are indexed automatically.** Foreign keys are **not**. If you `JOIN tasks ON tasks.project_id = projects.id`, `projects.id` is already indexed; **index `tasks.project_id`**. Same for `assigned_to` if you list “tasks for this user.”' },
+          { type: 'p', text: 'Thumb rule: consider an index if the column is in **WHERE, JOIN, or ORDER BY**, and that query is **frequent**. You can choose **ASC or DESC** so it matches `ORDER BY created_at DESC` and the engine does not re-sort. Examples: `users.email` (login / lookup), `users.created_at DESC` (list users), `tasks.status` (filter pending), FKs on a linking table.' },
+          { type: 'p', text: '**Reads get faster. Writes get a little slower** — every INSERT/UPDATE/DELETE must **update the index too**. Do not index every column “just in case.” Start with the hot queries; **drop** the index later if the query is rare. Monitor. Indexes are not free RAM/disk either.' },
+          {
+            type: 'pre',
+            lines: `CREATE INDEX users_email_idx ON users (email);
+CREATE INDEX users_created_at_idx ON users (created_at DESC);
+CREATE INDEX tasks_project_id_idx ON tasks (project_id);
+
+-- helps:  WHERE email = $1
+-- helps:  ORDER BY created_at DESC
+-- helps:  JOIN ... ON tasks.project_id = projects.id`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'No index = flip every page to find “dragon.”',
+              'Index = back of the book: “dragon — page 88.” Adding a new chapter means **updating that back page** too (slower writes).',
+              'The ID stamped on the cover is already in the index. The “which class?” stamp on homework is not — unless you add it.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '22. Triggers — the database stamps updated_at',
+        blocks: [
+          { type: 'p', text: 'Two ways to keep `updated_at` honest: **set it in every UPDATE** from app code, or a **trigger**. A trigger is: when a condition happens (`UPDATE` on this table), run an action. The video’s pattern: one Postgres **function** that sets `NEW.updated_at = now()` and returns the row; then `CREATE TRIGGER … BEFORE UPDATE` on **each** table that has `updated_at` (users, profiles, projects, tasks, members). Name the triggers so **down** migrations can `DROP TRIGGER` cleanly.' },
+          {
+            type: 'pre',
+            lines: `-- idea (exact syntax lives in a migration):
+-- CREATE FUNCTION set_updated_at() ... NEW.updated_at = now(); RETURN NEW;
+-- CREATE TRIGGER users_set_updated_at
+--   BEFORE UPDATE ON users
+--   FOR EACH ROW EXECUTE FUNCTION set_updated_at();`,
+          },
+          { type: 'p', text: 'After `dbmate up`, the same PATCH as before now **changes** `updated_at` with no extra `SET` in the handler. Triggers are easy to **hide** — prefer them for boring stamps; keep product rules in the **service** where you can see them. Still: they are part of mastering Postgres because you will meet them, and they stop every teammate from forgetting the stamp.' },
+          {
+            type: 'kid',
+            items: [
+              'Every time someone edits a page, the librarian **automatically** writes today’s date in the corner.',
+              'You do not trust every student to remember the date stamp.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '23. What you actually do all day',
+        blocks: [
+          { type: 'p', text: 'The rest of a real API surface is the same loop: read the payload, **construct a dynamic query** from an allow-list, **parameterize** every user value, execute, return rows. Joins, indexes, and triggers are already in the schema. That is most of day-to-day backend database work — not the last 20% of exotic engine internals.' },
+          {
+            type: 'table',
+            columns: ['Chapter', 'Remember'],
+            rows: [
+              ['Persistence', 'Survives the process. RAM does not.'],
+              ['Disk vs RAM', 'Ledger on disk. Cache in RAM.'],
+              ['DBMS', 'Organize, CRUD, integrity, security.'],
+              ['Not a .txt', 'Scan, no schema, no safe concurrent writes.'],
+              ['Relational vs not', 'Schema first vs flexible documents. Integrity vs speed of dumping.'],
+              ['Postgres', 'Open source, SQL, JSONB — default choice.'],
+              ['DECIMAL vs FLOAT', 'Money is DECIMAL. Always.'],
+              ['TEXT vs CHAR', 'TEXT default. CHAR only if length is fixed. Skip VARCHAR(255) theater.'],
+              ['JSONB', 'Queryable JSON. You often do not need Mongo for blobs.'],
+              ['Migrations', 'Up / down files + schema_migrations. Same files everywhere.'],
+              ['Enum', 'Integrity + documentation in one glance.'],
+              ['NOT NULL / UNIQUE / CHECK / FK', 'The DBMS refuses garbage and orphans.'],
+              ['ON DELETE', 'RESTRICT, CASCADE, SET NULL — pick on purpose.'],
+              ['1:1 / 1:N / M:N', 'Shared PK; FK on the many; linking table with composite PK.'],
+              ['LEFT JOIN', 'Keep the left even when the right is missing. to_jsonb nests the extra row.'],
+              ['$1 parameters', 'Never glue SQL strings. Drivers/ORMs fill slots.'],
+              ['LIMIT / OFFSET', 'Pages. Offset 0 = first page. Whitelist sort columns.'],
+              ['RETURNING', 'Give the API the new row after INSERT/UPDATE.'],
+              ['Index', 'WHERE / JOIN / ORDER BY + frequent. PK is free. FK is not. Writes cost extra.'],
+              ['Trigger', 'DB stamps updated_at so handlers cannot forget.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              'The database is **truth that outlives the server**.',
+              '**DECIMAL** for money. **TEXT** for strings. **JSONB** for shapeless bits. **UUID** if ids must not be guessable. **Migrations** for every schema change.',
+              '**Parameterize** every user value. **LEFT JOIN** when the extra table is optional. **Index** what you search — and only if that query is hot.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
