@@ -1851,16 +1851,232 @@ createItem({ ...body, userId: ctx.userId })`,
   {
     id: 'caching',
     n: 14,
-    title: 'Caching',
+    title: 'What is Caching? A Fast Copy So You Do Not Repeat the Expensive Work',
     label: 'Caching',
     cluster: 'core',
     x: 445,
     y: 575,
-    gist: 'A cache is a lie I tell on purpose because the database is too slow or too hot. The hard part is when the lie goes stale.',
+    gist: 'A cache keeps a small, fast copy of data you will need again — so you skip the slow path. The hard part is when that copy goes stale.',
     remember: [
-      'Layers: browser/HTTP, in-process memory, Redis, DB buffer. Different TTLs, different dangers.',
-      'Patterns: cache-aside, write-through, write-behind. Evict with TTL, LRU, LFU.',
-      'If I cannot name the invalidation rule, I should not cache it.',
+      'Hit = served from the fast copy. Miss = do the slow work, then store it.',
+      'Lazy (cache-aside): fill on first read. Write-through: update DB and cache together on write.',
+      'The cache is small. Evict with TTL, LRU, or LFU. If you cannot name the invalidation rule, do not cache it.',
+    ],
+    sections: [
+      {
+        heading: '1. What caching is',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Caching **decreases the time and effort** to do work you already did. You keep a **subset** of the primary data — not everything — in a place that is **faster to read**, chosen by how often it is used and how likely you will need it next.' },
+          { type: 'quote', text: 'Primary data lives in the slow, true store. The cache is a small, fast copy of the hot slice.' },
+          {
+            type: 'ul',
+            items: [
+              '**Cache hit** — the answer is already in the fast store. Return it. No DB, no crawl, no vendor call.',
+              '**Cache miss** — it is not there. Do the expensive work, **then write** the result into the cache so the next caller hits.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `GET /weather?city=phnom-penh
+
+hit   Redis has "phnom-penh"  →  return JSON in ~1ms
+miss  Redis empty
+      →  call weather vendor (slow, costs money)
+      →  SET phnom-penh = payload  TTL 1h
+      →  return JSON`,
+          },
+          { type: 'p', text: 'High-traffic products track latency in **milliseconds**. Twenty extra milliseconds on every request, times a thousand users, is a hot database and a slow app.' },
+          {
+            type: 'kid',
+            items: [
+              'You already did the homework. You keep a photocopy on your desk so you do not walk to the library every time someone asks the same question.',
+              '**Hit** = the photocopy is on the desk. **Miss** = walk to the library, then leave a photocopy for next time.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Where you already see it',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Place', 'What is expensive', 'What they cache'],
+            rows: [
+              ['**Search**', 'Crawl, index, rank billions of pages', 'Popular queries — “weather today” should not rerun the whole engine every time'],
+              ['**Video**', 'Sending one huge file from one origin', 'Copies at **CDN edge** nodes near the viewer so buffering stays low'],
+              ['**Social trends**', 'Count millions of posts in real time', 'A computed “trending” list in **Redis** for hours, not per page view'],
+            ],
+          },
+          { type: 'p', text: 'A CDN does not cache the whole internet. It caches the **subset** that region is watching. Same rule as Redis: small, hot, near the reader.' },
+          {
+            type: 'kid',
+            items: [
+              'The popular movie is already in the shop down the street (edge). You do not wait for a truck from another country every evening.',
+              'The school does not recount every vote on the bulletin board each time a kid walks by. They pin yesterday’s “top 10” and update it on a timer.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Three levels — network, hardware, software',
+        blocks: [
+          { type: 'h3', text: 'Network' },
+          {
+            type: 'ul',
+            items: [
+              '**CDN** — edge / POP near the user. Static assets and video chunks. Geography is the trick.',
+              '**DNS** — name → IP. Your OS cache, then the browser cache, then the ISP / public resolver cache, then (maybe) the authoritative server. Without that ladder, every visit would walk root → TLD → authoritative again.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `open example.com
+  1. browser DNS cache?   hit → IP
+  2. OS DNS cache?        hit → IP
+  3. resolver (ISP / 8.8.8.8)
+       miss → root → .com TLD → authoritative
+       then STORE the answer with a TTL
+  next visit stops at step 1 or 2`,
+          },
+          { type: 'h3', text: 'Hardware' },
+          { type: 'p', text: 'CPU **L1 / L2 / L3**: tiny and next to the core, then RAM (fast, volatile), then disk (big, slow). Same idea as software: hot data closer to the CPU.' },
+          { type: 'h3', text: 'Software — in-memory key/value' },
+          { type: 'p', text: '**Redis** and **Memcached** keep pairs in RAM. No join, no schema walk. A get is a key lookup. That is why rate-limit counters and session tokens live here — not in Postgres on every request (20–30ms extra, and the DB melts under a thousand chatty clients).' },
+          {
+            type: 'kid',
+            items: [
+              'Your backpack (L1) vs the locker down the hall (RAM) vs the house across town (disk).',
+              'DNS sticky notes: once you wrote the address, you do not call directory assistance for every visit.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Two fill strategies — lazy vs write-through',
+        blocks: [
+          { type: 'h3', text: 'Lazy (cache-aside)' },
+          { type: 'p', text: 'Nothing is in the cache until someone **asks**. Miss → load from the DB (or vendor) → store → return. Saves space. First caller pays the slow path.' },
+          {
+            type: 'pre',
+            lines: `func getItem(id) {
+  cached = redis.get("item:" + id)
+  if cached { return cached }          // hit
+
+  row = db.query("SELECT ... WHERE id = ?", id)  // miss
+  redis.set("item:" + id, row, TTL=60s)
+  return row
+}`,
+          },
+          { type: 'h3', text: 'Write-through' },
+          { type: 'p', text: 'On **POST / PUT**, you update the **database and the cache together**. Next read is already fresh. Cost: every write does two stores. Freshness is the point.' },
+          {
+            type: 'pre',
+            lines: `func updateItem(id, patch) {
+  db.update(id, patch)
+  redis.set("item:" + id, patch)   // same moment
+}`,
+          },
+          { type: 'p', text: 'If you cannot say **when this copy becomes wrong**, do not cache it. Money, one-time tokens, and “did this payment succeed?” are usually the wrong things to serve stale.' },
+          {
+            type: 'kid',
+            items: [
+              '**Lazy** = photocopy only after the first kid asks. The first kid waits; the rest are fast.',
+              '**Write-through** = every time you change the original, you also change the photocopy. Nobody reads last week’s version — but you do double writing.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. The cache is small — eviction',
+        blocks: [
+          { type: 'p', text: 'RAM is not infinite. When it is full, you **evict**. No policy → new writes **fail**. That is worse than serving a miss.' },
+          {
+            type: 'table',
+            columns: ['Policy', 'What it drops', 'When it fits'],
+            rows: [
+              ['**TTL**', 'Keys that passed their expiry', 'Weather for 1 hour. Session for 30 minutes. “This is allowed to be a little old.”'],
+              ['**LRU**', 'Least **recently** used', 'Whatever nobody opened lately'],
+              ['**LFU**', 'Least **frequently** used', 'Whatever almost nobody ever opens'],
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `SET weather:phnom-penh  {...}  EX 3600
+// after 1 hour the key dies
+// next GET is a miss → fetch vendor again`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'The desk only holds ten photocopies. When the 11th arrives, throw out the one nobody has touched (**LRU**), or the one almost never asked for (**LFU**), or anything older than a day (**TTL**).',
+              'A desk with no throw-away rule fills up and then **refuses new paper**. That is “no eviction.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. Backend jobs Redis is actually for',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Heavy queries** — cache the result of an expensive join. Watch hit vs miss ratio; a cache that always misses is just extra code.',
+              '**Sessions** — after login, the token / session blob lives in Redis so every request does not hit the user table.',
+              '**Vendor APIs** — weather (changes slowly). TTL 1h. Saves **rate limits and bill**.',
+              '**Rate limiting** — middleware reads `X-Forwarded-For`, `INCR` a per-IP counter in Redis. Over 50 / minute → **429 Too Many Requests**. A SQL counter here would add latency *and* load on every request.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `// rate limit — 50 requests / minute / IP
+key = "rl:" + ip + ":" + thisMinute
+n = redis.incr(key)
+if n == 1 { redis.expire(key, 60) }
+if n > 50 { return 429 }
+
+// weather — one vendor call per city per hour
+key = "wx:" + city
+if hit = redis.get(key) { return hit }
+payload = weatherVendor.fetch(city)
+redis.set(key, payload, EX=3600)
+return payload`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'The librarian stamps how many times you borrowed this hour. Stamp lives on a sticky note, not in the slow ledger. Too many stamps → “come back later” (429).',
+              'The weather board on the wall updates once an hour. You do not call the weather station for every classmate.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Concept', 'Real-world analogy', 'What it does'],
+            rows: [
+              ['Cache', 'Photocopy on the desk', 'Fast subset of the slow truth'],
+              ['Hit / miss', 'On the desk / walk to the library', 'Serve copy vs do expensive work'],
+              ['CDN / DNS', 'Shop down the street / sticky address', 'Network-level copies'],
+              ['Redis', 'Sticky notes in RAM', 'Key → value in microseconds'],
+              ['Lazy fill', 'Photocopy after first ask', 'Cache-aside'],
+              ['Write-through', 'Update original and copy together', 'Fresher, more write work'],
+              ['TTL / LRU / LFU', 'Expires / nobody touched / nobody uses', 'Make room in a small desk'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              'A cache is a **fast lie you chose**. Name **when it expires**.',
+              '**Hit** skip the DB. **Miss** pay once, then store.',
+              'Counters, sessions, and slow vendor reads belong in **memory**. The ledger stays in the database.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
