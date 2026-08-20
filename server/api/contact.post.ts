@@ -8,6 +8,7 @@ type ContactBody = {
   phone?: unknown;
   email?: unknown;
   message?: unknown;
+  _gotcha?: unknown;
   website?: unknown;
 };
 
@@ -41,7 +42,8 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<ContactBody>(event).catch(() => ({} as ContactBody));
 
   // Honeypot: bots fill hidden fields; pretend success so they move on.
-  if (asString(body.website, 200)) {
+  // Check _gotcha (current field) and website (old name browsers used to autofill).
+  if (asString(body._gotcha, 200) || asString(body.website, 200)) {
     return { ok: true };
   }
 

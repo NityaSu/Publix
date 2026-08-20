@@ -12,7 +12,7 @@ const name = ref('');
 const phone = ref('');
 const email = ref('');
 const message = ref('');
-const website = ref('');
+const gotcha = ref('');
 const status = ref<'idle' | 'sending' | 'sent' | 'error'>('idle');
 const errorMessage = ref('');
 
@@ -24,7 +24,7 @@ function resetForm() {
   phone.value = '';
   email.value = '';
   message.value = '';
-  website.value = '';
+  gotcha.value = '';
 }
 
 function readErrorMessage(error: unknown) {
@@ -49,7 +49,7 @@ async function onSubmit() {
         phone: phone.value,
         email: email.value,
         message: message.value,
-        website: website.value,
+        _gotcha: gotcha.value,
       },
     });
     status.value = 'sent';
@@ -97,9 +97,9 @@ async function onSubmit() {
 
       <form v-else class="w-full" @submit.prevent="onSubmit">
         <input
-          v-model="website"
+          v-model="gotcha"
           type="text"
-          name="website"
+          name="_gotcha"
           tabindex="-1"
           autocomplete="off"
           aria-hidden="true"
