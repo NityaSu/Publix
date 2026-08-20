@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { Maximize2, Minimize2 } from 'lucide-vue-next';
+import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-vue-next';
+import DockerConfigMaster from '~/component/DockerConfigMaster.vue';
+import DockerQuestGame from '~/component/DockerQuestGame.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
 
-type SectionId = 'recipe' | 'kitchen' | 'cookies';
+type SectionId = 'recipe' | 'kitchen' | 'cookies' | 'quest' | 'master';
 
 const DK = '/docker-lesson';
 
@@ -18,6 +20,7 @@ const icons = {
   cookie: icon('icons', 'cookie.svg'),
   bulb: icon('icons', 'bulb.svg'),
   arrow: icon('icons', 'arrow_right.svg'),
+  package: icon('icons', 'package.svg'),
   flour: icon('icons', 'flour.svg'),
   butter: icon('icons', 'butter.svg'),
   chocolate: icon('icons', 'chocolate_chips.svg'),
@@ -107,6 +110,48 @@ const lessons: LessonSection[] = [
       meaning: 'A live instance. Isolated from siblings.',
     },
   },
+  {
+    id: 'quest',
+    n: 4,
+    label: 'Quest',
+    tabIcon: icons.package,
+    title: 'Docker Quest — real configs',
+    titleIcon: icons.package,
+    blurb: 'Play five levels: match terms, fix docker run, order a Dockerfile, save DB data, wire compose DNS.',
+    tip: 'Pick any level from the pills — you don’t have to play in order.',
+    gist: 'A short game that teaches real docker run flags, Dockerfile layer order, volumes, and compose service DNS — the configs you’d write on a real project.',
+    remember: [
+      'Image / Container / Engine / Dockerfile map to recipe / cookie / kitchen / writing the recipe.',
+      '`docker run` starts; port maps are host:container; volumes keep DB data alive.',
+      'In compose, the service name is the hostname between containers.',
+    ],
+    adult: {
+      kid: 'Quest levels',
+      docker: 'run · Dockerfile · volumes · compose',
+      meaning: 'Hands-on practice with production-shaped configs.',
+    },
+  },
+  {
+    id: 'master',
+    n: 5,
+    label: 'Master',
+    tabIcon: icons.bulb,
+    title: 'Docker Config Master — production stacks',
+    titleIcon: icons.bulb,
+    blurb: 'Harder configs: Redis, Postgres networks, healthchecks, multi-stage Dockerfiles, Nginx + .env.',
+    tip: 'Pick any level from the pills — you don’t have to play in order.',
+    gist: 'Practice real compose and Dockerfile patterns you’d ship: memory limits, named networks, healthchecks, multi-stage builds, restart policies, and service_healthy.',
+    remember: [
+      'Pin images (redis:7-alpine); map ports as host:container.',
+      'Healthchecks + depends_on condition: service_healthy beat race conditions.',
+      'Multi-stage: builder tools stay out of the slim runtime image.',
+    ],
+    adult: {
+      kid: 'Master levels',
+      docker: 'compose · healthcheck · multi-stage · prod',
+      meaning: 'Copy-ready production config drills.',
+    },
+  },
 ];
 
 const activeId = ref<SectionId>('recipe');
@@ -119,6 +164,8 @@ const {
   leftPct,
   leftStyle,
   dragging,
+  rightOpen,
+  toggleRight,
   onHandlePointerDown,
   onHandleKeydown,
 } = useInsightsSplit({ storageKey: 'docker-for-kids', defaultPct: 42 });
@@ -201,7 +248,18 @@ onUnmounted(() => {
     <header class="mf-header">
       <NuxtLink to="/insights/notes" class="mf-brand">DOCKER IN KID VERSION</NuxtLink>
       <div class="mf-meta">
-        <span class="mf-step">3 lessons</span>
+        <span class="mf-step">5 lessons</span>
+        <button
+          type="button"
+          class="mf-tool"
+          :aria-pressed="!rightOpen"
+          :aria-label="rightOpen ? 'Hide notes panel' : 'Show notes panel'"
+          @click="toggleRight"
+        >
+          <PanelRightClose v-if="rightOpen" :size="14" />
+          <PanelRightOpen v-else :size="14" />
+          {{ rightOpen ? 'Hide notes' : 'Notes' }}
+        </button>
         <button type="button" class="mf-tool" @click="toggleFullscreen">
           <Minimize2 v-if="isFullscreen" :size="14" />
           <Maximize2 v-else :size="14" />
@@ -211,7 +269,11 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <div ref="bodyEl" class="mf-body" :class="{ 'is-dragging': dragging }">
+    <div
+      ref="bodyEl"
+      class="mf-body"
+      :class="{ 'is-dragging': dragging, 'is-notes-closed': !rightOpen }"
+    >
       <section
         v-show="!isFullscreen"
         class="mf-graph"
@@ -222,8 +284,34 @@ onUnmounted(() => {
           <p class="mf-graph-title">Kitchen</p>
         </div>
 
-        <div class="dk-stage">
-          <div class="dk" aria-label="Docker cookie analogy">
+        <div
+          class="dk-stage"
+          :class="{ 'is-quest': activeId === 'quest' || activeId === 'master' }"
+        >
+          <div class="dk-tabs dk-tabs-bar" role="tablist" aria-label="Docker analogy parts">
+            <button
+              v-for="lesson in lessons"
+              :key="lesson.id"
+              type="button"
+              role="tab"
+              class="dk-tab"
+              :class="{
+                'is-active': activeId === lesson.id,
+                'is-on-dark': activeId === 'quest' || activeId === 'master',
+              }"
+              :aria-selected="activeId === lesson.id"
+              :id="`dk-tab-${lesson.id}`"
+              @click="selectLesson(lesson.id)"
+            >
+              <img :src="lesson.tabIcon" alt="" class="dk-tab-icon" width="18" height="18" />
+              {{ lesson.label }}
+            </button>
+          </div>
+
+          <DockerQuestGame v-if="activeId === 'quest'" />
+          <DockerConfigMaster v-else-if="activeId === 'master'" />
+
+          <div v-else class="dk" aria-label="Docker cookie analogy">
             <header class="dk-hero">
               <h2 class="dk-hero-title">
                 <img :src="icons.whale" alt="" class="dk-hero-whale" width="40" height="40" />
@@ -234,24 +322,6 @@ onUnmounted(() => {
                 <img :src="icons.cookie" alt="" class="dk-inline-icon" width="18" height="18" />
               </p>
             </header>
-
-            <div class="dk-tabs" role="tablist" aria-label="Docker analogy parts">
-              <button
-                v-for="lesson in lessons"
-                :key="lesson.id"
-                type="button"
-                role="tab"
-                class="dk-tab"
-                :class="{ 'is-active': activeId === lesson.id }"
-                :aria-selected="activeId === lesson.id"
-                :id="`dk-tab-${lesson.id}`"
-                :aria-controls="`dk-panel-${lesson.id}`"
-                @click="selectLesson(lesson.id)"
-              >
-                <img :src="lesson.tabIcon" alt="" class="dk-tab-icon" width="18" height="18" />
-                {{ lesson.label }}
-              </button>
-            </div>
 
             <div
               :id="`dk-panel-${active.id}`"
@@ -351,7 +421,7 @@ onUnmounted(() => {
       </section>
 
       <InsightsSplitHandle
-        v-show="!isFullscreen"
+        v-show="!isFullscreen && rightOpen"
         :dragging="dragging"
         :value="leftPct"
         :min="28"
@@ -360,12 +430,28 @@ onUnmounted(() => {
         @keydown="onHandleKeydown"
       />
 
-      <section ref="lessonEl" class="mf-lesson" aria-label="Lesson">
+      <section
+        v-show="rightOpen"
+        ref="lessonEl"
+        class="mf-lesson"
+        aria-label="Lesson"
+      >
         <article class="mf-page">
-          <p class="mf-kicker">
-            Lesson {{ active.n.toString().padStart(2, '0') }}
-            · {{ active.label }}
-          </p>
+          <div class="mf-lesson-top">
+            <p class="mf-kicker">
+              Lesson {{ active.n.toString().padStart(2, '0') }}
+              · {{ active.label }}
+            </p>
+            <button
+              type="button"
+              class="mf-tool mf-lesson-close"
+              aria-label="Hide notes panel"
+              @click="toggleRight"
+            >
+              <PanelRightClose :size="14" />
+              Hide
+            </button>
+          </div>
           <h1>{{ active.title }}</h1>
           <p class="mf-lead">{{ active.gist }}</p>
 
@@ -411,6 +497,34 @@ onUnmounted(() => {
               the “cage” is a throwaway cookie: a container baked from an image, with only the project
               workspace mounted. The host kitchen stays safe because the bite happens inside that cookie.
             </p>
+          </section>
+
+          <section v-if="activeId === 'quest'" class="mf-block">
+            <h2>What you’ll practice</h2>
+            <ul class="mf-bullets">
+              <li><strong>Level 1</strong> — Match recipe/cookie/kitchen to Image / Container / Engine / Dockerfile.</li>
+              <li><strong>Level 2</strong> — Fix a broken <code>docker run</code> (start vs create, <code>host:container</code> ports).</li>
+              <li><strong>Level 3</strong> — Order Dockerfile layers for cache: FROM → RUN → COPY → CMD.</li>
+              <li><strong>Level 4</strong> — Spot the missing volume before Postgres data disappears.</li>
+              <li><strong>Level 5</strong> — Wire compose DNS: service name <code>db</code> is the hostname.</li>
+            </ul>
+            <div class="mf-callout">
+              <p>Jump levels with the pills on the left — order is optional. Next only when you want it.</p>
+            </div>
+          </section>
+
+          <section v-if="activeId === 'master'" class="mf-block">
+            <h2>What you’ll configure</h2>
+            <ul class="mf-bullets">
+              <li><strong>Redis</strong> — pinned image, port map, memory + LRU eviction.</li>
+              <li><strong>PG + Redis</strong> — env vars and a shared named network.</li>
+              <li><strong>Health</strong> — <code>depends_on</code> + Postgres/Redis healthchecks.</li>
+              <li><strong>Multi-stage</strong> — builder → slim runtime Dockerfile order.</li>
+              <li><strong>Prod</strong> — Nginx proxy, <code>.env</code>, <code>unless-stopped</code>, <code>service_healthy</code>.</li>
+            </ul>
+            <div class="mf-callout">
+              <p>Harder than Quest. Pick any level, then copy the fixed config into a real project.</p>
+            </div>
           </section>
 
           <div class="mf-pager">
@@ -525,6 +639,32 @@ onUnmounted(() => {
   cursor: col-resize;
 }
 
+.mf-body.is-notes-closed .mf-graph {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.mf-body.is-notes-closed :deep(.dq),
+.mf-body.is-notes-closed :deep(.dcm) {
+  max-width: min(56rem, 100%);
+}
+
+.mf-lesson-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.15rem;
+}
+
+.mf-lesson-top .mf-kicker {
+  margin: 0;
+}
+
+.mf-lesson-close {
+  flex-shrink: 0;
+}
+
 .mf-graph {
   position: relative;
   width: 42%;
@@ -555,10 +695,61 @@ onUnmounted(() => {
 .dk-stage {
   min-height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 48px 16px 24px;
   box-sizing: border-box;
+  gap: 0.75rem;
+}
+
+.dk-stage.is-quest {
+  justify-content: flex-start;
+  padding-top: 40px;
+  overflow: auto;
+}
+
+.dk-tabs-bar {
+  width: 100%;
+  max-width: 38rem;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+}
+
+.dk-tabs-bar .dk-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--dk-font, 'Space Grotesk', sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--mf-text);
+  border: 2px solid var(--mf-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mf-panel) 80%, transparent);
+  padding: 0.32rem 0.65rem;
+  cursor: pointer;
+}
+
+.dk-tabs-bar .dk-tab.is-active {
+  border-color: #4a9eff;
+  color: #4a9eff;
+  background: color-mix(in srgb, #4a9eff 12%, transparent);
+}
+
+.dk-tabs-bar .dk-tab.is-on-dark {
+  color: var(--mf-text);
+  border-color: var(--mf-line);
+  background: color-mix(in srgb, var(--mf-panel) 80%, transparent);
+}
+
+.dk-tabs-bar .dk-tab.is-on-dark.is-active {
+  border-color: #4a9eff;
+  color: #4a9eff;
+  background: color-mix(in srgb, #4a9eff 12%, transparent);
 }
 
 .mf-lesson {
@@ -646,6 +837,20 @@ onUnmounted(() => {
   text-transform: uppercase;
   color: #7b2d8e;
   margin-bottom: 4px;
+}
+
+.mf-callout {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--mf-line);
+  border-radius: 6px;
+  background: var(--mf-graph);
+}
+
+.mf-callout p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .mf-table-wrap {
