@@ -3968,16 +3968,191 @@ GET /catalog/123
   {
     id: 'config',
     n: 19,
-    title: 'Config management',
+    title: 'Production-grade Configuration: The DNA of How the Same Code Runs in Every Environment',
     label: 'Config',
     cluster: 'keep',
     x: 1180,
     y: 500,
-    gist: 'Code is the same in every environment. Config is what changes. Secrets are config that must not leak.',
+    gist: 'Config is every setting that decides how the app behaves — not only DB passwords. Same code; different env. Never hardcode secrets. Validate at boot or production will fail in a way you cannot see.',
     remember: [
-      'Env for host-specific values. Feature flags for behavior I want to flip without a deploy.',
-      'Static (DB URL) vs dynamic (rate limit, flag). Secrets from a vault/.env, never hardcoded.',
-      'If I need a rebuild to change a URL, config leaked into code.',
+      'Secrets are a slice. Also: port, log level, pool size, timeouts, vendor keys, feature flags, business limits.',
+      'Store by risk: env and YAML for most; a vault when traffic and many machines demand it. Hybrid + a priority order is normal.',
+      'If you take one rule: validate every config at startup. Missing a required env var should refuse to boot, not limp.',
+    ],
+    sections: [
+      {
+        heading: '1. Config is the DNA — not just the vault',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: '**Configuration management** is the systematic way you **organize, store, access, and maintain all the settings** of the backend. It is the **DNA**: it decides how the **same code** runs in different environments.' },
+          { type: 'p', text: 'Most people hear “config” and picture **database passwords**, connection URLs, **JWT secrets**, vendor **API keys**. That is the engine of the car. You still need the rest of the car: how the process **starts**, how it **talks to other services**, how it **behaves per environment**, **whether and where it logs**, where **metrics** go, **which features** this deploy turns on, **for which users**.' },
+          { type: 'quote', text: 'A database URL is config. So is “debug vs info,” pool size 10 vs 50, and “new checkout only for this country.” Treat only the secrets and you will still have chaos.' },
+          {
+            type: 'kid',
+            items: [
+              'The **recipe** (code) stays the same. The **oven temperature and which pantry** (config) change at home vs the cafeteria.',
+              'The lock on the safe is important. So is “lights on or off” and “how many kids at each table.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Why it is high stakes',
+        blocks: [
+          { type: 'p', text: 'Backends no longer run **alone**. They sit in a **distributed** mess: other services, databases, caches, queues, auth, email. Each hop needs **how to connect**, **how to fail**, **how to stay fast**, **how to stay secret** — and those answers **change by environment**.' },
+          { type: 'p', text: 'Without a **strategy**, you get **configuration chaos**: hardcoded numbers sprinkled through the repo, **different mystery behavior** in staging vs prod, **secrets in git**, bugs you **cannot reproduce** because you cannot name which setting caused the break.' },
+          { type: 'p', text: 'A wrong frontend config might show a bad dialog. A wrong **backend** config can **leak customer data**, **charge the wrong amount**, or **take the whole platform down**. Diverse runtimes (cloud, on-prem, containers, serverless, edge) each want their own settings. That is why this is a dedicated lesson, not a `.env` footnote.' },
+          {
+            type: 'kid',
+            items: [
+              'If the cafeteria thermostat is wrong, lunch is ruined for everyone — not just one poster on the wall.',
+              'If every classroom writes the oven temperature in a different notebook, you cannot tell why the cookies burned.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Types of config (they are not equal)',
+        blocks: [
+          { type: 'p', text: 'An e-commerce backend is a useful pile. Types matter because they pick **where you store**, **how you lock**, and **who may read**:' },
+          {
+            type: 'ul',
+            items: [
+              '**Application settings** — log level, listen **port**, **HTTP timeout**, **DB connection pool** size. Local often `8080` + **debug** logs; prod a different port + **info** so you do not drown the log pile. Timeout too short (60s) vs a job that takes 80s → the request **dies** (often a gateway **504**). Pool size is how many DB sockets you keep warm.',
+              '**Database** — host, port, user, password, name (often one **URL**), query timeouts.',
+              '**External services** — email provider API key, payment processor key, hosted-auth key. Anything you `init` a vendor client with.',
+              '**Feature flags** — turn a **new checkout** on for **one country** (A/B), keep the old flow elsewhere. Dynamic enable/disable **without a rewrite**.',
+              'Also in the mix: **infra / DevOps**, **security** (JWT / session secrets), **runtime tuning** (e.g. max CPUs in a Go process), **business rules** you want in one place (max order amount) instead of scattered `if`s.',
+            ],
+          },
+          { type: 'p', text: 'Some values are **secret** (leak = damage). Some only **steer behavior**. Some change **weekly**; some **quarterly**. Some are **the same in every env**; some **must differ**. Sort before you pick a store.' },
+        ],
+      },
+      {
+        heading: '4. Feature flags are config too',
+        blocks: [
+          { type: 'p', text: 'You shipped a new checkout API. You do **not** flip 100% of users on day one. A **flag** says: this segment (e.g. one country) gets the new flow; another keeps the old. That is still configuration — it just changes **while the process is alive**, more often than a DB URL.' },
+          { type: 'quote', text: 'A flag is a dimmer for a feature. A secret is a key. Do not keep both in the same mental drawer just because both are “settings.”' },
+          {
+            type: 'kid',
+            items: [
+              'The new playground opens **only for the east wing** this week. West wing still uses the old yard. That switch is a flag, not a new school building.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. Where it lives — env, files, vaults, hybrid',
+        blocks: [
+          { type: 'h3', text: 'Environment variables' },
+          { type: 'p', text: 'The **most common** store, in every language. Locally: a file named something like `.env`, loaded into the **OS environment** by a library so you are not `export`ing by hand. In Kubernetes / a cloud deploy: the platform **injects** env at start — often **fetched from a secrets manager** (Vault, a cloud parameter/secret store) **then** handed to the process. Your app reads `process.env` / `os.Getenv` and runs.' },
+          { type: 'h3', text: 'Files' },
+          { type: 'p', text: '**JSON** works; you **cannot comment**. **YAML** is the usual choice in open-source backends (server, log level, storage, sessions in one tree) **because comments teach the next teammate**. **TOML** is another file standard. Local DB in a sample `config.yaml` might even be SQLite; prod will not be.' },
+          { type: 'h3', text: 'Key-value and dedicated vaults' },
+          { type: 'p', text: 'A **KV store** (Consul-class, etc.) feels like env: simple pairs. At **real traffic and many regions / many clouds**, teams centralize in **Vault / AWS Parameter Store / Azure Key Vault / Google Secret Manager** — docs and integrations already exist for Kubernetes and autoscaling. That is when a dedicated product pays for itself. Until then, env + YAML is most of the industry.' },
+          { type: 'h3', text: 'Hybrid + priority' },
+          { type: 'p', text: 'Normal: **build one runtime settings object** at boot from **several** places. Example order you **decide up front**: cloud parameter store **wins**, then `config.yaml`, then leftover env. Environment can change which sources even exist. Do not leave the merge order as folklore.' },
+          {
+            type: 'kid',
+            items: [
+              'The **pocket card** (env) is what this machine was handed at the door.',
+              'The **binder** (YAML) is the shared classroom rules with sticky-note comments.',
+              'The **bank vault** is for the combinations. Big schools use a vault; a single classroom uses a locked drawer.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. Same code, different env — on purpose',
+        blocks: [
+          { type: 'p', text: 'Why not one config file forever? Each environment has a **different first job**:' },
+          {
+            type: 'table',
+            columns: ['Place', 'First job'],
+            rows: [
+              ['**Local / dev**', 'Go fast. Debug. Catch bugs on your laptop.'],
+              ['**CI / test**', 'Automated checks. Quality, not pretty logs.'],
+              ['**Staging**', 'As **close to prod behavior** as you can afford — so surprises happen here.'],
+              ['**Production**', '**Reliability, security, performance.**'],
+            ],
+          },
+          { type: 'p', text: 'The **application code does not change**. Config changes **behavior**. That is the whole point of not hardcoding. If a URL lives in source, you **rebuild** to point at another database — config leaked into code.' },
+          { type: 'p', text: '**Pool size example:** local `max=10` is fine on a beefy laptop. Prod `max=50` because spikes are real. Staging might be **`2`**: you still want prod-*shaped* bugs, but you **do not** want prod-*priced* cloud bills. Staging is used by a handful of people; a little latency is cheaper than a clone of prod. Dev also **minimizes cost**. Those are config decisions, not code forks.' },
+          {
+            type: 'kid',
+            items: [
+              'Practice kitchen: two burners. Banquet hall: twenty. Same cookbook.',
+              'The dress rehearsal uses a smaller oven so the school does not pay banquet prices every Tuesday.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Security — obvious, still skipped',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Never hardcode secrets** — prod DB URL, payment key, email key, auth key. In the repo they get copied, forked, screenshot, logged. Obvious; still the first leak.',
+              '**Prefer a secrets manager in production** when you can. They **encrypt at rest** and usually **in transit**; your deploy (GitHub secret, kube env, instance role) holds the key that unwraps. Over-engineering security here is cheaper than a leak.',
+              '**Least privilege** — frontend folks get API base URL and **their** keys. Backend gets DB / cache / search. **Cloud instance** keys stay with DevOps. A large team without this map will share one god `.env`.',
+              '**Rotate** JWT secrets, API keys, DB passwords on a schedule so a leak has a **shelf life**.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '8. Validate at boot — the one thing to steal',
+        blocks: [
+          { type: 'p', text: 'People load env and then `process.env.WHATEVER` with **no check**. If a **required** variable is missing, prod does not always crash loudly — it **limps**: empty string, `undefined`, weird defaults. That is **hard to spot** and **expensive**.' },
+          { type: 'p', text: '**At startup**, after deploy, **before** you take traffic: validate **every** source (env, YAML, parameter store) with a real schema library (Zod in TypeScript, go-playground validator in Go, …). Mark **required vs optional**. Put **defaults in code** only where optional is honest. Fail the process if mandatory config is absent or the wrong type.' },
+          { type: 'quote', text: 'If you take one sentence from this lesson: **always validate your config**, no matter where it came from. That is the production-grade part.' },
+          {
+            type: 'pre',
+            lines: `// boot — before listen()
+settings = load(env, yaml, vault)   // merge by your priority
+assert settings.DATABASE_URL        // required
+assert settings.PORT is a number
+settings.LOG_LEVEL = settings.LOG_LEVEL or "info"  // optional default
+listen(settings.PORT)`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'Before the cafeteria opens, someone checks: oven on, fridge cold, **combination for the safe present**. Missing the combination means **do not open**, not “cook anyway and hope.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '9. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Piece', 'Remember'],
+            rows: [
+              ['Config', 'All settings. DNA of how the same code runs.'],
+              ['Not only secrets', 'Port, logs, pools, timeouts, flags, business limits.'],
+              ['Chaos', 'Hardcoded values, env drift, secrets in git, unreproducible bugs.'],
+              ['Types', 'App / DB / vendors / flags / infra / security / perf / rules.'],
+              ['Flags', 'New checkout for one country. Change behavior without a deploy of logic.'],
+              ['Stores', 'Env, YAML (comments), TOML, KV, vaults. Hybrid + explicit priority.'],
+              ['Envs', 'Dev = debug. CI = tests. Staging ≈ prod shape, cheaper. Prod = safe and fast.'],
+              ['Code vs config', 'Never rebuild to change a URL.'],
+              ['Secrets', 'Not in source. Encrypt. Least privilege. Rotate.'],
+              ['Validate', 'Boot fails closed. This is the hill to die on.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Same binary. Different DNA.** That DNA is config.',
+              '**Secrets are necessary and not sufficient.** Timeouts and flags take platforms down too.',
+              '**Validate at startup.** Missing required env should never become a mysterious prod.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
