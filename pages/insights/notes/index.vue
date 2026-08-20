@@ -43,7 +43,7 @@ function formatDate(iso: string) {
           <InsightsReadingToggle />
         </div>
         <p class="mt-5 max-w-2xl text-sm md:text-base ri-ink leading-relaxed">
-          Longer write-ups about learning projects. New posts show up here — not in the nav.
+          Simple notes on my personal learning, written for myself just to review for fun. Not necessarily meant for others, but I’m generous enough to keep it public!
         </p>
         <div class="mt-6 h-[2px] w-full ri-rule" />
 
