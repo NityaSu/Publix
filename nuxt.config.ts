@@ -24,6 +24,9 @@ export default defineNuxtConfig({
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseKey: process.env.SUPABASE_KEY || '',
     draftSecret: process.env.DRAFT_SECRET || '',
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    contactToEmail: process.env.CONTACT_TO_EMAIL || 'suonnitya@gmail.com',
+    resendFromEmail: process.env.RESEND_FROM_EMAIL || 'Nitya Suon <beth.t@example.com>',
   },
   vite: {
     server: {
