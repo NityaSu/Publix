@@ -5142,16 +5142,336 @@ authors = db.select(users).where(id in post.authorIds)
   {
     id: 'concurrency',
     n: 24,
-    title: 'Concurrency and parallelism',
+title: 'Concurrency and Parallelism: Interleave the Waits, Parallelize the Math',
     label: 'Concurrency',
     cluster: 'keep',
     x: 1015,
     y: 820,
-    gist: 'Concurrency is many tasks in flight (good for I/O). Parallelism is many cores at once (good for CPU). Races do not care that I meant well.',
+    gist: 'Concurrency is many tasks in flight (one core can still serve while a query is outstanding). Parallelism is many cores at the same instant. Most APIs wait on IO 95% of the time. Threads, event loops, and goroutines are three answers to that wait. Races happen at await too.',
     remember: [
-      'I/O-bound: async/await, event loop, connection pools. CPU-bound: workers/processes.',
-      'Shared mutable state needs locks, queues, or immutability. Transactions are a concurrency tool.',
-      'Idempotency + isolation levels: two requests, one row, one truth.',
+      'IO-bound: event loop, async/await, goroutines. CPU-bound: more cores, workers. Do not run image math on the request loop.',
+      'A thread has its own stack. Ten thousand of them eat RAM and context switches. Virtual threads map many tasks onto few OS threads.',
+      'Increment is three steps. Check-then-act across an await is a race. Locks, channels, or one owner of the number.',
+    ],
+    sections: [
+      {
+        heading: '1. A server that takes one customer at a time is not a server',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Every backend is asked to handle **many things at once**. Browser A, browser B, a cron, a webhook. A process that finishes request 1 before it even looks at request 2 is a demo. In production the line is thousands long. If you serialize them, people wait, then they retry, then you have a worse line.' },
+          { type: 'p', text: 'This chapter is a **mental model**, not a library tour. `async` and `await` are keywords. Under them: a scheduler, a wait, a resume. If you only know the keywords, you cannot debug a hung loop, a thread explosion, or a balance that went negative. If you know the wait, you can pick a model on purpose.' },
+          { type: 'quote', text: 'Concurrency is how the program is structured. Parallelism is how many cores actually run at the same instant. Most backend work is the first problem.' },
+        ],
+      },
+      {
+        heading: '2. The wait is the product — 95% idle is the default',
+        blocks: [
+          { type: 'p', text: 'A typical handler: parse JSON, validate, **query**, maybe call email or payments, serialize, write the socket. Parse and validate are CPU. The query is **not**. You send bytes. You sit. 1ms on a hot local box, 100ms across a busy network. The CPU did not get slower. **Physics** did.' },
+          { type: 'p', text: 'A modern core does on the order of **3 billion instructions a second**. Wait 100ms for Postgres and you just threw away **hundreds of millions** of instructions. Five network hops at 50ms each is 250ms of waiting against maybe **10ms** of actual compute. The box is idle **most of the request**. Concurrency exists so that idle is not a personality: while A waits, B gets the core.' },
+          {
+            type: 'table',
+            columns: ['Slice', 'Rough time', 'Bound'],
+            rows: [
+              ['Route, validate, JSON', '1-10ms', 'CPU'],
+              ['One SQL round trip', '1-100ms', 'IO'],
+              ['Five hops (DB + vendor + mail)', '~250ms', 'IO'],
+              ['Handler compute in between', '~10ms', 'CPU'],
+            ],
+          },
+          {
+            type: 'kid',
+            items: [
+              'You order. The kitchen is quiet for two minutes while the oven works. The cook staring at the glass is wasted.',
+              'A shop that takes the next ticket while the oven runs serves the room. That is concurrency.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Concurrency vs parallelism',
+        blocks: [
+          { type: 'p', text: '**Concurrency:** many tasks **in flight**. Start, pause on wait, resume. One core is enough. You are **dealing with** several things. You are not necessarily **doing** them in the same nanosecond.' },
+          { type: 'p', text: '**Parallelism:** many instructions **at the same instant**. That needs **more than one core** (or more than one machine). Two cores, two requests in the first 5ms of JSON parse, truly overlapping. One core cannot do that. It can only interleave.' },
+          {
+            type: 'table',
+            columns: ['Word', 'Means', 'Hardware'],
+            rows: [
+              ['Concurrency', 'Structure: start / pause / resume', 'Works on one core'],
+              ['Parallelism', 'Execution: same instant', 'Needs multiple cores'],
+            ],
+          },
+          { type: 'quote', text: 'Juggling is concurrency. Two jugglers is parallelism. One juggler with two balls is still one pair of hands.' },
+        ],
+      },
+      {
+        heading: '4. Two requests, one core — a timeline',
+        blocks: [
+          { type: 'p', text: 'Request A arrives. Five milliseconds of CPU: route, validate, deserialize. Then A needs the database (~40ms). The core has nothing useful to do for A. The scheduler (OS or runtime) **gives the core to B**, which just arrived. B burns 15ms of CPU, then B also waits. Around 40ms the database answers A. A does not necessarily snap back this microsecond — someone else may still hold the core — but A is **runnable** again. At 50ms A resumes, finishes, leaves.' },
+          { type: 'p', text: 'From the outside both requests were “in progress.” From the silicon, **one core, one instruction stream**. That is concurrency. Add a second core and A and B can parse JSON **together**. That is parallelism. Same handlers. Different hardware story.' },
+          { type: 'p', text: 'If you refuse to pause, A occupies the process for the whole 100ms wait. B sits in a socket backlog. That is the “one customer” server. Throughput dies. Latency for everyone else explodes. The query was fine. The **policy** was not.' },
+        ],
+      },
+      {
+        heading: '5. IO-bound vs CPU-bound',
+        blocks: [
+          { type: 'p', text: '**IO-bound:** the limiter is waiting on something **outside** the core. Database, HTTP to a vendor, disk, stdout if it actually blocks, the socket to the client. The CPU is ready. The wire is not.' },
+          { type: 'p', text: '**CPU-bound:** the limiter **is** the core. Validation and JSON are CPU, but they are usually **milliseconds**. Image resize, video transcode, heavy crypto, matrix work, ML inference — those **occupy** the core. More concurrent waiters will not shrink that math. You need **more cores**, or a **worker** that is allowed to burn them.' },
+          {
+            type: 'table',
+            columns: ['Workload', 'Examples', 'You want'],
+            rows: [
+              ['IO-bound', 'SQL, HTTP out, files, most APIs', 'Concurrency: event loop, goroutines, async'],
+              ['CPU-bound', 'Images, video, fat crypto, ML', 'Parallelism: threads, processes, extra cores'],
+              ['Mixed', 'API that also resizes an upload', 'Both: do not do the math on the request loop'],
+            ],
+          },
+          { type: 'p', text: 'Most backends are **majority IO**. That is why Node can look heroic on a CRUD API and look cursed on a thumbnail farm. Go is popular when the mix is real: cheap concurrency **and** real parallelism across cores. The fork is the workload, not the logo.' },
+          {
+            type: 'kid',
+            items: [
+              'Waiting for the oven: give the cook another ticket (concurrency).',
+              'Chopping a crate of onions: hire a second cook (parallelism). More tickets will not make one knife faster.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. Two machines for concurrency: threads, and the loop',
+        blocks: [
+          { type: 'p', text: 'Computers expose two big stories. **Threads:** the OS runs several instruction pointers inside one process (or many processes). **Event loop:** usually **one** thread, a queue of callbacks, and an OS primitive that says “these sockets woke up.” Languages dress them differently. Underneath you still have those two, plus a third costume: **virtual threads** (goroutines) that look like threads to you and look like a scheduler to the kernel.' },
+        ],
+      },
+      {
+        heading: '7. What a thread actually is',
+        blocks: [
+          { type: 'p', text: 'A **thread** is an independent execution the OS knows how to run. It has its own **stack** (calls, locals) and an **instruction pointer** (what runs next). Threads in the **same process** share the **heap** and globals. That is why they can pass a pointer and not serialize. Threads in **different processes** do not share that memory — isolation is the point.' },
+          { type: 'p', text: 'The **scheduler** picks who runs. It hands a thread a **time slice** (a few milliseconds). When the slice ends, or when the thread **blocks**, someone else runs. Pausing a thread that was not done is **preemptive** scheduling. You do not get a vote. The kernel does.' },
+          { type: 'p', text: '**Blocking:** the thread does something the CPU cannot finish alone — a `read` on a socket that has no bytes yet, a disk, a lock. It tells the kernel “I am blocked.” The scheduler runs a **runnable** thread. When the bytes arrive, the blocked thread becomes runnable again. It does not steal the core this instant. It waits its turn.' },
+        ],
+      },
+      {
+        heading: '8. The thread tax — stacks, syscalls, context switches',
+        blocks: [
+          { type: 'p', text: 'Threads are not free. Each one wants a **stack**. On Linux that reservation is often **about 8MB** of address space (not all of it is dirty RAM, but it is not nothing). A toy model: 10,000 concurrent requests, one OS thread each, even at a few hundred KB apiece, and you are talking **gigabytes** just to exist. The process dies of memory before it dies of SQL.' },
+          { type: 'p', text: '**Creation** is a syscall: kernel structures, stack, bookkeeping. Microseconds to milliseconds. Fine for a handful. Ugly in a tight loop per request if you spawn unbounded.' },
+          { type: 'p', text: 'The quiet killer is the **context switch**. Save registers, load the other thread, update scheduler state. One to ten microseconds sounds cute. A hundred threads fighting for a few cores and you spend the day in **maintenance**: switching instead of computing. For **CPU-bound** work, more threads than cores can **slow you down**. For **IO-bound** work, blocking is a gift — the switch happens while you would have been idle anyway — until the count explodes and the switches become the work.' },
+          { type: 'quote', text: 'Four cores can run four threads in parallel. Four thousand threads on four cores is a traffic jam with extra paperwork.' },
+        ],
+      },
+      {
+        heading: '9. The event loop — one thread, many waits',
+        blocks: [
+          { type: 'p', text: 'The other model: **one** (or a few) OS threads. You start a query and **do not block the thread**. You register “when this socket is readable, run this callback.” Control returns to the **loop**. The loop asks the OS which IO finished. Linux: **epoll**. macOS: **kqueue**. Each iteration: any ready sockets? Run their callbacks. Any new CPU work in the queue? Run it. Repeat.' },
+          { type: 'p', text: 'No 8MB stack per request. No kernel context switch per waiter. Thousands of **in-flight** queries on one thread is normal. That is why this model **wins on IO-bound** APIs.' },
+          { type: 'p', text: 'The bill: **you must not block the loop**. A 2s image resize on that thread is 2s where **nobody** else gets a callback. The whole process looks frozen. CPU-bound work belongs on **another thread or process**. Callbacks after IO must stay **short**: parse, enqueue, return. The loop is a dispatcher, not a workshop.' },
+          {
+            type: 'kid',
+            items: [
+              'One receptionist. They never stand in the kitchen. They take the next call the moment they hang up.',
+              'If the receptionist starts chopping onions, the phone rings out. That is blocking the loop.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '10. Same handler, two runtimes',
+        blocks: [
+          { type: 'p', text: 'Walk a boring `GET user` in both models. Parse the request (CPU). Take a connection from the pool. Send `SELECT ... WHERE id = ?` on a socket. **Read** the response — that read is IO.' },
+          {
+            type: 'pre',
+            lines: `// threading (blocking style)
+user = db.query("SELECT * FROM users WHERE id = ?", [id])
+// this thread is blocked on the socket
+// OS runs some other thread, or nobody if the pool is empty
+return json(user)
+
+// event loop
+db.query("SELECT * FROM users WHERE id = ?", [id], (err, user) => {
+  send(user)  // runs later, when the socket is readable
+})
+// this thread is already back in the loop`,
+          },
+          { type: 'p', text: 'Threading: the blocked thread **tells the OS** to schedule a sibling. If every thread is blocked and the pool is exhausted, **everyone waits**. Event loop: the read is registered; request B can parse on the **same** thread while A is in flight. When epoll says socket A is ready, A’s callback runs. Same SQL. Different pause machinery: kernel thread state vs callback queue.' },
+          { type: 'p', text: 'After the row arrives, both models spend CPU again: parse into objects, serialize JSON, write the client socket (more IO). Humans read the handler top to bottom. The pauses are invisible. That is the trap.' },
+        ],
+      },
+      {
+        heading: '11. async / await is callbacks in a nicer font',
+        blocks: [
+          { type: 'p', text: 'Old JavaScript: nested callbacks, error as the first argument, “callback hell” when the second query lives inside the first. After ES6: `async` / `await`. It **looks** synchronous. It is **not**. `await` **yields** to the event loop until the promise settles. Other requests run in the gap. Then you resume on the next line.' },
+          {
+            type: 'pre',
+            lines: `async function handle(userId) {
+  const user = await db.query(
+    "SELECT * FROM users WHERE id = ?",
+    [userId]
+  )
+  return user
+}`,
+          },
+          { type: 'p', text: 'Python `async def` / `await`, JS, others: same contract. The keyword means **this wait is allowed to pause me**. A blocking `query()` on the loop thread is the old sin with a shorter name. Drivers that actually block will still freeze Node. `await` only helps if the thing you await is **non-blocking IO**.' },
+        ],
+      },
+      {
+        heading: '12. Why await only lives inside async — a state machine',
+        blocks: [
+          { type: 'p', text: 'A single-threaded runtime cannot literally “wait” without freezing the process. So the compiler **rewrites** an async function into a **state machine**: which line you are on, which locals to keep, what to do when the promise returns. `async` is the flag that says “please rewrite me.” `await` outside that rewrite is a syntax error because there is no machine to pause.' },
+          { type: 'p', text: 'Traffic-light analogy: states (red / yellow / green), transitions on a timer. Here the states are **your lines**. Hit `await db.getUser`: save locals, register a callback, **return to the loop**. When the row arrives, enter the next state: `await db.getOrders`. Save again. Resume. Return `{ user, orders }`.' },
+          {
+            type: 'pre',
+            lines: `// what you wrote
+async function fetchUserData(userId) {
+  const user = await db.getUser(userId)
+  const orders = await db.getOrders(userId)
+  return { user, orders }
+}
+
+// what it is conceptually
+function fetchUserData(userId) {
+  let state = 0
+  let user, orders
+  function step() {
+    switch (state) {
+      case 0:
+        state = 1
+        db.getUser(userId).then((result) => {
+          user = result
+          step()
+        })
+        return
+      case 1:
+        state = 2
+        db.getOrders(userId).then((result) => {
+          orders = result
+          step()
+        })
+        return
+      case 2:
+        return { user, orders }
+    }
+  }
+  return step()
+}`,
+          },
+          { type: 'p', text: 'You do not have to love compilers. You do have to know: **every await is a concurrency point**. The loop runs other code in the hole. Shared variables are not frozen just because your function is “waiting.” That is the next chapter of pain.' },
+        ],
+      },
+      {
+        heading: '13. Goroutines — many virtual threads, few OS threads',
+        blocks: [
+          { type: 'p', text: 'Go’s answer is **goroutines**: virtual threads the **runtime** schedules onto a small pool of **OS threads** (M:N). You write blocking-looking code. A `Query` that waits on the network **pauses that goroutine**, not necessarily the OS thread. The Go scheduler runs another goroutine on the same thread. Cheap create, small initial stack (**on the order of 2KB**, grows as needed), switch that is a pointer dance rather than a full kernel context switch. Thousands to millions in flight is the pitch. 10,000 OS threads is how you OOM. 10,000 goroutines is a Tuesday.' },
+          { type: 'p', text: 'The HTTP server typically **starts a goroutine per request**. `go f()` is the keyword you would use yourself. When G1 hits IO, G2 runs. When the socket wakes, G1 is runnable again. You still get **parallelism** when there are multiple OS threads on multiple cores — CPU-bound goroutines can actually overlap. That is why mixed workloads like Go: concurrency without an event-loop religion, parallelism without a thread per connection.' },
+          {
+            type: 'table',
+            columns: ['', 'OS thread', 'Goroutine'],
+            rows: [
+              ['Stack', '~8MB reserved', '~2KB, grows'],
+              ['Create', 'kernel syscall', 'runtime, cheap'],
+              ['Switch', 'OS context switch', 'runtime, light'],
+              ['How many', 'thousands, painfully', 'millions, in principle'],
+              ['Who schedules', 'kernel', 'Go runtime onto OS threads'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: '14. Race: increment is three steps',
+        blocks: [
+          { type: 'p', text: 'Concurrency’s tax is **shared mutable state**. Two tasks, one number, no protocol. A **race** means the answer depends on **timing**. Tests pass on your laptop. Production loses a write on Tuesday.' },
+          { type: 'p', text: '`counter += 1` is not one instruction in your head. **Read** the value. **Add** in a register. **Write** back. Between those steps another task can sneak in.' },
+          {
+            type: 'pre',
+            lines: `counter starts at 0
+T1 reads 0
+T2 reads 0          // both saw the old world
+T1 writes 1
+T2 writes 1          // lost update — expected 2, got 1`,
+          },
+          { type: 'p', text: 'That is a **lost update**. Hard to see: no crash, just a wrong number. Stress tests and race detectors exist because sequential unit tests will not save you.' },
+        ],
+      },
+      {
+        heading: '15. You can race on one thread — await at the bank',
+        blocks: [
+          { type: 'p', text: 'Node is single-threaded. That does **not** mean races are impossible. They live at **await**. Check the balance, await the payment vendor, subtract. In the hole, another `withdraw` runs the same check on the **old** balance.' },
+          {
+            type: 'pre',
+            lines: `balance = 100
+withdraw(100):  100 >= 100? yes → await process()
+withdraw(100):  100 >= 100? yes → await process()   // still 100
+first resumes:  balance = 0
+second resumes: balance = 0 - 100 = -100`,
+          },
+          { type: 'p', text: 'The pattern is always **check-then-act** with a yield in the middle: read, decide, await, mutate based on a **stale** decision. Threads are one way to get that hole. `await` is another. The database row is shared state too. A **transaction** (or `UPDATE ... WHERE balance >= $1`) is often the lock you already have — do not reimplement banking in a process global.' },
+          {
+            type: 'kid',
+            items: [
+              'Two kids both see one cookie, both get told yes, both eat. The jar cannot do that math.',
+              'The hole is not “threads.” The hole is “I looked, then I waited, then I acted.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '16. Locks, channels, atomics',
+        blocks: [
+          { type: 'p', text: '**Lock / mutex:** only one task in the **critical section**. Acquire, read-increment-write, release. Others block. Correct. Cost: waiting, **contention**, and **deadlock** if two locks are taken in opposite orders. Keep the section **tiny**. Do not hold a lock across a network call unless you like outages.' },
+          { type: 'p', text: '**Channels (Go):** do not share the variable. **Send a message.** One goroutine **owns** the counter. Everyone else sends “increment.” Serial by construction. The proverb: do not communicate by sharing memory; **share memory by communicating**. Cleaner for pipelines. Still a design: the protocol is the API.' },
+          { type: 'p', text: '**Atomics:** hardware-indivisible bump of **one** integer. Great for a counter. Not a substitute for a multi-step withdraw. **Immutability** (copy, do not mutate) removes the race by removing the write. Heavier on memory. Fine when the object is small.' },
+          {
+            type: 'table',
+            columns: ['Tool', 'Best for', 'Bill'],
+            rows: [
+              ['Lock', 'A critical section of several steps', 'Contention, deadlock if nested badly'],
+              ['Channel', 'One owner, many senders', 'You must design the messages'],
+              ['Atomic', 'One integer, one op', 'Does not compose into “check then update”'],
+              ['Immutability', 'No writers', 'Copies'],
+              ['DB transaction', 'The row is the truth', 'Use it instead of a process global'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: '17. Practical rules',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              'Share **less**. If only one owner mutates, you cannot race.',
+              'If you share, **every** read and write goes through the protocol. One naked write is enough to corrupt.',
+              'Critical sections stay **short**. Lock, bump, unlock. Not lock, call Stripe, unlock.',
+              'Do not nest locks without an order everyone obeys.',
+              'Test under load. Sequential tests lie. Race detectors (Go `-race`, ThreadSanitizer) exist for a reason.',
+              'On an event loop, **never** CPU-block. Offload math. `await` is not a lock.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '18. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Situation', 'Reach for'],
+            rows: [
+              ['CRUD API, lots of SQL wait', 'Event loop (Node) or goroutines (Go)'],
+              ['Thumbnails, video, fat crypto', 'Worker threads / extra processes / extra cores'],
+              ['Mixed', 'Do IO on the request path; park CPU work elsewhere'],
+              ['Shared counter in process', 'Atomic or a lock, or do not share'],
+              ['Shared balance', 'Database constraint / transaction, not a global'],
+              ['Pipeline of tasks', 'Channels or a queue (jobs lesson)'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Most backends are IO-bound.** Concurrency is the default win. Parallelism is for the math.',
+              '**async/await is a state machine.** Every await is a hole where someone else runs.',
+              '**Threads cost stacks and switches.** Virtual threads exist because 10k OS threads is a memory story.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
