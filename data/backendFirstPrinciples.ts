@@ -1776,16 +1776,323 @@ createItem({ ...body, userId: ctx.userId })`,
   {
     id: 'rest',
     n: 11,
-    title: 'REST and API shape',
+    title: 'Complete REST API Design: Resources Clients Can Guess Without Reading Your Code',
     label: 'REST',
     cluster: 'surface',
     x: 1325,
     y: 125,
-    gist: 'Resources and HTTP semantics, not “POST /doThing for everything.” Filtering, pagination, and versioning are part of the design.',
+    gist: 'REST is a contract: plural nouns in the path, verbs in the method, JSON in camelCase. Design the interface first — then code. Pagination, sort, filter, and sane defaults are part of that contract, not extras.',
     remember: [
-      'Nouns in paths, verbs in methods. Honor GET safety and cacheability.',
-      'List endpoints need filter, sort, page/cursor. Unbounded lists are an outage.',
-      'Versioning keeps old clients alive while the resource model evolves.',
+      'Collection `GET/POST /books`. Item `GET/PATCH/DELETE /books/:id`. Same path, different method.',
+      'POST is the only non-idempotent method — and the bucket for custom actions (`POST /orgs/:id/archive`).',
+      'List: 200 + empty array, never 404. Create: 201. Delete: 204. Missing item: 404. Defaults: page 1, limit 10, sort createdAt desc.',
+    ],
+    sections: [
+      {
+        heading: '1. Why this video exists',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'API design is a huge slice of backend work. This lesson is **REST only** — not RPC, not GraphQL. The standards already exist. Juniors still stall on the same questions: **plural or singular?** **PATCH or PUT?** **What method for a custom action** that is not create/read/update/delete? **Which status code?**' },
+          { type: 'p', text: 'Those questions feel eternal because the web they were written for was **multi-page**: every click was a full HTML round-trip. Today the client is often a **single-page app** — one download of JS, routing in the browser, JSON back and forth. The HTTP verbs did not change. The **payloads** did.' },
+          { type: 'quote', text: 'Extract rules from the existing standard. Stick to them so you can stop arguing about REST and start writing the product.' },
+          { type: 'p', text: 'Scope of this lesson: resources, routes, success and error shapes, status codes, what to accept. After this, **business logic**. Not a new standard — a consistent style so nobody has to guess.' },
+          {
+            type: 'kid',
+            items: [
+              'The class already agreed: homework goes in the blue tray. You do not invent a red tray every week.',
+              'If every kitchen numbered the spoons differently, dinner would be an argument. Pick the numbering everyone already knows.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Where REST came from (short history)',
+        blocks: [
+          { type: 'p', text: 'Around 1990 the web was invented to **share knowledge**: URI, HTTP, HTML, a server, a browser, a WYSIWYG editor in the browser. Those pieces still exist (HTTP/2, HTTP/3, many servers, many browsers). The user base then **exploded**. The original plan had not budgeted for that scale.' },
+          { type: 'p', text: 'In the mid-90s, to keep the web from collapsing under its own traffic, a set of **constraints** was proposed. Those constraints later got a name in a 2000 PhD dissertation: **REST — Representational State Transfer**. HTTP/1.1 was standardized in that same era. You do not need to memorize the paper. You do need the six constraints, because they are why REST looks the way it does.' },
+        ],
+      },
+      {
+        heading: '3. Six constraints — why the web scales',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Client–server** — UI on the client, data and rules on the server. Each side can change without rewriting the other. Frontend / backend is this constraint with job titles.',
+              '**Uniform interface** — one way to talk. Four sub-rules: identify resources (URIs); change them through **representations**; messages that describe themselves; **hypermedia as the engine of application state** (links that tell you what you can do next). Consistency beats a special protocol per service.',
+              '**Layered system** — a layer only sees the layer below it. Load balancers and proxies can sit in the middle **without** the app changing.',
+              '**Cache** — the server must **label** a response cacheable or not. Clients that cache cut load and feel faster. (The caching lesson is this constraint in production.)',
+              '**Stateless** — each request carries **everything** needed to process it. The server does not remember your last call. Any replica behind a load balancer can serve you. (Covered with HTTP earlier.)',
+              '**Code on demand** (optional) — the server may send executable code (JavaScript) to extend the client. Optional; not the daily REST you design.',
+            ],
+          },
+          {
+            type: 'kid',
+            items: [
+              'The kitchen (server) does not remember your last order. Every ticket has the full order on it — so any cook can make it.',
+              'A uniform menu: you do not invent a secret handshake for the soup station.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. What the name REST actually means',
+        blocks: [
+          { type: 'p', text: '**Representational** — a resource (a user, a cart) is shown in a **format**: JSON for API clients, HTML for a browser, sometimes XML. Same user row, different clothes. Server-to-server is usually JSON; a classic page load is HTML.' },
+          { type: 'p', text: '**State** — the current attributes of that resource. A cart’s state is the line items, quantities, total. That state rides in the representation.' },
+          { type: 'p', text: '**Transfer** — client and server **move** those representations over HTTP (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, plus `HEAD` / `OPTIONS`). Fetching a page with GET is transferring an HTML representation.' },
+          { type: 'quote', text: 'REST: resources have formats; their state can move; clients and servers share representations; the six constraints keep that scalable. You do not need the dissertation in your pocket — you need this picture.' },
+        ],
+      },
+      {
+        heading: '5. Anatomy of an API URL',
+        blocks: [
+          { type: 'p', text: 'A normal website URL: **scheme** (`http` / `https`) + **authority** (domain, maybe subdomain) + **path** (resource; `/` means hierarchy) + **query** (key–value filters on GET) + optional **fragment** (`#section` — browser scroll, not the server).' },
+          { type: 'p', text: 'An API URL, as most companies ship it: `https://api.example.com/v1/books`. Subdomain **`api`**. Path version **`/v1`** (or `/v2`) so old clients can live. Then the resource. Industry habit, not a law — but if you skip versioning in a demo, remember production usually has it.' },
+          {
+            type: 'pre',
+            lines: `https://api.example.com/v1/books
+https://api.example.com/v1/books/harry-potter
+
+scheme      https
+host        api.example.com     // api. subdomain
+version     /v1
+collection  /books              // always plural
+item        /books/:id-or-slug`,
+          },
+        ],
+      },
+      {
+        heading: '6. Paths — plural, slug, hierarchy',
+        blocks: [
+          { type: 'p', text: '**Always plural** in the path, even for one book. The resource is the **collection** `books`. `GET /book/123` is the classic mistake: you are still talking about the books resource.' },
+          { type: 'p', text: '**Readable URLs.** No spaces, no underscores in the path. A human slug: lowercase (URLs travel across OS and servers; case fights are not worth it), spaces become **hyphens**: `Harry Potter` → `harry-potter`. `GET /books/harry-potter`.' },
+          { type: 'p', text: 'Each `/` is a **level**: `/books` is the collection; `/books/:id` is one member of that collection. Custom actions continue the tree: `/organizations/:id/archive` = among organizations → this one → the archive action.' },
+          {
+            type: 'kid',
+            items: [
+              'The drawer is labeled **books**, not book — even when you take out one.',
+              'A hyphen is a space that survives being shouted across the playground. An underscore gets eaten.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Idempotency — same call, same world',
+        blocks: [
+          { type: 'p', text: '**Idempotent** = doing the action **N times** has the **same effect** as doing it once. The side effect on the **server**, caused by **this client’s request**, does not keep changing. Someone else inserting a row while you GET is **not** a failure of GET’s idempotency — you did not write.' },
+          {
+            type: 'table',
+            columns: ['Method', 'Idempotent?', 'Why'],
+            rows: [
+              ['**GET**', 'Yes', 'Read only. A thousand fetches do not create a thousand books.'],
+              ['**PUT / PATCH**', 'Yes', 'Set name to B. Call again: still B. Same payload → same state.'],
+              ['**DELETE**', 'Yes', 'First call removes the row. Second call: nothing left to change (often **404**). No extra delete happened.'],
+              ['**POST**', '**No**', 'Each call can **insert**. Same body a thousand times → a thousand rows (ids differ). Unique-name errors are a special case, not the rule.'],
+            ],
+          },
+          { type: 'p', text: '`HEAD` (headers only) and `OPTIONS` (CORS: is this origin allowed?) exist. Daily CRUD is the five methods above.' },
+          {
+            type: 'kid',
+            items: [
+              'Putting the same sticker on the locker a hundred times still leaves **one** sticker. That is PUT.',
+              'Dropping a new marble in the jar every time you press the button is POST. The jar grows.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '8. PUT vs PATCH — and POST as the open method',
+        blocks: [
+          { type: 'p', text: '**PATCH** = change **some** fields (`{ "name": "B" }`). **PUT** = send the **whole** representation and **replace** the server’s copy (id, name, createdAt, …). Internally, teams often mix them. On a **public** API, mixing them **confuses integrators** who assumed the spec. Prefer PATCH in SPA/JSON land: you almost never replace the entire row from the client. PUT was more natural when a form posted every field of an MPA page.' },
+          { type: 'p', text: '**Custom actions** (not create, not read, not update, not delete): **POST** is specified as **open-ended**. `POST /send-email` with `{ "target": "a@b.com" }` is not a fetch and not a row replace. Archive, clone, “charge the card” — if it does not fit CRUD, it is POST on a **verb path** under the resource (next sections).' },
+          { type: 'quote', text: 'Do not assume every POST is 201 Created. Archive is POST and often **200**. Clone is POST and often **201** because a new row appeared. Status follows **what happened**, not the method mascot.' },
+        ],
+      },
+      {
+        heading: '9. Design the interface first',
+        blocks: [
+          { type: 'p', text: 'Before business logic, before a framework: **design the contract**. Intuitive, not vague, mostly on-standard. If you invent `POST` for reads and `DELETE` for fetches, integrators have two options: read your source, or poke methods until something works. That is how you get Slack threads and bugs.' },
+          { type: 'p', text: 'Start from **wireframes / user stories** (Figma, whatever the product team uses). The **end user** touches data through the UI; the frontend consumes **your** API; you touch the database. Nouns in those screens are your **resources**.' },
+          { type: 'p', text: 'Example: a **project-management** product (think issue tracker). Nouns: **projects, users, organizations, tasks, tags**. Write them down. Next you would design tables (that is the databases lesson). Then you design **routes**. This video skips schema on purpose: interface only. Use an API client (Postman-class) to **sketch requests** — not to write Go or Node yet.' },
+          {
+            type: 'kid',
+            items: [
+              'Draw the menu **before** you cook. Guests should not have to tour the kitchen to order soup.',
+              'Circle the nouns in the story: those are the drawers. Verbs are what you do to a drawer.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '10. Collection vs item — one URL, two jobs',
+        blocks: [
+          { type: 'p', text: 'For each resource, list the **actions**: list, get one, create, update, delete — then extras. Sketch **organizations**, then **projects**, then **tasks**. The pattern does not change.' },
+          {
+            type: 'pre',
+            lines: `GET    /organizations          // list
+POST   /organizations          // create   (same path, method decides)
+
+GET    /organizations/:id      // one
+PATCH  /organizations/:id      // update some fields
+DELETE /organizations/:id      // remove`,
+          },
+          { type: 'p', text: 'The server splits list vs create by **method**, not by a `/create` suffix. Path stays lowercase. Demo servers may skip `/v1`; production usually does not. **Do not send** `id` / `createdAt` / `updatedAt` on create — the server owns those. Client body: name, status, description, …' },
+        ],
+      },
+      {
+        heading: '11. Create 201, list 200, pagination envelope',
+        blocks: [
+          { type: 'p', text: '**POST** success: status **201 Created**, body = the **new** row (server ids and timestamps filled in). **GET list** success: **200**, not 201 — you did not create.' },
+          { type: 'p', text: 'A list is **paginated**. Returning every organization serializes a huge JSON blob, delays the API, and the UI only shows 10–20 until the user scrolls anyway. First response: a **slice** (often latest by `createdAt`). Page 2 / infinite scroll asks for the **next** slice.' },
+          {
+            type: 'pre',
+            lines: `{
+  "data": [ { "id": "...", "name": "Org 5" } ],
+  "total": 5,
+  "page": 1,
+  "totalPages": 3
+}`,
+          },
+          {
+            type: 'ul',
+            items: [
+              '**data** — this page’s rows.',
+              '**total** — count in the database (for “10 of 50” in the UI), independent of page size.',
+              '**page** — which slice this is.',
+              '**totalPages** — so infinite scroll can **stop** when `page === totalPages`.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '12. Query params — page, limit, sort, filter',
+        blocks: [
+          { type: 'p', text: 'GET has no JSON body. Control the list with **query params**. **limit** = page size. **page** = which slice (**1-based** in this design — page 1 is the first slice). Five orgs, `limit=2` → three pages (2 + 2 + 1). `page=3` returns the last leftover row.' },
+          { type: 'p', text: '**Sane defaults** if the client sends nothing: `page=1`, `limit=10` or `20`. Do **not** 400 “missing page.” The first request should already be a usable list.' },
+          { type: 'p', text: '**sortBy** + **sortOrder**. Default even when they omit both: **createdAt descending** (newest first). Databases do not store a stable “natural” order — unsorted lists **shuffle** between calls. If they send `sortBy=name` but no order, still default **desc**. `sortOrder=asc` when they ask. Whitelist fields (name, status, id, …) — do not sort by arbitrary strings.' },
+          { type: 'p', text: '**Filter** = query keys named like fields: `?status=archived`, `?name=Org4`. Combine filters. The UI’s “active / archived” switch is this.' },
+          {
+            type: 'pre',
+            lines: `GET /organizations
+GET /organizations?limit=2&page=2
+GET /organizations?sortBy=name&sortOrder=asc
+GET /organizations?status=archived`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'Do not mail the whole yearbook. Mail **two pages**, and say “this is page 1 of 3, 5 kids total.”',
+              'If they forget to say which page, you still send page 1. You do not scold them for a blank form.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '13. One resource — GET, PATCH, DELETE',
+        blocks: [
+          { type: 'p', text: '**GET /organizations/:id** — no body. **200** and the row. **PATCH /organizations/:id** — JSON with **only** changed fields. **200** and the **updated** row (not 201). **DELETE /organizations/:id** — no body. **204 No Content**: success (2xx) but **empty body** — the row is gone, there is nothing honest to return. Then list no longer includes it. GET the same id → **404** + message like “organization not found.”' },
+          { type: 'quote', text: '**404 is for a specific id the client named.** A list that matches nothing is **200** and `"data": []` (total 0). A nonsense `status` filter is empty data, not “resource not found.” Never 404 a list.' },
+          {
+            type: 'pre',
+            lines: `PATCH /organizations/abc-uuid
+{ "status": "active" }          → 200 + full row
+
+DELETE /organizations/abc-uuid  → 204 empty
+
+GET /organizations/abc-uuid     → 404 after delete
+GET /organizations?status=nope  → 200 { "data": [], "total": 0 }`,
+          },
+        ],
+      },
+      {
+        heading: '14. Custom actions — archive and clone',
+        blocks: [
+          { type: 'p', text: '**Archive** looks like `PATCH { "status": "archived" }`. If archive also **deletes nested projects, emails members, wipes tasks**, that is **not** “set a field.” It is a **workflow**. Name it: `POST /organizations/:id/archive`. Hierarchical: collection → item → action. Response is often **200** + the org now `archived` — **not** 201, nothing new was created.' },
+          { type: 'p', text: '**Clone project**: you *could* `POST /projects` with a copy-paste body. The server may also clone **tasks**, email the owner, … The client cannot know. So: `POST /projects/:id/clone`. Optional body if they want to override a field. If the server **inserts** a new project, status **201** and the new row (`"name": "Project 2 clone"`). If the id was already deleted → **404**.' },
+          {
+            type: 'pre',
+            lines: `POST /organizations/:id/archive     → 200  (workflow; row still exists)
+POST /projects/:id/clone            → 201  (new row)
+POST /projects/:id/clone            → 404  (source gone)`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'Archiving a classroom is not “change the label on the door.” It is cancel the trips, email the parents, box the art. That is a **named action**, not a sticker.',
+              'Photocopying a project folder may also photocopy every worksheet inside. The office does that in one request: **clone**.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '15. JSON camelCase — and be boring on purpose',
+        blocks: [
+          { type: 'p', text: 'Request and response **JSON fields are camelCase** (`organizationId`, `createdAt`, `sortBy`). That is the JSON convention. Postgres columns were **snake_case** (`created_at`) — the API layer **translates**. Clients should not see both styles in one product.' },
+          { type: 'p', text: '**Consistency across resources.** If create-org uses `"description"`, create-project uses `"description"`, not `"dsc"`. Integrators **copy the first payload they got working**. A surprise key is a wasted hour and a validation error. Same for paths: if orgs are plural, projects are plural. Pick the global REST style; if you cannot, **still pick one style and never vary it.**' },
+          { type: 'p', text: 'Server-owned fields stay out of create bodies. Nested FKs the client *must* send (`organizationId` on a project) stay in the JSON — camelCase.' },
+          {
+            type: 'kid',
+            items: [
+              'Every classroom uses the same word for “homework.” You do not say “HW” in one room and “assignment” in the next for the same tray.',
+              'The database speaks snake. The hallway (JSON) speaks camel. The translator is the API, not the kid at the door.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '16. Sane defaults, no abbreviations, document the playground',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**List defaults** — page 1, limit 10/20, sort `createdAt` desc. Sorting is not optional on the server: skip it and order **wanders**.',
+              '**Create defaults** — only require what you **must** have. New org without `status` → server sets **`active`**. Optional description can be omitted. The client should create with **just a name** if that is enough.',
+              '**No abbreviations** — `description`, not `dsc`. You know the domain; the integrator does not.',
+              '**Interactive docs** from day one (OpenAPI / Swagger-style playground). Test your own API there; give integrators a try-it page. Keeping that spec honest is a large part of looking like a backend engineer. (OpenAPI is its own node on this map.)',
+            ],
+          },
+          { type: 'quote', text: 'A REST API is **designed** in the first phase, not typed into a framework. Spend a session on the interface with no language in the room. Then implement.' },
+          {
+            type: 'kid',
+            items: [
+              'If they forget the “how many cookies” box, you still hand them a normal plate of ten. You do not refuse lunch.',
+              'Write “description” on the jar. “dsc” is a secret code only the baker knows.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '17. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Piece', 'Remember'],
+            rows: [
+              ['REST', 'Representations of state, transferred over HTTP, under six constraints.'],
+              ['URL', '`https://api.example.com/v1/books` — api subdomain, version, plural resource.'],
+              ['Path', 'Plural always. Slug: lowercase + hyphens. `/` is hierarchy.'],
+              ['Idempotent', 'GET, PUT, PATCH, DELETE. POST is not — each call may create.'],
+              ['PATCH vs PUT', 'Some fields vs whole replace. SPAs mostly PATCH.'],
+              ['Custom action', 'POST `/resource/:id/verb`. Status is 200 or 201 from the outcome.'],
+              ['Collection', 'GET list + POST create. Same path.'],
+              ['Item', 'GET / PATCH / DELETE `/:id`.'],
+              ['Statuses', '201 create, 200 most success, 204 delete, 404 missing **item**, never 404 on list.'],
+              ['List extras', 'page, limit, sortBy, sortOrder, filters. Defaults so the first GET works.'],
+              ['JSON', 'camelCase. Same keys on every resource. No dsc.'],
+              ['Process', 'Wireframes → nouns → (schema) → interface in a client → then code.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Nouns in the path. Verbs in the method.** Custom work is still a noun tree plus a last segment (`/archive`, `/clone`).',
+              '**Design the contract first.** Follow it so integrators stop guessing.',
+              '**Sane defaults. Empty lists are 200. Missing ids are 404.** Pagination is not optional on list endpoints.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
