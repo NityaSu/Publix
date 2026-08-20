@@ -1866,16 +1866,239 @@ createItem({ ...body, userId: ctx.userId })`,
   {
     id: 'search',
     n: 17,
-    title: 'Search indexes',
+    title: 'What is Full-Text Search? Why LIKE Dies and Indexes Win',
     label: 'Search',
     cluster: 'core',
     x: 145,
     y: 810,
-    gist: 'Full-text and typeahead are a different data structure (inverted index), not `LIKE %foo%` on the primary DB.',
+    gist: 'Full-text search is a different data structure — an inverted index — not `LIKE %foo%` on the primary database. Elasticsearch is a fast projection. Postgres stays the source of truth.',
     remember: [
-      'Inverted index: terms → documents. Good for search, logs, autocomplete — not the source of truth.',
-      'Keep the primary store authoritative; the search cluster is a projection that can lag.',
-      'If I treat search as my database, I will lose ACID and then a lawsuit.',
+      'Inverted index: term → list of documents. Lookup, do not scan every row.',
+      'Write to the primary DB. Sync a copy into the search cluster. Search can lag a second; that is the trade.',
+      'text fields are analyzed (search inside). keyword fields are exact (filter, sort). Map them on purpose.',
+    ],
+    sections: [
+      {
+        heading: '1. The problem — why the primary DB is slow at search',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Users type a box: “quiet hours”, a typo, a prefix for typeahead. They want **ranked** hits in milliseconds — titles, posts, comments, logs — not “scan every row.”' },
+          { type: 'quote', text: '`LIKE \'%quiet%\'` is a brute-force walk. It cannot use a normal B-tree well. As the catalog grows, it gets slower. It also cannot say *which* hit is the best match.' },
+          {
+            type: 'pre',
+            lines: `-- looks innocent. becomes a table scan.
+SELECT * FROM items
+WHERE title LIKE '%quiet%'
+   OR description LIKE '%quiet%';
+
+-- no ranking: a weak mention and a perfect title look the same
+-- no typos: "quieet" misses
+-- no typeahead: you are not scoring prefixes`,
+          },
+          { type: 'p', text: 'That is why this lesson exists. Search is its **own** engine, beside the database — not a cleverer `WHERE`.' },
+          {
+            type: 'kid',
+            items: [
+              'Finding “dragon” by reading every book in the library, cover to cover, every time someone asks.',
+              'The librarian would quit. You want the **index at the back of the book**: word → page numbers.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Inverted index — term → documents',
+        blocks: [
+          { type: 'p', text: 'A normal table maps **document → words** (the row has a title). Search flips it: **word → documents**. That flip is the **inverted index**.' },
+          {
+            type: 'pre',
+            lines: `Doc 1: "Quiet Hours"
+Doc 2: "Night Shift Hours"
+Doc 3: "Quiet Kitchen"
+
+inverted index
+  quiet   →  {1, 3}
+  hours   →  {1, 2}
+  night   →  {2}
+  shift   →  {2}
+  kitchen →  {3}
+
+search "quiet hours"
+  quiet ∩ hours  →  {1}     // lookup + intersect, not a scan`,
+          },
+          { type: 'p', text: 'Before the index, text is **analyzed**: lowercase, split into tokens, drop tiny words, sometimes stem (`searching` → `search`). The **query** runs through the **same** analyzer so “Quiet” hits `quiet`.' },
+          {
+            type: 'kid',
+            items: [
+              'The back-of-book index: “dragon — pages 12, 40, 88.” You do not reread the novel.',
+              'Two words means “pages that appear in **both** lists.” Intersection, not a treasure hunt.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Ranking — not just yes/no',
+        blocks: [
+          { type: 'p', text: '`LIKE` can only say match / no match. An inverted index can **score**. Classic ingredients:' },
+          {
+            type: 'ul',
+            items: [
+              '**Term frequency (TF)** — this word shows up a lot *in this document* → stronger hit.',
+              '**Inverse document frequency (IDF)** — this word is rare *across the whole catalog* → more interesting. “the” is useless; “kubernetes” is not.',
+              '**Length** — a short title that is *exactly* the query often beats a long dump that mentions the word once.',
+            ],
+          },
+          { type: 'p', text: 'Production engines (Lucene / Elasticsearch) use **BM25**, a tuned version of that idea. You can **boost** fields: title `^3`, name `^2`, body `^1` — a title hit outranks a footer mention.' },
+          {
+            type: 'pre',
+            lines: `GET /catalog/_search
+{
+  "query": {
+    "multi_match": {
+      "query":  "quiet hours",
+      "fields": ["title^3", "tags^2", "description"]
+    }
+  }
+}
+// higher _score first — not insertion order`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'Two books mention “dragon.” The one with “Dragon” in the **title** goes on the display table. The one that says it once in a footnote goes lower.',
+              'The word “the” is in every book — it does not help you rank. Rare words do.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Elasticsearch — documents, shards, segments',
+        blocks: [
+          { type: 'p', text: '**Elasticsearch** is a distributed search engine on **Apache Lucene**. You talk to it over HTTP with JSON documents. It is built for **read-heavy** search and analytics, not as your bank ledger.' },
+          {
+            type: 'ul',
+            items: [
+              '**Document** — one JSON thing you want to find (an item, a post, a log line).',
+              '**Index** — a named collection of documents (like a table, but for search).',
+              '**Shard** — a slice of the index on a node. Query many shards **in parallel**. This is how it scales.',
+              '**Segment** — Lucene writes small **immutable** files. Search reads old segments while new ones appear. Near-real-time: a new doc is searchable after a short refresh, not always in the same millisecond as the SQL commit.',
+            ],
+          },
+          { type: 'p', text: '**Use cases this lesson is for:** typeahead, log analytics, social search (profiles, posts, comments), product / catalog full-text — not “replace Postgres.”' },
+          {
+            type: 'kid',
+            items: [
+              'The library is so big it is split into **wings** (shards). Each wing has its own card catalog. A question is asked in every wing at once; you merge the answers.',
+              'New cards are printed in small **batches** (segments). You can still search yesterday’s catalog while today’s batch is being printed.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. Mapping — text vs keyword',
+        blocks: [
+          { type: 'p', text: 'How you **declare fields** decides what search can do. Do this **explicitly**. Guessed mappings will hurt you later (a reindex).' },
+          {
+            type: 'table',
+            columns: ['Field type', 'What happens', 'Use for'],
+            rows: [
+              ['**text**', 'Analyzed — split, lowercased, searchable *inside*', 'Title, body, comments'],
+              ['**keyword**', 'Exact value — not analyzed', 'Filter, sort, aggregations: status, category, id'],
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `PUT /catalog
+{
+  "mappings": {
+    "properties": {
+      "title":    { "type": "text" },
+      "status":   { "type": "keyword" },
+      "price":    { "type": "scaled_float", "scaling_factor": 100 }
+    }
+  }
+}
+
+// filter on status (keyword) + search in title (text)
+{
+  "query": {
+    "bool": {
+      "must":   [{ "match":  { "title": "quiet" } }],
+      "filter": [{ "term":   { "status": "published" } }]
+    }
+  }
+}
+// must  = scored  (relevance)
+// filter = yes/no, often cached  (faster)`,
+          },
+          { type: 'p', text: '**Analyzers** are the pipeline that builds tokens. **Fuzzy** search allows typos (`quieet` → `quiet`). **Aggregations** power facets: counts per category, price ranges — without a second slow `GROUP BY` on the primary DB. **Pagination:** prefer search-after / cursors; deep `from/size` gets expensive.' },
+          {
+            type: 'kid',
+            items: [
+              '**text** = the essay you can search *inside*. **keyword** = the sticker on the spine (genre: “mystery”) — exact, for filtering the shelf.',
+              'Do not use the essay field when you meant the sticker. You will sort “Mystery” and “mystery ” as two different books.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. Keep the database. Sync the index.',
+        blocks: [
+          { type: 'p', text: 'Writes go to the **primary store** (Postgres, etc.): transactions, joins, “this order paid.” A pipeline **copies** searchable fields into Elasticsearch. The search cluster is a **projection**. It can be **a second behind**. That is eventual consistency — acceptable for search, not for money.' },
+          {
+            type: 'pre',
+            lines: `POST /catalog          →  insert row in Postgres  (source of truth)
+                       →  index JSON into ES      (for the search box)
+
+GET  /catalog?q=quiet  →  query Elasticsearch
+                       →  return ids + snippets
+                       →  (optional) hydrate extra fields from Postgres
+
+// if ES is down: search degrades. checkout still uses Postgres.`,
+          },
+          {
+            type: 'ul',
+            items: [
+              '**Index in batches** when you backfill. Do not one-by-one a million docs in a tight loop if you can bulk.',
+              '**Avoid leading wildcards** (`*quiet`) — they fight the inverted index.',
+              'Pick **shard count** on purpose; more shards is not always faster.',
+              '**Kibana** is the UI for poking indexes, dashboards, logs — not a replacement for the mapping you designed.',
+            ],
+          },
+          { type: 'quote', text: 'If I treat search as my database, I will lose ACID and then a lawsuit.' },
+          {
+            type: 'kid',
+            items: [
+              'The office ledger is the **truth** (who paid). The library card catalog is a **copy** for finding books fast. If the catalog is five minutes late, you can still check out with the ledger.',
+              'If you throw away the ledger and only keep the catalog, you will argue about money with a search engine.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Concept', 'Real-world analogy', 'What it does'],
+            rows: [
+              ['`LIKE %foo%`', 'Read every book', 'Scan — slow, no rank'],
+              ['Inverted index', 'Back-of-book index', 'Term → documents, then intersect'],
+              ['TF / IDF / BM25', 'Title hit beats a footnote', 'Rank, not just match'],
+              ['text vs keyword', 'Essay vs spine sticker', 'Search inside vs filter exact'],
+              ['Shard / segment', 'Wings of the library / new card batches', 'Scale out; near-real-time'],
+              ['ES beside Postgres', 'Catalog vs ledger', 'Search projection, not source of truth'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Lookup** the word. Do not **scan** the table.',
+              '**Map** `text` vs `keyword` on purpose. Boost the title.',
+              '**Write** to the primary DB. **Search** the replica index. Search may lag; money must not.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
