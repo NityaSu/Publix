@@ -1533,16 +1533,273 @@ after (service / DB)
   {
     id: 'security',
     n: 22,
-    title: 'Security',
+    title: 'Backend Security: Where Did I Assume — and What Language Did That Input Become?',
     label: 'Security',
     cluster: 'gate',
     x: 720,
     y: 345,
-    gist: 'Assume hostile input. Least privilege. Defense in depth — one missed check should not be the whole castle.',
+    gist: 'Every hole starts as an assumption: clean input, our frontend, a logged-in user acting in good faith. The app speaks SQL, HTML, and shell. User text that crosses a language boundary without being treated as data is an injection.',
     remember: [
-      'Injection (SQL and NoSQL), XSS, CSRF. Validate, then deserialize, then query with binds.',
-      'Secrets in config, not in git. HTTPS everywhere that leaves the box.',
-      'Least privilege on DB roles, cloud IAM, and admin endpoints.',
+      'Separate code from data: parameterized SQL, no shell strings, sanitize before HTML. App DB user is DML only.',
+      'Authn is who. Authz is this row, this function. Ownership in the query. Missing row and forbidden row both 404. Default deny.',
+      'Slow salted hashes (Argon2id). Cookies: HttpOnly, Secure, SameSite. Rate-limit login in layers. Secrets never in git — rotate if they were.',
+    ],
+    sections: [
+      {
+        heading: '1. The goal is paranoia, not a checklist',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Security of a backend is one of the few topics that, if you ignore it, is **destructive in money**: data gone, charges wrong, the business itself. It is also a **huge domain**. Browser cookies, TLS, the operating system the process sits in, the application code — each has its own book. This chapter stays on **the app you wrote**: the process, the queries, the sessions. Not because the rest is fake. Because stuffing every layer into one sitting is how you learn nothing and ship anyway.' },
+          { type: 'p', text: 'The aim is **not** “implement these twelve tricks tomorrow.” No application is **truly** secure. Languages, libraries, and attackers move. The aim is to keep security **in the back of your head** every time you write a handler — to get **paranoid** in a useful way. Fancy technique lists rot. The question does not:' },
+          { type: 'quote', text: 'Where did the developer make an assumption?' },
+          { type: 'p', text: 'Attackers do not care which language you used. They poke **boundaries**. They open the network tab. They change the id. They do not walk the happy path you demoed under a deadline.' },
+          {
+            type: 'kid',
+            items: [
+              'The fire drill is not a list of pretty extinguishers. It is “what did we assume would never catch fire?”',
+              'No school is unburnable. You still check the exits.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. The assumptions that feel reasonable',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              'User input will be **clean**.',
+              'They will only use **our** frontend.',
+              'The person who **claims** to be Maya **is** Maya.',
+              'This request **came from our site**.',
+              'Nobody will **edit the query string**.',
+            ],
+          },
+          { type: 'p', text: 'Under a shipping deadline those all feel true. Users will fill the form. They will click the right button. Attackers will **not**. They guess every assumption. By the end of this map you should hear “what could go wrong **here**, in security?” in Go, Python, Node, anything — the language does not matter.' },
+        ],
+      },
+      {
+        heading: '3. The app speaks several languages',
+        blocks: [
+          { type: 'p', text: 'Injection is decades old and still common because of one fact: **your backend speaks more than one language**. SQL to the database. HTML/CSS/JS toward the browser. Shell toward the OS when you resize a file or call a CLI. Each language has **grammar**, **special characters**, and a line between **command** and **data**.' },
+          { type: 'p', text: 'The user mostly speaks **browser**. Trouble starts when that input **crosses a boundary** and the other language treats a quote or a semicolon as **syntax**. SQL injection, command injection, XSS — same root: **data confused for code**.' },
+          {
+            type: 'pre',
+            lines: `intended:  [SQL CODE] + [user data]
+happened:  [SQL CODE] + [user data that is also SQL]
+         = [different program]`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'You asked for a name on a nametag. They wrote a sentence that the kitchen read as a recipe.',
+              'The nametag language and the recipe language both use commas. That is the hole.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. SQL injection — login, then the whole table',
+        blocks: [
+          { type: 'p', text: 'Login: email + password in the browser. Server asks the database for that user. **Happy path:** Alice types `alice@mail.test`. You concatenate:' },
+          {
+            type: 'pre',
+            lines: `query = "SELECT * FROM users WHERE email = '" + userEmail + "'"`,
+          },
+          { type: 'p', text: 'Works for Alice. The attacker types something that is **not an email**:' },
+          {
+            type: 'pre',
+            lines: `email field:  ' OR '1'='1' --
+
+becomes:
+SELECT * FROM users WHERE email = '' OR '1'='1' --'
+                 empty      always true    rest commented`,
+          },
+          { type: 'p', text: 'The first quote **closes** the string the server opened. `OR 1=1` is always true. `--` comments out whatever you had for password. The database returns **every row**. Two users in the demo table, both come back — emails included — and nobody typed a real address.' },
+          { type: 'p', text: 'Worse shape: close the string, then a second statement that drops the users table. Some modern drivers **refuse** stacked queries. Old drivers, or a shell that will run them, **delete the table**. UNION can pull **other** tables (payments) into the same result. This is not a party trick. It is “string plus input = a new program.”' },
+          {
+            type: 'kid',
+            items: [
+              'You asked “is this locker number Alice?” They answered “or is 1=1?” The clerk said yes to the whole hallway.',
+              'Then they added “and throw the locker room away.” Some clerks still do it.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. The fix — parameters, then a poorer DB user',
+        blocks: [
+          { type: 'p', text: '**Parameterized queries / prepared statements:** send the **template** and the **values** as two things. `$1` (or `?`, depending on the driver) is a **slot**. The database **parses the SQL first**. Then it fills the slot as **pure data**. The malicious string is a search for a weird email, not a second command.' },
+          {
+            type: 'pre',
+            lines: `// mashed string — the database parses user text as SQL
+"SELECT * FROM users WHERE email = '" + email + "'"
+
+// two envelopes — structure locked, then data
+db.query("SELECT * FROM users WHERE email = $1", [email])`,
+          },
+          { type: 'p', text: 'Second door: the credential your **app** uses to talk to Postgres should be **DML** — insert, update, delete, select. **Not** DDL. No `DROP`, `ALTER`, `CREATE`. Even if injection still happens, the table does not vanish. Least privilege is not a slogan here. It is the blast radius after you already failed.' },
+          { type: 'quote', text: 'The slot is data. The app user cannot drop tables. Two layers. You want both.' },
+        ],
+      },
+      {
+        heading: '6. Command injection — same trick, the OS',
+        blocks: [
+          { type: 'p', text: 'Same pattern, different language. Upload an image; the server shells out to a CLI (resize, compress). If the **output filename** is concatenated into `ffmpeg ... -o ` + userInput, the attacker puts a filename **and** a semicolon **and** `rm -rf /` (or whatever the shell will run). You intended one command. The OS heard two.' },
+          {
+            type: 'ul',
+            items: [
+              'Do **not** build a shell string from user text.',
+              'Call a **library** (decode/resize in-process) or `execFile` with an **argv array** and an **allowlist** for names (`basename`, no `..`).',
+              'If you do not need a shell, do not start one.',
+            ],
+          },
+          { type: 'p', text: 'Template injection and LDAP filters are cousins: user text lands in **another grammar**. The prevention pattern is always: **safe API**, **escape for that context**, **allowlist**, never mash strings.' },
+        ],
+      },
+      {
+        heading: '7. Passwords — hash, then salt, then go slow',
+        blocks: [
+          { type: 'p', text: 'Plaintext in the table: a dump is every account, and people **reuse** passwords. Hashing is **one-way**, fixed length, same input → same output. On login you hash what they typed and **compare hashes**. A breach gives hashes, not the secret — **if** that were the whole story.' },
+          { type: 'p', text: 'It is not. Fast hashes (MD5, SHA-256 as a **password** scheme) are a GPU toy: billions of guesses a second. Attackers keep **rainbow tables**: common passwords → their hashes under the popular algorithm. `password` and `12345` light up. Hashing alone is not enough.' },
+          { type: 'p', text: '**Salt:** a random per-password value mixed in so the same password is a **different** hash for Maya and for Bob. Rainbow tables stop being a lookup. bcrypt / Argon2 / scrypt **salt for you** — do not invent your own mixer. **Argon2id** is the current default people mean; bcrypt was the web default for a long time. Both are **slow on purpose**. SHA-256 is a fine **integrity** hash and a bad **password** hash.' },
+          {
+            type: 'table',
+            columns: ['Store', 'After a dump'],
+            rows: [
+              ['Plaintext', 'Every password, immediately.'],
+              ['Fast hash, no salt', 'Rainbow + GPU. Common passwords fall.'],
+              ['Slow salted (Argon2id / bcrypt)', 'Each guess is expensive. Same password, different rows.'],
+            ],
+          },
+          { type: 'p', text: 'Building full auth (OAuth, session revoke, MFA, linking “same email, Google vs password”) is a **product**. This map already has an Auth lesson. The security extra here is: **what you store**, and that a **slow** hash also **costs your CPU** — which is why login **rate limits** exist (next).' },
+        ],
+      },
+      {
+        heading: '8. Sessions — the cookie flags are the lock',
+        blocks: [
+          { type: 'p', text: 'Stateful auth: server stores the session (DB and/or Redis); the browser holds a **session id**. That id must be **un-guessable** (cryptographic random, lots of bits), not `user-17`. Put it in a **cookie**, not localStorage — JS on a poisoned page can read storage.' },
+          {
+            type: 'ul',
+            items: [
+              '**HttpOnly** — JavaScript cannot read it. XSS (later) then cannot yeet the session to the attacker as easily.',
+              '**Secure** — cookie only rides **HTTPS**. Cafe Wi-Fi plus HTTP is a postcard. Encrypted hops are the point.',
+              '**SameSite** — **Strict**: only your own origin. **Lax**: top-level clicks (a normal link), not images/iframes. **None**: everywhere, and it **requires** Secure. For a session id you want **Strict**, or Lax if Strict breaks real links. You almost never want None.',
+            ],
+          },
+          { type: 'p', text: 'SameSite is also how modern stacks **starve CSRF** (cookies no longer auto-attach to a stranger img or iframe). Revocation is the stateful superpower: delete the row, the id is junk. That costs Redis/DB — the Auth lesson trade.' },
+        ],
+      },
+      {
+        heading: '9. JWT — the payload is not a secret',
+        blocks: [
+          { type: 'p', text: 'Stateless: three base64 chunks, `header.payload.signature`. Header names the algorithm. Payload is **claims** (`sub`, `exp`, maybe a role). Signature proves **you** minted it. The middle is **encoding, not encryption**. Anyone can decode the JSON. Do not put emails, phone numbers, or “secrets” in claims. Put an **id**. Check `exp`. Enforce the algorithm **on the server** — do not let the token pick `none`.' },
+          { type: 'p', text: 'The pain: you **cannot un-issue** a JWT until it expires. Stolen token works until `exp`. Workaround the industry uses: **short access** (minutes) plus **refresh** (hours/days). Access rides requests. On 401 the client spends the refresh to get a new pair. Steal the access, the window is small. Steal the refresh too, the window is the refresh TTL — still not “forever,” still not a revoke button unless you **version** refresh tokens in a store (then you are a bit stateful again).' },
+          { type: 'quote', text: 'Decode is not verify. Verify is the signature plus expiry plus the algorithm you meant.' },
+        ],
+      },
+      {
+        heading: '10. Rate limits — login is a special door',
+        blocks: [
+          { type: 'p', text: 'Without a limit, someone tries **thousands** of passwords a second: they hit a match, or they **knock the box over** (your slow hash becomes a self-DoS). Auth endpoints should be **stingy**. The rest of the API can be looser.' },
+          {
+            type: 'ul',
+            items: [
+              '**Per IP** — e.g. 10 logins a minute. Stops dumb scripts. Fails when a campus **shares an egress IP**, and when attackers **rotate** IPs / botnets.',
+              '**Per account** — e.g. five failures in fifteen minutes, then lock until a human. Stops “hammer Maya from a thousand IPs.” Fails when they try **one password across every account**.',
+              '**Global** — e.g. N failed logins per minute **for the whole service**. The spray still trips a wire.',
+            ],
+          },
+          { type: 'p', text: 'Layers, not one knob. Numbers are **examples** — measure your real traffic. Alert when the global counter spikes. This is Observe plus Security in the same hallway.' },
+        ],
+      },
+      {
+        heading: '11. BOLA — logged in is not “this invoice”',
+        blocks: [
+          { type: 'p', text: 'Authentication middleware at the **route**: cookie / Bearer valid → 401 if not. Role middleware: member vs admin. That is still the **door of the building**. **Broken object-level authorization** (BOLA / BA): you then fetch the invoice by id only and return it. Any logged-in user who **guesses ids** downloads every other invoice, then money, then social-engineering lists.' },
+          { type: 'p', text: 'Fix: ownership **at the query**. Context already has `userId` from Auth. `WHERE id = $1 AND user_id = $2`. No row → treat it as missing. Do this on **update and delete**, not only select.' },
+          {
+            type: 'pre',
+            lines: `// false safety: any member can fetch any id
+SELECT * FROM invoices WHERE id = $1
+
+// the row must belong to this user
+SELECT * FROM invoices WHERE id = $1 AND user_id = $2`,
+          },
+          { type: 'h3', text: '403 vs 404' },
+          { type: 'p', text: 'Fetch, then `if (invoice.userId !== ctx.userId) return 403` **confirms the id exists**. An enumerator learns which numbers are real, then phishes. Prefer **one query** with ownership. Zero rows → **404**. They cannot tell “not in the database” from “not yours.” You still **log** the miss internally with user id + request id (Errors / Observe). The client gets a boring not-found.' },
+          {
+            type: 'kid',
+            items: [
+              'The badge got them into the building. It did not get them into every locker.',
+              'If you say “that locker exists but you cannot open it,” they now know which doors to pick later.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '12. BFLA — hiding /admin is not a lock',
+        blocks: [
+          { type: 'p', text: '**Broken function-level authorization:** the user should not run **admin functions** (list **all** invoices). You cannot `AND user_id = me` — the admin **must** see everyone. The bug is “the URL is secret.” Login is the same for member and admin; only the path is obscure. **Security through obscurity.** Someone finds `/admin/invoices` and the API has no role check.' },
+          { type: 'p', text: 'Fix: **centralize** authorization. One layer every request walks. **Default deny:** if the layer does not **explicitly allow** this role on this action, refuse. New endpoints start closed. **Test the ugly paths** in CI: user A cannot read user B; member cannot hit admin; anonymous cannot hit authed. Happy-path tests are how BOLA ships.' },
+        ],
+      },
+      {
+        heading: '13. XSS — user HTML is a program',
+        blocks: [
+          { type: 'p', text: 'Comments, bios, markdown → HTML. If you inject that string into the DOM, a **script tag** the attacker smuggled in runs **as your site**. **Stored XSS:** every later viewer runs it. Cookies (if not HttpOnly), storage, phishing redirects — session stolen. Frameworks name this honestly (`dangerouslySetInnerHTML`) so you feel the heat.' },
+          { type: 'p', text: '**Sanitize on the way in** (strip scripts, allow a tiny tag list). Escape on the way out. That is prevention. **Content-Security-Policy** is a header: no inline scripts, scripts only from your origin. CSP is **not** the fix. It is the last net if sanitizing missed. Defense in depth, same as SQL parameters plus a DML-only user.' },
+        ],
+      },
+      {
+        heading: '14. CSRF — cookies that tag along',
+        blocks: [
+          { type: 'p', text: 'The browser **attaches cookies** to requests to that site, even when the **page** is some other origin. Classic trick: `<img src="https://your.api/transfer?...">` while the user is still logged in. Your server sees a real session. **SameSite=Lax/Strict** stops most of this on modern browsers. CSRF tokens (random field the attacker cannot read) are the old belt. The chapter treats CSRF as **smaller** on current stacks **if** cookies are SameSite and you are not living in 2012. Legacy apps still die here. Know the picture; do not skip SameSite because “CSRF is over.”' },
+        ],
+      },
+      {
+        heading: '15. Misconfiguration — git and debug',
+        blocks: [
+          { type: 'p', text: 'Secrets in source: DB passwords, JWT keys, vendor keys. They go to the remote, then to everyone with repo access. **Deleting the file does not delete history.** Rotate **immediately**. Live in env / a vault (Config lesson).' },
+          { type: 'p', text: '**Debug in production:** stack traces name files and functions. SQL and pool internals print. Local wants that. Prod wants **info** (Observe). Clients get **boring** 500s (Errors). Debug mode is a guided tour of your internals.' },
+        ],
+      },
+      {
+        heading: '16. Keep reading — the map is not the territory',
+        blocks: [
+          { type: 'p', text: 'OWASP Top 10 and the cheat-sheet series are the shared vocabulary. Hands-on labs (the usual web-security academies) train the attacker question until it is a reflex. Session-id randomness, cookie flags, injection — you will meet them again under different names. This chapter is **awareness plus the moves that show up in backend code**. The rest is homework on purpose.' },
+        ],
+      },
+      {
+        heading: '17. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Hole', 'Assumption', 'Close it'],
+            rows: [
+              ['SQLi', 'Email is data', 'Parameters. DML-only DB user.'],
+              ['Cmd inject', 'Filename is a name', 'No shell strings. Allowlist. Libraries.'],
+              ['Rainbow', 'Hash is enough', 'Slow + salt (Argon2id).'],
+              ['XSS steal', 'JS will not read the cookie', 'HttpOnly + sanitize + CSP last.'],
+              ['Cafe Wi-Fi', 'HTTP is fine', 'Secure cookie. HTTPS.'],
+              ['CSRF', 'Only our page sends cookies', 'SameSite. Tokens if you must.'],
+              ['JWT dump', 'Payload is secret', 'It is base64. Short access + refresh.'],
+              ['BOLA', 'Logged in = this row', '`AND user_id`. 404 not 403.'],
+              ['BFLA', 'Hidden URL = admin', 'Role at the function. Default deny.'],
+              ['Stuffing', 'Login can be unbounded', 'IP + account + global limits.'],
+              ['Git', 'We will not commit .env', 'Vault. Rotate history leaks.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Ask where you assumed.** Then ask which language that string will be parsed as.',
+              '**Authn is the building. Authz is the locker.** Query both.',
+              'No stack is finished. Layer the doors anyway.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
