@@ -4158,16 +4158,195 @@ listen(settings.PORT)`,
   {
     id: 'observe',
     n: 20,
-    title: 'Logging, monitoring, observability',
+    title: 'Logging, Monitoring, Observability: How You See a Machine You Cannot Sit Next To',
     label: 'Observe',
     cluster: 'keep',
     x: 1355,
     y: 530,
-    gist: 'Logs say what happened. Metrics say how it is doing. Traces say where the time went. Together they are how I debug a machine I cannot sit next to.',
+    gist: 'Logs are the diary. Metrics are the numbers. Traces are the path of one request. Monitoring says something is wrong; the three pillars together say where. It is a spectrum, not a badge.',
     remember: [
-      'Structured logs, levels, rotation. No passwords, tokens, or PII in log lines.',
-      'RED/USE-ish metrics. Alerts on symptoms users feel — not on every blip (alert fatigue).',
-      'Trace a request across services with one ID. Three pillars: logs, metrics, traces.',
+      'Debug locally; info/warn/error in prod. Fatal means the process is dying. JSON logs in prod so tools can parse; pretty text in the terminal.',
+      'Alert → metrics → the related logs → the trace. Slack is the doorbell, not the diagnosis.',
+      'You instrument in code (context + request id). DevOps collects. OpenTelemetry is the shared language. Nobody is 100% observable.',
+    ],
+    sections: [
+      {
+        heading: '1. A spectrum, not a trophy',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Logging, monitoring, and observability each deserve their own book. In practice they are **not a pass/fail exam**. Companies sit on a **spectrum**. Nobody “does all the good practices.” That is on purpose: do not freeze when the tool names pile up.' },
+          { type: 'p', text: 'These are **practices glued to code**. Unlike most of this map, this lesson has to show **how a request is instrumented** — otherwise the words stay fog. The sample stack in the video is Go plus a dashboard; the **moves** are the same in Node or Python.' },
+          { type: 'quote', text: 'You will never be 100% observable. You still instrument. The dashboard is empty if the code never emits.' },
+          {
+            type: 'kid',
+            items: [
+              'The school does not have a camera on every pencil. It still has a bell, a logbook, and a hallway map.',
+              'You do not “finish observability.” You get better at seeing.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Why we bother — many machines, many cities',
+        blocks: [
+          { type: 'p', text: 'Modern backends run **distributed**: many servers, many regions, users everywhere. You cannot SSH into “the” box. You need a way to **keep track** of services and infra.' },
+          { type: 'p', text: '**Logging** (we stay on the backend here): **record** important events — business, suspicious, security — with **metadata**: who (`userId`), how slow (`latency`), **which function** ran. That is the diary of the request lifecycle and of process start/stop.' },
+          { type: 'p', text: '**Monitoring**: watch **health** — CPU, memory, requests per second, **how many DB pool connections are open**. “Realtime” in traditional stacks is often **10–15 seconds stale**. Pushing every millisecond would **drown** the pipeline. A few seconds of lag is normal unless you bought a specialist path.' },
+          {
+            type: 'kid',
+            items: [
+              'The diary says what the class did. The wall clock says how hot the room is **about now** (not every blink).',
+              'You do not weigh the oven every millisecond. You glance every few seconds so the thermometer itself does not melt.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Observability’s three pillars',
+        blocks: [
+          { type: 'p', text: 'A system is called **observable** when you can infer **internal state from external outputs**. The usual **three pillars**:' },
+          {
+            type: 'ul',
+            items: [
+              '**Logs** — the record of events.',
+              '**Metrics** — **numbers** over a window (last 30 minutes, last hour, or “right now”): how many requests, how many failed, how many todos created. You **choose** which numbers matter — in code **and** in the tool.',
+              '**Traces** — one request as a **transaction**. Where it started (browser, load balancer, or your API), then **handler → validation → service → repository → database**. Which hops it touched, where it died.',
+            ],
+          },
+          { type: 'p', text: '**Monitoring alone** (the old default) **tells you there is a fire.** An alert fires. That is it. **Observability** (if you actually implemented all three) also tells you **what is on fire** — which function, which query — so you can fix it instead of staring at “API unhealthy.”' },
+          {
+            type: 'table',
+            columns: ['Piece', 'Answers'],
+            rows: [
+              ['Logs', '**What** happened (and context).'],
+              ['Metrics / monitoring', '**Patterns** — rate, trend, now vs an hour ago.'],
+              ['Traces', '**Which hops** this one request walked, and where it stopped.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. The debugging loop',
+        blocks: [
+          { type: 'p', text: 'You set a rule: **error rate over a threshold** (the video used 80%) → webhook → Slack. That is the doorbell. Then you open **metrics** (concrete counts). From a bad metric you jump to the **related logs** (the failed lines). From a 500 log you open the **trace**: request entered here, walked these functions, **failed at this one**. That path is the payoff.' },
+          { type: 'p', text: 'A **failed request** in metrics is a **non-success** — typically **4xx/5xx**, not “any status above 200.” 201 and 204 are still wins. Pick the definition once and keep it.' },
+          {
+            type: 'pre',
+            lines: `Slack: error rate high
+  → metrics: which route / which operation
+  → logs: the 401 / 500 lines + requestId
+  → trace: middleware → service → DB  (died here)`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'The bell rings. The scoreboard says “too many red cards.” The diary names the play. The hallway map shows **which door** they tripped on.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. Log levels',
+        blocks: [
+          { type: 'p', text: 'Every event gets a **level**. Libraries support this; use it.' },
+          {
+            type: 'ul',
+            items: [
+              '**debug** — as much detail as you can stand. **Local / troubleshooting.** Usually **off in production** (too loud).',
+              '**info** — normal life: todo created, server started, DB connected. Successful business events.',
+              '**warn** — not success, not “the app is on fire.” Example: user typed a **wrong password**. That is their miss, not a server bug. Do **not** log the password.',
+              '**error** — validation that exploded, **query failed**. A main reason logs exist.',
+              '**fatal** — the process is **stopping**. Infra may restart it. Reserve this for “we cannot continue.”',
+            ],
+          },
+          { type: 'p', text: 'At boot, pick the floor from **config** (last lesson): local → debug (or info, depending on noise); production → **info** so debug lines never hit the billable pile.' },
+        ],
+      },
+      {
+        heading: '6. Pretty locally, JSON in production',
+        blocks: [
+          { type: 'p', text: '**Unstructured / console**: colors, plain sentences, human-first. That is what you want in the terminal while coding. Easy to spot. Hard for a machine to split into `userId` and `requestId`.' },
+          { type: 'p', text: '**Structured**: almost always **JSON** — `level`, `message`, status, ids, timestamp. Ugly in a local console. Perfect for **ELK**, **Loki + Promtail + Grafana**, or a vendor parser. Production should emit JSON so the pipeline does not regex a novel.' },
+          {
+            type: 'pre',
+            lines: `// local (console)
+INFO  connected to database
+INFO  starting HTTP server
+
+// production (JSON)
+{"level":"info","msg":"todo created","todoId":"…","requestId":"…"}`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'At the desk, write in **handwriting**. In the archive, file **index cards** the librarian can sort.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Instrumentation and OpenTelemetry',
+        blocks: [
+          { type: 'p', text: 'Two words you will hear forever: **instrumentation** = actually **measuring** a function / request (timers, attributes, errors). **OpenTelemetry** = the **open standard** (SDKs, collectors, practices) so Node, Go, Python all speak the same telemetry language. You can run a **vendor dashboard** and still send through an OTel collector if you want control.' },
+          { type: 'p', text: 'Open-source stack people actually mean: **Prometheus** (metrics), **Grafana** (dashboards), **Promtail/Loki** (logs), **Jaeger** (traces). A **one-stop vendor** (New Relic, Datadog, cousins) is the same three pillars with less glue — useful when you do not have a team to babysit four open-source boxes. Neither path is “more observant” by brand. The code still has to emit.' },
+        ],
+      },
+      {
+        heading: '8. What the code actually does',
+        blocks: [
+          { type: 'p', text: '**Before listen:** build a logger. Log level from env (debug vs info). Format from env (console vs JSON). Flip JSON + “production” when you want the dashboard to ingest.' },
+          { type: 'p', text: '**Middleware wraps every request** — that is **instrumentation**. First hop creates a **transaction** (the start of a trace), stamps **service name, env, IP, user-agent, request id, user id** (and whatever else you need), **puts it on request context**. Later layers **must not** invent a new world; they **pull the same transaction** out of context. (Same idea as the Context lesson: trusted bag for *this* call.)' },
+          { type: 'p', text: 'In **create todo** (service): start of function → get transaction; `defer` end this **segment** when the function returns; add attributes (`userId`, title, priority); **info** “creating todo”; on DB error → **error** log + attach error to the trace + mark operation failed; on success → **debug** “created id …” (hidden in prod) + **info** business event with id, title, category, priority.' },
+          {
+            type: 'pre',
+            lines: `middleware:  start transaction → context
+service:     tx = context.transaction
+             tx.set userId, title
+             log.info  "create todo"
+             row = repo.insert(...)
+             if err: log.error; tx.noticeError; return
+             log.debug "created"   // prod filter drops this
+             log.info  "todo_created" metadata`,
+          },
+          { type: 'p', text: 'One request = **one trace** from that middleware through validation and service. That is how a 401 on `GET /todos` (no token) shows up as metric + log line + clickable trace: app name, env, status, host, IP, level, message, method, path, span id, timestamp.' },
+        ],
+      },
+      {
+        heading: '9. What the dashboard is for',
+        blocks: [
+          { type: 'p', text: '**Metrics** on a summary: average transaction time, **throughput**, **error %**. Fire a few unauthorized GETs → HTTP errors appear; click through to logs; click through to the trace. Per-route: error rate and latency for `/todos`. **Runtime**: GC time, RSS (tiny in a demo), throughput, average response. Those are still metrics — numbers about the **process**, not the business.' },
+          { type: 'quote', text: 'Dev writes the emit. DevOps (or the platform) **collects**. If either side is missing, the loop is fake.' },
+        ],
+      },
+      {
+        heading: '10. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Piece', 'Remember'],
+            rows: [
+              ['Spectrum', 'Never 100%. Still instrument.'],
+              ['Logs', 'Diary + metadata. Levels. JSON in prod, pretty locally.'],
+              ['Monitor', 'Health: CPU, RAM, RPS, pool. Often 10–15s stale.'],
+              ['Metrics', 'Chosen numbers over time. Error rate, throughput, “todos created.”'],
+              ['Traces', 'One request’s walk through layers. Transaction on context.'],
+              ['Alert loop', 'Slack → metrics → logs → trace.'],
+              ['Levels', 'debug / info / warn / error / fatal.'],
+              ['OTel', 'Standard for instrumenting any language.'],
+              ['Tools', 'Grafana stack or a vendor box. Same pillars.'],
+              ['People', 'Code emit + infra collect. Both.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Monitoring rings the bell. Observability names the door.**',
+              '**JSON in production. Debug stays on the laptop.** Attach **request id** so the three pillars join.',
+              'You will not finish this. You will get faster at the loop: alert → number → line → path.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
