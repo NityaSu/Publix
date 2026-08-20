@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Maximize2, Minimize2, RefreshCw } from 'lucide-vue-next';
+import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen, RefreshCw } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
@@ -63,6 +63,8 @@ const {
   leftPct,
   leftStyle,
   dragging,
+  rightOpen,
+  toggleRight,
   onHandlePointerDown,
   onHandleKeydown,
 } = useInsightsSplit({ storageKey: 'backend-first-principle', defaultPct: 42 });
@@ -445,6 +447,17 @@ onUnmounted(() => {
       <NuxtLink to="/insights/notes" class="mf-brand">FIRST PRINCIPLE</NuxtLink>
       <div class="mf-meta">
         <span class="mf-step">31 lessons</span>
+        <button
+          type="button"
+          class="mf-tool"
+          :aria-pressed="!rightOpen"
+          :aria-label="rightOpen ? 'Hide notes panel' : 'Show notes panel'"
+          @click="toggleRight"
+        >
+          <PanelRightClose v-if="rightOpen" :size="14" />
+          <PanelRightOpen v-else :size="14" />
+          {{ rightOpen ? 'Hide notes' : 'Notes' }}
+        </button>
         <button type="button" class="mf-tool" @click="toggleFullscreen">
           <Minimize2 v-if="isFullscreen" :size="14" />
           <Maximize2 v-else :size="14" />
@@ -454,7 +467,11 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <div ref="bodyEl" class="mf-body" :class="{ 'is-dragging': dragging }">
+    <div
+      ref="bodyEl"
+      class="mf-body"
+      :class="{ 'is-dragging': dragging, 'is-notes-closed': !rightOpen }"
+    >
       <section
         v-show="!isFullscreen"
         class="mf-graph"
@@ -565,7 +582,7 @@ onUnmounted(() => {
       </section>
 
       <InsightsSplitHandle
-        v-show="!isFullscreen"
+        v-show="!isFullscreen && rightOpen"
         :dragging="dragging"
         :value="leftPct"
         :min="28"
@@ -574,12 +591,28 @@ onUnmounted(() => {
         @keydown="onHandleKeydown"
       />
 
-      <section ref="lessonEl" class="mf-lesson" aria-label="Lesson">
+      <section
+        v-show="rightOpen"
+        ref="lessonEl"
+        class="mf-lesson"
+        aria-label="Lesson"
+      >
         <article v-if="selectedTopic" class="mf-page">
-          <p class="mf-kicker">
-            Lesson {{ selectedTopic.n.toString().padStart(2, '0') }}
-            <span v-if="selectedCluster"> · {{ selectedCluster.label }}</span>
-          </p>
+          <div class="mf-lesson-top">
+            <p class="mf-kicker">
+              Lesson {{ selectedTopic.n.toString().padStart(2, '0') }}
+              <span v-if="selectedCluster"> · {{ selectedCluster.label }}</span>
+            </p>
+            <button
+              type="button"
+              class="mf-tool mf-lesson-close"
+              aria-label="Hide notes panel"
+              @click="toggleRight"
+            >
+              <PanelRightClose :size="14" />
+              Hide
+            </button>
+          </div>
           <h1>{{ selectedTopic.title }}</h1>
           <p class="mf-lead">{{ selectedTopic.gist }}</p>
 
@@ -791,6 +824,27 @@ onUnmounted(() => {
 
 .mf-body.is-dragging {
   cursor: col-resize;
+}
+
+.mf-body.is-notes-closed .mf-graph {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.mf-lesson-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.15rem;
+}
+
+.mf-lesson-top .mf-kicker {
+  margin: 0;
+}
+
+.mf-lesson-close {
+  flex-shrink: 0;
 }
 
 .mf-graph {
