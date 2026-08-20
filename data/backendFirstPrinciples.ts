@@ -3429,16 +3429,284 @@ GET  /catalog?q=quiet  →  query Elasticsearch
   {
     id: 'queue',
     n: 16,
-    title: 'Task queuing and scheduling',
+    title: 'Task Queues and Background Jobs: Work That Must Not Hold the HTTP Door Open',
     label: 'Queues',
     cluster: 'async',
     x: 720,
     y: 830,
-    gist: 'If it can fail, retry, or take more than a blink, it is a job. The request returns “accepted,” not “done.”',
+    gist: 'A background job is any work that runs outside the request–response cycle. Enqueue JSON, return 200/201, let a worker call the slow third party — with retries when that third party is down.',
     remember: [
-      'Workers pull work. Retries + backoff. Dead-letter when poison.',
-      'Idempotency keys so a double-publish does not double-charge.',
-      'Schedulers (cron-like) for periodic work. Visibility timeout so a crashed worker does not lose the job forever.',
+      'Producer enqueues. Broker holds. Worker dequeues, deserializes, runs the handler, ACKs. No ACK before visibility timeout → job is offered again.',
+      'HTTP POST is not idempotent. Jobs must be — a retry starts from scratch without double-charging or half-deleted users.',
+      'One-off (verify email), recurring (reports, session cleanup), chain (encode → thumbs + captions), batch (delete account, midnight reports). Keep each job small.',
+    ],
+    sections: [
+      {
+        heading: '1. What a background job is',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'A **background task** is any logic that runs **outside** the request–response cycle. Client talks to server; HTTP comes in; HTTP goes out. Whatever you do **after** that door closes — or **without** blocking it — is a job. It is **not** mission-critical *to the HTTP round-trip*. It does not have to finish before you answer. It is not synchronous with the click. You offload it to **another process** and let that process finish how you programmed it.' },
+          { type: 'quote', text: 'If the user can see “signed up” before the email provider has spoken, that email is a job. The API’s job was: validate, persist, **enqueue**.' },
+          {
+            type: 'kid',
+            items: [
+              'The classroom door (HTTP) cannot stay open while someone walks across town to mail a letter.',
+              'You stamp “we’ll mail it” on the homework, close the door, and a runner takes the letter later.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Why — the signup email',
+        blocks: [
+          { type: 'p', text: 'User signs up: name, email, password. Frontend hits your API. You validate (length, complexity, …). Then you must **prove they own the inbox**: a verification **link** or a 6–8 digit code. That means **another HTTP call** — from *your* backend to an **email provider** (HTML template, to/from, subject, API key). Their servers decide if it sends. You do not control their latency or their downtime.' },
+          { type: 'p', text: '**Synchronous** (email inside the signup handler):' },
+          {
+            type: 'ul',
+            items: [
+              'Provider is down **and** you do not catch the error → the **whole signup** 500s. Horrible: they typed a password for nothing.',
+              'You catch the error → signup **200**, UI says “we sent a verification email,” but **nothing arrived**. They wait, then hit “resend,” which is **another** API that can lie the same way.',
+            ],
+          },
+          { type: 'p', text: 'You cannot honestly promise “email sent” until a machine that is not yours has succeeded. Blocking the signup on that machine makes *your* product feel broken whenever *they* hiccup.' },
+          {
+            type: 'kid',
+            items: [
+              'The office cannot refuse your library card because the post office is closed.',
+              'They also should not say “the letter is already in your mailbox” if they never dropped it off.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. The async shape — enqueue, then 200',
+        blocks: [
+          { type: 'p', text: 'Same signup: validate, write the user, generate the code. Then **do not** call the provider in that function. Pack everything the send needs (to, template, code, user id, first name) into **JSON** — serialize — and **push it onto a queue**. Then return **200 or 201** (whatever your create semantics are). The UI can show “check your email” **immediately**. Creating the task is done.' },
+          {
+            type: 'pre',
+            lines: `POST /signup
+  validate
+  insert user + verification code
+  enqueue { to, template, code, userId }   // JSON on a queue
+  return 201                               // HTTP is finished
+
+// later, another process:
+  dequeue → deserialize → POST to email provider`,
+          },
+          { type: 'p', text: 'On the other side: **consumers / workers** — a **different process** from the API. They pull the task. Config can put producers and consumers on **different machines**. High level: take JSON, deserialize to a dict / object / struct, run a **registered handler** — the same send function you used to call inline.' },
+          { type: 'p', text: 'You can have **many queues**: email vs in-app vs mobile push. Different workers subscribe to different queues. Latency for email is usually **milliseconds to a few seconds**; verification links last **15–20 minutes**, so a 10s queue under load is fine.' },
+        ],
+      },
+      {
+        heading: '4. Failure is why the queue exists',
+        blocks: [
+          { type: 'p', text: 'If the provider call fails **inside HTTP**, you were heading toward **500**. If it fails **in a worker**, the **task** fails — not the signup that already returned. Frameworks (Celery in Python, BullMQ in Node, Asynq in Go, and cousins) **put the job back** on the queue.' },
+          { type: 'p', text: '**Exponential backoff**: fail → wait 1 min → retry; fail → 2 min; then 4, 8, … up to a **max** (e.g. five tries). Big email APIs are rarely down for eight minutes straight; downtime is seconds. One or two retries usually land. The user still gets the mail. That retry story is a second reason jobs exist — not only “don’t block.”' },
+          {
+            type: 'ul',
+            items: [
+              '**Responsive APIs** — you do not wait on someone else’s server or on heavy CPU in the request.',
+              '**No timeout** because a vendor hung.',
+              '**Retries** for work that is allowed to fail once.',
+            ],
+          },
+          { type: 'quote', text: 'Offload work that is slow or non-critical to the click. Keep the HTTP door honest. Let the queue absorb vendor weather.' },
+          {
+            type: 'kid',
+            items: [
+              'If the post office is closed, you do not fail the library card. You try the mailbox again in a minute, then two, then four.',
+              'You stop after five tries and tell a grown-up (logs / alerts) — you do not keep the kid standing at the door.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. What we actually offload',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Email** — verify, welcome, reset password. External HTTP. (Transactional email is its own node; the *mechanism* is this queue.)',
+              '**Images / video** — user uploaded a photo; you resize for phone vs desktop, several widths. CPU. Do not transcode in the signup or upload **handler**.',
+              '**Reports** — weekly/daily PDF or HTML stats (done / pending in a sprint). Often **scheduled** (“cron-like”): midnight, Sunday 00:00. Queue libraries usually have **scheduled / repeating** jobs.',
+              '**Push notifications** — the banner on a phone. You store a **device token**. You cannot push yourself: you call **Apple or Google**. Another vendor. Another job.',
+            ],
+          },
+          { type: 'p', text: 'Pattern: **your API must call a machine you do not run**, or **do minutes of CPU**, or **wake up on a clock**. That is a queue, not a `await` in the route.' },
+        ],
+      },
+      {
+        heading: '6. Task queue — producer, broker, worker',
+        blocks: [
+          { type: 'p', text: 'A **task queue** is the system that **manages and distributes** jobs — the engine behind “do this later.” **Producer** = your app code: build the payload the worker will need, **serialize**, **enqueue** (DSA word: add to the queue). **Broker** = the queue itself, a **holding area** until a worker is free. **Consumer / worker** = another process (same repo or another): **watch** the broker, **dequeue**, run the handler.' },
+          { type: 'p', text: 'Mental model: a **to-do list for the backend**. The API writes items. Workers tick them off one by one.' },
+          {
+            type: 'pre',
+            lines: `API (producer)
+  serialize payload → ENQUEUE → broker
+
+worker (consumer)
+  monitor broker
+  DEQUEUE → deserialize → handler(payload)
+  ACK → broker may delete the message`,
+          },
+          { type: 'p', text: 'The broker is a **real product**: RabbitMQ, Redis pub/sub (often used as a queue), **SQS** if you need a managed queue across regions. The *library* (Celery, BullMQ, Asynq, …) sits on top and handles retries and edge cases so you are not inventing ACK protocol at 2am.' },
+          {
+            type: 'kid',
+            items: [
+              'The **inbox tray** is the broker. The **receptionist** (API) drops a slip in. A **runner** (worker) takes slips when their hands are free.',
+              'Enqueue = put the slip in. Dequeue = take it out. The tray is not the runner.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. ACK and visibility timeout — so jobs do not vanish',
+        blocks: [
+          { type: 'p', text: 'When the worker **finishes**, it **ACKs** the broker: “processed, you may drop this.” If it **never ACKs**, the broker must not assume success. Crash, hung vendor, network hole — the worker already **took** the message. Without a rule, that work **disappears**.' },
+          { type: 'p', text: '**Visibility timeout** = how long the job is “in progress” and **hidden** from other workers. If no ACK in that window, the broker **makes it visible again** so **another** worker can take it. Someone must ACK success **or** failure. That is how the queue refuses to lose the verification email because one process died.' },
+          { type: 'quote', text: 'Taken off the tray is not the same as done. Done is the ACK. Timeout without ACK = put the slip back.' },
+          {
+            type: 'kid',
+            items: [
+              'A runner grabs the letter and trips in the hallway. If we shredded the slip when they grabbed it, the letter is gone forever.',
+              'We pencil “checked out for 5 minutes.” If they do not stamp DONE, another runner may take it.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '8. One-off jobs',
+        blocks: [
+          { type: 'p', text: '**One-off** = something in the request cycle **triggers one function** in the background. Most of what you will write:' },
+          {
+            type: 'ul',
+            items: [
+              'Registered → verification email.',
+              'Verified → welcome email.',
+              'Forgot password → reset link.',
+              'Someone messaged you → a notification job.',
+            ],
+          },
+          { type: 'p', text: 'Fire once per event. Still a queue, still retries — just not on a clock.' },
+        ],
+      },
+      {
+        heading: '9. Recurring jobs',
+        blocks: [
+          { type: 'p', text: '**Recurring** = same work on an **interval**. Daily / weekly / monthly **reports**. **Cleanup**: stateful auth stored sessions in a table; login/logout leaves **orphan** rows. A monthly (or similar) job **deletes dead sessions** so they do not eat disk. Libraries expose **scheduled** tasks for “every Sunday at midnight.”' },
+          {
+            type: 'kid',
+            items: [
+              'One-off = “mail this letter because they just signed the form.”',
+              'Recurring = “every Sunday, empty the lost-and-found box.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '10. Chained jobs — parent, then children',
+        blocks: [
+          { type: 'p', text: '**Chain** = **parent/child**. A course platform: instructor uploads video. HTTP **must not** wait for encode. Frontend gets an ACK; bytes go to object storage (often a **presigned URL**). Then a **graph** of jobs:' },
+          {
+            type: 'ul',
+            items: [
+              '**First** — encode to several resolutions / formats (network and device mix).',
+              '**Then, in parallel** (neither waits on the other): **thumbnails** from the encoded file; **transcription / subtitles** from audio.',
+              '**Then** — thumbnail **images** themselves get resized for devices.',
+            ],
+          },
+          { type: 'p', text: 'Thumbs and captions **both wait on encode**. Image-resize waits on thumbnail **generation**. A child starts only when its parent **succeeded**. That is chaining, not one giant function.' },
+          {
+            type: 'pre',
+            lines: `upload ACK (HTTP done)
+     └─ encode
+           ├─ generate thumbs → resize thumb images
+           └─ transcribe captions
+         (thumbs ∥ captions after encode)`,
+          },
+        ],
+      },
+      {
+        heading: '11. Batch jobs — one trigger, lots of work',
+        blocks: [
+          { type: 'p', text: '**Delete account** cannot walk every shard of a big user in one HTTP request. 40–60s+ would time out. Pattern: **200 immediately**, log them out. Either a **grace window** (3–7 days to cancel) or “gone for you” while the worker still runs. The job: strip owned projects, assets, profile, then the user row, then a “we deleted you” email. One job that **fans out** into many deletes is **batch**. The API is not blocked.' },
+          { type: 'p', text: 'Second batch picture: **midnight reports for every user** — thousands of **same-shaped** jobs at once. That is also batch: many copies of generate-and-send, not one request holding the wire.' },
+        ],
+      },
+      {
+        heading: '12. Design — idempotency and errors',
+        blocks: [
+          { type: 'p', text: 'At scale, jobs will **run more than once** (timeout, retry). **Idempotent** here: **safe to execute again** without extra side effects. Delete-account: do the DB work in a **transaction**. If a later step fails, **roll back**. The retry starts at **0%**, not “half the rows gone, try to delete them again and explode.” Design so a crash mid-job does not leave a cursed half-user.' },
+          { type: 'p', text: '**Error handling** is stricter than in a handler you are staring at: this is **another process**. Catch, **log**, let the queue **retry**. Miss an edge case here and nobody is on the HTTP call to see the stack — only the dead job.' },
+          { type: 'quote', text: 'HTTP POST is allowed to create twice if the client double-clicks. A **job retry** is not a double-click — it is recovery. The job itself must be the idempotent one.' },
+          {
+            type: 'kid',
+            items: [
+              'If the runner drops the box halfway through unpacking, we put **everything back on the shelf** and start unpacking again. We do not leave a mess and unpack “the rest.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '13. Design — observe, scale, order, rate limits',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Monitoring** — how many jobs in the queue, how many succeeded, how many failed, **why** (vendor vs your bug). Metrics into something like Prometheus / Grafana (the observability lesson is the deep dive). You need a **live picture**, not a feeling.',
+              '**Scale workers horizontally** — more users → **more consumer nodes**, not a bigger API box. Design so adding a worker is normal.',
+              '**Ordering** — if jobs **must** run in sequence, the broker/library must **support ordered delivery**. Do not assume FIFO if you never asked.',
+              '**Rate limits** — workers calling vendors can **blow their quota and your bill**. Cap how hard you hit *their* API, not only your own public routes.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '14. Best practices from the floor',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Small and focused** — one job, one unit of work. If B depends on A, **chain**, do not stuff both in one handler. If the child fails, the parent can stay succeeded; retries hit the **child**. One mega-job that fails on the last line **redoes the expensive first lines** and burns CPU.',
+              '**No long-running blobs** — a job that “takes forever” is a signal to **split** (parallel siblings or a parent/child chain).',
+              '**Errors + logs** — so you can debug, and so the queue knows to retry. You need the story: vendor vs internal.',
+              '**Watch queue length and worker health** — alert if the tray piles up, alert if workers die. Otherwise you discover the outage when users say “no email.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '15. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Piece', 'Remember'],
+            rows: [
+              ['Job', 'Work outside HTTP. Not required before 200/201.'],
+              ['Why', 'Vendors and CPU. Don’t 500 signup. Don’t lie “email sent.”'],
+              ['Flow', 'Serialize → enqueue → return. Worker deserializes → vendor/CPU → ACK.'],
+              ['Retry', 'Exponential backoff + max tries. Queue eats downtime; HTTP does not.'],
+              ['Broker', 'Rabbit / Redis / SQS. Library on top (Celery, BullMQ, Asynq, …).'],
+              ['Visibility', 'No ACK in time → job visible again. Crash must not drop work.'],
+              ['One-off', 'Event → one send/notify.'],
+              ['Recurring', 'Clock: reports, session cleanup.'],
+              ['Chain', 'Encode then thumbs ∥ captions.'],
+              ['Batch', 'Delete account / N reports. HTTP still instant.'],
+              ['Idempotent', 'Retry from zero. Transactions. No half-deletes.'],
+              ['Ops', 'Metrics, more workers, ordered delivery if required, rate-limit vendors, small jobs, alerts.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              'The request returns **accepted work**, not **finished vendor**.',
+              '**Enqueue JSON. ACK when done. Retry with backoff.** Visibility timeout is how a dead worker does not eat the letter.',
+              '**Small jobs. Idempotent jobs. Watch the tray.** That is most of backend queue work.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
