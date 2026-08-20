@@ -29,9 +29,19 @@ export function useInsightsSplit(options: InsightsSplitOptions) {
   const leftPct = ref(defaultPct);
   const dragging = ref(false);
   const narrow = ref(false);
+  /** When false, the right notes/lesson panel is hidden so the left can fill the row. */
+  const rightOpen = ref(true);
 
   const leftStyle = computed(() => {
     if (narrow.value) return undefined;
+    if (!rightOpen.value) {
+      return {
+        flex: '1 1 100%',
+        width: '100%',
+        maxWidth: 'none',
+        minWidth: '0',
+      } as Record<string, string>;
+    }
     return {
       flex: `0 0 ${leftPct.value}%`,
       width: `${leftPct.value}%`,
@@ -49,11 +59,31 @@ export function useInsightsSplit(options: InsightsSplitOptions) {
     localStorage.setItem(`${STORAGE_PREFIX}${storageKey}`, String(leftPct.value));
   }
 
+  function persistRight() {
+    if (!import.meta.client) return;
+    localStorage.setItem(
+      `${STORAGE_PREFIX}${storageKey}:right`,
+      rightOpen.value ? '1' : '0',
+    );
+  }
+
   function readStored() {
     if (!import.meta.client) return;
     const raw = localStorage.getItem(`${STORAGE_PREFIX}${storageKey}`);
     const n = raw == null ? NaN : Number(raw);
     if (Number.isFinite(n)) leftPct.value = clamp(n);
+    const right = localStorage.getItem(`${STORAGE_PREFIX}${storageKey}:right`);
+    if (right === '0') rightOpen.value = false;
+    if (right === '1') rightOpen.value = true;
+  }
+
+  function setRightOpen(open: boolean) {
+    rightOpen.value = open;
+    persistRight();
+  }
+
+  function toggleRight() {
+    setRightOpen(!rightOpen.value);
   }
 
   function setFromClientX(clientX: number) {
@@ -81,7 +111,7 @@ export function useInsightsSplit(options: InsightsSplitOptions) {
   }
 
   function onHandlePointerDown(event: PointerEvent) {
-    if (narrow.value) return;
+    if (narrow.value || !rightOpen.value) return;
     if (event.button != null && event.button !== 0) return;
     event.preventDefault();
     dragging.value = true;
@@ -94,7 +124,7 @@ export function useInsightsSplit(options: InsightsSplitOptions) {
   }
 
   function onHandleKeydown(event: KeyboardEvent) {
-    if (narrow.value) return;
+    if (narrow.value || !rightOpen.value) return;
     const step = event.shiftKey ? 4 : 2;
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
@@ -139,6 +169,9 @@ export function useInsightsSplit(options: InsightsSplitOptions) {
     leftStyle,
     dragging,
     narrow,
+    rightOpen,
+    setRightOpen,
+    toggleRight,
     onHandlePointerDown,
     onHandleKeydown,
   };
