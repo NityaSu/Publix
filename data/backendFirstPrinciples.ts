@@ -4894,16 +4894,249 @@ in parallel:
   {
     id: 'scale',
     n: 23,
-    title: 'Scaling and performance',
+    title: 'Scaling and Performance: Measure the Tail, Then Add Machines You Can Afford to Lose',
     label: 'Scale',
     cluster: 'keep',
     x: 1355,
     y: 670,
-    gist: 'Measure first. Vertical until you cannot; horizontal when you must. Most “slow” is N+1, locks, or unbounded work.',
+    gist: 'Fast is click-to-pixels. Averages hide the 1% that is paying you. Find the bottleneck before you cache. Vertical is simple until the ceiling; horizontal needs stateless boxes, a balancer, and a database that is no longer one box.',
     remember: [
-      'Latency, throughput, CPU, memory, IO. Find the bottleneck; do not sprinkle caches blindly.',
-      'Horizontal: more instances behind a balancer. Stateless app servers make this possible.',
-      'Fix N+1, add indexes, bound lists, lazy-load what you can. Then cache. Then shard.',
+      'P99/P95 over averages. Throughput plus latency. Run at 60-80% utilization so bursts have a shoulder.',
+      'Never guess: time the path. N+1, missing indexes, and connection storms beat “add Redis.” Pool externally when instances multiply.',
+      'Horizontal only works if state lives outside the process. LB + health checks. Reads to replicas (lag is physics). Shard when one table cannot. CDN for the edge. Do not start with microservices.',
+    ],
+    sections: [
+      {
+        heading: '1. Fast is the whole round trip',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Scaling and performance mean different things in a browser, on a wire, and in an OS. This chapter is the **backend**: how the process behaves **under load**, where time actually goes, and how you grow capacity without turning the map into folklore.' },
+          { type: 'p', text: 'A system is **fast** when a click becomes pixels. Browser → internet → your server → maybe the database, maybe an email provider → JSON back → paint. Users who say “slow” are talking about that whole wait. They do not care that your handler was 2ms if the query was 800ms.' },
+          { type: 'quote', text: 'Performance is a number you can argue with. “Fast” is a feeling. Give the feeling a unit: latency.' },
+        ],
+      },
+      {
+        heading: '2. Latency is a distribution, not an average',
+        blocks: [
+          { type: 'p', text: 'One request 50ms (cache hit, idle box). The next 200ms (miss, or fifty neighbors on the CPU). Average them and you get a polite lie. Averages **erase variation**, and variation is the job.' },
+          { type: 'p', text: 'A thousand requests, average 100ms: 99% under 50ms, **1% at 5 seconds**. Scale to a million a day and **ten thousand** people stared at a spinner. The average still looks fine. That 1% is often the **hard workflow** — pay, purchase, the query with three joins — the customers you cannot afford to gaslight.' },
+          {
+            type: 'table',
+            columns: ['Number', 'Means'],
+            rows: [
+              ['**P50**', 'Half of requests are at or below this. The typical click.'],
+              ['**P90**', '10% are worse. The shoulder.'],
+              ['**P99 / P95**', 'The tail. Complex logic, fat queries, waiting on someone else. Watch these.'],
+            ],
+          },
+          { type: 'p', text: 'When people say P99 is 2s they mean **1% of users waited 2s** (and 99% were faster). Talk percentiles in every scaling argument. Average is for other sciences.' },
+          {
+            type: 'kid',
+            items: [
+              'The class average is a B. One kid waited at the office for an hour. The average did not mention them.',
+              'The kids who wait are often the ones turning in the hard homework — payment, not window shopping.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Throughput — how many, not how long',
+        blocks: [
+          { type: 'p', text: '**Throughput** is requests per second (or minute). Latency is one trip. You can look heroic at 10 rps and 150ms, then die at 1,000 rps and 2s. The curve is not “more work, a little slower.” It stays almost flat, then **falls off a cliff**.' },
+          { type: 'p', text: 'Throughput answers: can we survive a sale day, a podcast mention, an email blast? Latency without throughput is a bench press with one plate.' },
+        ],
+      },
+      {
+        heading: '4. Utilization — leave a shoulder for bursts',
+        blocks: [
+          { type: 'p', text: 'Empty ice-cream shop: you are served now. **Low utilization, low latency.** Lunch rush: the worker is still two minutes per cone. You wait because of the **queue**. The worker did not get slower. **You** did, in wall-clock.' },
+          { type: 'p', text: 'Servers are that shop. Idle CPU grabs a request and returns. Busy CPU makes a line. Formal name: **utilization** = fraction of capacity in use. 0% idle. 100% maxed, about to fall over.' },
+          { type: 'p', text: 'The trap: we expect latency to rise **linearly** with utilization. Near 100% it goes **exponential**. Highway at 50%: overtaking works. 80%: you think twice. 90%: a brake becomes a jam. 100%: nobody moves. Production boxes usually sit **60-80%** and keep **20%+ headroom**. Traffic is not a metronome. It **bursts**. Average 40% still spikes through 100% if you have no shoulder.' },
+          { type: 'quote', text: 'You cannot run at 100% and stay fast. The buffer is the product.' },
+        ],
+      },
+      {
+        heading: '5. The bottleneck is specific — measure, do not sprinkle Redis',
+        blocks: [
+          { type: 'p', text: '“Slow” means **something named** is slow. In practice we skip naming it. We add a cache because a blog said so. We bump the database version. We add instances. Sometimes we get lucky. Often we spend a week fixing a problem we **do not have**.' },
+          { type: 'p', text: 'Story from the chapter: `GET /products/:id` felt slow. Cache in front of the read. Still slow. Then **timers** on the path: the query was **10ms**, the new cache **5ms**, a **sync** write to a remote log sink **500ms**. The database was never the villain. Blocking on someone else was. JSON of a huge body, XML, an HTTP call in a loop — same lesson. **Never guess. Always measure.**' },
+          {
+            type: 'kid',
+            items: [
+              'The line is long. You hire another cashier. The delay was the printer in the back.',
+              'A stopwatch on each door beats a new oven.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. Profilers for CPU, traces for I/O',
+        blocks: [
+          { type: 'p', text: 'A **profiler** samples a running process: which functions, for how long. A **flame graph** makes wide frames the ones that ate the clock. First look: the hot path is rarely the “clever” business function. It is serialize, or wait.' },
+          { type: 'p', text: 'Profilers are strong on **CPU**. Typical backends are **I/O-bound** (query, disk, outbound HTTP). For that, **distributed tracing** (Observe): one request, timestamps at handler / query / vendor. Two milliseconds in your code, 800 in SQL — now you know which lesson to reopen.' },
+        ],
+      },
+      {
+        heading: '7. N+1 — one list, a thousand round trips',
+        blocks: [
+          { type: 'p', text: 'Twenty posts on a home page, then **one query per author**. 21 trips. A thousand posts, 1001. Each trip pays TCP (if you are not pooled), parse, plan, execute, network. Five milliseconds times a thousand is **five seconds** of loader. The frontend loop is the cartoon. The real N+1 is **in the server**, looping `SELECT author` because the ORM made it look like an array walk.' },
+          {
+            type: 'pre',
+            lines: `// the cartoon — and the ORM footgun
+posts = db.select(posts)
+for post in posts:
+  author = db.select(users).where(id = post.authorId)   // N more queries
+
+// bulk: 1 + 1, or a join
+posts = db.select(posts)
+authors = db.select(users).where(id in post.authorIds)
+// or: select related / includes / join`,
+          },
+          { type: 'p', text: 'Modern ORMs have **prefetch / select-related / includes**. Raw SQL has **JOIN**. Print the SQL in dev. If you see a query per row, that is the bug, not “Postgres is slow.”' },
+        ],
+      },
+      {
+        heading: '8. Indexes — a catalog, not a sticker on every column',
+        blocks: [
+          { type: 'p', text: 'No catalog in a million-book library: walk every shelf (**sequential / full table scan**). A catalog by author: go to the shelves (**index**). Postgres usually uses a **B-tree**: sorted copy of a column plus pointers. Search by `author_id` without an index: seconds on a million rows. With one: tens of milliseconds. Primary key is already indexed. You still index the foreign keys you actually filter and join on.' },
+          { type: 'p', text: 'Indexes are **not free**. They take **disk**. Every insert/update/delete **updates every index** on that table. Index every column and writes crawl. Obvious keys (author on books) at migration time. Unobvious keys **after** traces say this query is hot. `EXPLAIN ANALYZE` shows seq scan vs index scan. Add the index, run it again.' },
+          {
+            type: 'ul',
+            items: [
+              '**Composite** `(user_id, created_at)` — helps queries that filter both, and queries that only use the **left** prefix. Only `created_at` will not use this index. Order matters.',
+              '**Covering** — the index holds the columns the query needs, so Postgres never visits the heap. Bigger index. Worth it when the read is brutal and the column set is tiny.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '9. Connections — a handshake is not free',
+        blocks: [
+          { type: 'p', text: 'Locally, open a connection, query, close — you never feel it. At scale: TCP handshake, auth, TLS, session, memory on the database **per connection**. Do that per query and you **pay latency on every request**. Postgres also **caps** connections (hundreds, not tens of thousands). A spike of workers can **exhaust** the cap and the database falls over.' },
+          { type: 'p', text: '**Pool:** keep idle connections warm. Borrow, query, return. **Internal** pool = inside each app process. Three instances times 150 = 450 against a 300 cap after autoscaling — crash. **External** pool (one shared pooler in front of Postgres) is the grown-up version when you multiply boxes. Internal is fine until the math says otherwise.' },
+        ],
+      },
+      {
+        heading: '10. Cache when the query is already honest',
+        blocks: [
+          { type: 'p', text: 'After indexes and pooling, if the database is **still** the wall, cache the **expensive result**. Caching lesson is the deep dive. Here: **invalidation** is the hard problem (time-based TTL vs delete-on-write). **Local** maps per instance go stale across boxes. **Shared** cache (Redis-shaped) is one truth plus a network hop. **Tiered:** tiny local L1 for the hottest keys, shared L2 behind it.' },
+          { type: 'p', text: 'Patterns: **aside** (read miss → DB → fill). **Write-through** (write DB and cache together — fewer misses, slower writes). **Write-behind** (cache first, DB later — fast, can diverge if the DB write dies). **Hit rate:** 90% is a healthy class; 20% means the key, TTL, or access pattern is wrong. TTL too long = stale. Cache too small = evict. Unknown user behavior = you are guessing again.' },
+        ],
+      },
+      {
+        heading: '11. Vertical then horizontal',
+        blocks: [
+          { type: 'p', text: '**Vertical (scale up):** bigger box — more cores, RAM, disk, NIC. Code unchanged. Twice the RAM, twice the local cache, roughly. Often **cheaper than two half-boxes** plus balancer tax. Ceiling: the cloud **largest instance**. **Single point of failure** — that beast reboots, you are gone (standbys help; the shape is still one neck). **One region** — far users stay far.' },
+          { type: 'p', text: '**Horizontal (scale out):** more **same-sized** copies. No hardware ceiling. One copy dies, traffic moves. Put copies **near users**. Cost: you now own a **distributed** problem — who gets the request, how state stays true, what happens when the network lies. Vertical avoids that complexity on purpose. Horizontal **trades** one set of problems for another. Pick the set you can operate.' },
+        ],
+      },
+      {
+        heading: '12. Statelessness — any box, same answer',
+        blocks: [
+          { type: 'p', text: 'Horizontal only works if **no instance owns exclusive memory**. Delete instance B; A and C must still be the product. **Stateful** here means “this machine remembers.” Login stored in a process array: next request hits B → **401**. Upload saved on A’s disk: C cannot find the file. SQLite file on the box: only that box has the ledger.' },
+          {
+            type: 'table',
+            columns: ['Thing', 'On the box (broken)', 'Outside (works)'],
+            rows: [
+              ['Session', 'Array in RAM', 'Shared store all instances can read'],
+              ['Upload', 'Local disk', 'Object storage'],
+              ['Rows', 'SQLite file beside the app', 'A real networked database'],
+            ],
+          },
+          { type: 'p', text: 'Thumb rule: if you chose horizontal, **every persist** is shared. That is a **code** change, not a slider in the console. Vertical was the slider.' },
+          {
+            type: 'kid',
+            items: [
+              'Four identical classrooms. Homework cannot live in one teacher’s drawer.',
+              'The office filing cabinet is shared. That is Redis / object storage / Postgres.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '13. Load balancer — the traffic cop and the pulse',
+        blocks: [
+          { type: 'p', text: 'Users do not pick instance C. Everything hits an **LB**; the LB forwards. Algorithms:' },
+          {
+            type: 'ul',
+            items: [
+              '**Round-robin** — A, B, C, A, … Fine when requests cost about the same and boxes are twins. Mix a 200ms read with a 2s write-plus-vendor-call and one box can drown in the expensive ones.',
+              '**Weighted round-robin** — bigger box gets more turns. Still blind to request shape.',
+              '**Least connections** — send to whoever has the fewest **open** HTTP waits. Long calls occupy a slot; light calls free it. Better mix of cheap and expensive.',
+              '**Weighted least connections**, **least response time**, **resource-based** (CPU/RAM) — same idea: use a signal, not a coin flip.',
+            ],
+          },
+          { type: 'p', text: 'If A is dead, round-robin still **sends A a third of traffic** → 502/503 for those users. **Health checks:** the LB probes a cheap GET on a timer. Fail → stop sending (Shutdown: fail **readiness** on purpose when draining). Live again → put back in rotation. Without probes, horizontal scaling is a lottery of errors.' },
+        ],
+      },
+      {
+        heading: '14. The database is still one bottleneck — replicas',
+        blocks: [
+          { type: 'p', text: 'You scaled the **stateless** app. The **stateful** store is still one primary. Most product APIs are **reads** (conservatively ~70%). **Read replicas:** one primary takes **writes**; copies take **SELECTs**, often closer to the reader. Primary load drops toward the write fraction.' },
+          { type: 'p', text: '**Replication lag** is physics. Write name in US, refresh 200ms later against a replica in another continent: old name. Fiber is not instant. Product choice: read-your-writes from primary for a beat, or accept stale for the catalog. Replicas do **not** make one giant table smaller. They copy it.' },
+        ],
+      },
+      {
+        heading: '15. Sharding — split the table on purpose',
+        blocks: [
+          { type: 'p', text: 'When **one** table is too many rows **and** too many QPS, **shard**: split rows across physical databases by a **shard key** (month of order, tenant, user id hash). Each shard is smaller (faster scans) and you have more machines (more QPS). The app (or a router) must **know which shard** before the query. Cross-shard joins and transactions are the bill. Hosted databases often **do this for you**; you still need the words so you can ask for the right knob. Rolling your own cluster on day one is how you learn operations the hard way.' },
+        ],
+      },
+      {
+        heading: '16. CDN and edge — cache that is already near the user',
+        blocks: [
+          { type: 'p', text: 'Even a perfect origin in one region costs **ocean latency** for Tokyo. A **CDN** is a global cache of **points of presence**. Static bundles, images, fonts, and **stable API JSON** (a catalog that barely moves) live at the edge. Origin sees less traffic. Invalidation is still a cache problem — now worldwide.' },
+          { type: 'p', text: '**Edge compute** is running **a little logic** at those POPs (auth cookie check, A/B, rewrite) so some requests never wake the origin. Not a replacement for your database. A shorter path for the bits that can be short.' },
+        ],
+      },
+      {
+        heading: '17. Async — get the HTTP door closed',
+        blocks: [
+          { type: 'p', text: 'The 2s handler that emails and writes a fat indexed table **holds an LB connection**. Queues lesson: enqueue, 202, worker. Horizontal scaling **loves** this: workers scale separately from request boxes. Part 2 repeats it because a “slow API” is often work that should not have been on the request thread. Shutdown still nacks in-flight jobs.' },
+        ],
+      },
+      {
+        heading: '18. One deploy vs many — monolith first',
+        blocks: [
+          { type: 'p', text: '**Microservices** are not a performance spell. They are **team and failure-domain** splits, paid for with network, versioning, and traces across hops. A **modulated monolith** (handlers / BLL already taught you the seams) scales **horizontally as one binary** for a long time. Split when a **piece** of the map has a different scale, a different store, or a different on-call — not because a talk said “distributed.”' },
+        ],
+      },
+      {
+        heading: '19. Serverless — someone else runs the instances',
+        blocks: [
+          { type: 'p', text: 'Functions that **appear** when a request arrives, bill per use, scale without you buying VMs. Cold start is a latency tax. Time limits and “no long in-process state” are the same **stateless** rule. Great for spiky, isolated work. Awkward for a chatty, always-warm monolith you have not designed as events. Not magic — a **packaging** of horizontal scale with sharper constraints.' },
+        ],
+      },
+      {
+        heading: '20. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Move', 'When'],
+            rows: [
+              ['Percentiles', 'Always. Average is camouflage.'],
+              ['Headroom', '60-80% CPU. Bursts are real.'],
+              ['Measure', 'Before cache, before bigger DB, before more boxes.'],
+              ['N+1 / index / pool', 'The usual database fruits.'],
+              ['Vertical', 'Until the ceiling or the single neck scares you.'],
+              ['Stateless + LB', 'The price of horizontal.'],
+              ['Replicas', 'Read-heavy, accept lag or read-your-writes.'],
+              ['Shard', 'One table cannot. Key is the design.'],
+              ['CDN / edge', 'Geography and static (and some JSON).'],
+              ['Queue', 'Work that should not own the HTTP connection.'],
+              ['Many services', 'After the seams hurt, not before.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**The tail is the product.** P99 is where checkout lives.',
+              '**State off the box, then add boxes.** A balancer without health checks is a random 502 machine.',
+              'Scaling is not a stack of logos. It is a sequence: measure, cheap DB wins, cache, up, then out.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
