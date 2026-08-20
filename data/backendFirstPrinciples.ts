@@ -2118,7 +2118,7 @@ POST /projects/:id/clone            → 404  (source gone)`,
     cluster: 'surface',
     x: 1310,
     y: 325,
-    gist: 'They call me. I do not poll them. That inverts trust: now I am the server on the other end of someone else’s retry loop.',
+    gist: 'They call me. I do not poll them. That inverts trust: now I am the server on the other end of someone else\'s retry loop.',
     remember: [
       'Push vs poll. URL + event + payload + signature. Answer 2xx fast, work later.',
       'Verify signatures. HTTPS. Retry with backoff. Make handlers idempotent — retries will happen.',
@@ -4352,16 +4352,286 @@ service:     tx = context.transaction
   {
     id: 'shutdown',
     n: 21,
-    title: 'Graceful shutdown',
+    title: 'Graceful Shutdown: How a Process Leaves Without Dropping the Work Still in Its Hands',
     label: 'Shutdown',
     cluster: 'keep',
     x: 1005,
     y: 670,
-    gist: 'Deploys and scale-in kill processes. A rude kill drops in-flight writes. A polite one finishes them.',
+    gist: 'A deploy or scale-in kills the process. A rude kill drops in-flight writes. A polite one stops new work, finishes what it already started, closes pools in reverse, and exits before SIGKILL arrives.',
     remember: [
-      'SIGTERM → stop accepting → drain in-flight → close pools → exit.',
-      'Load balancer health check must go unhealthy before the drain, or it keeps sending.',
-      'Jobs: nack/return the message if you die mid-work.',
+      'SIGTERM / SIGINT you can catch. SIGKILL you cannot. Finish inside the grace window or the OS yanks the cord.',
+      'Fail readiness first, then stop accepting, then drain HTTP, then jobs, then pools. Last in, first out.',
+      'Force-exit on a timer shorter than the orchestrator. Log the whole walk so Observe can see the death.',
+    ],
+    sections: [
+      {
+        heading: '1. Why dying is a feature',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Starting a server is the easy half. **Stopping** it is the half that eats payments. Every deploy, every scale-in, every machine recycle **kills a running process**. The question is not whether it dies. The question is whether the work **already in its hands** finishes, or gets cut mid-write.' },
+          { type: 'p', text: 'Picture checkout: the card network has said yes, your handler is writing the order row, a job is about to fire the receipt. Then the orchestrator replaces the box. If the process vanishes **now**, you can charge without an order, keep an order without a charge, or retry and **charge twice**. That is not a rare bug. That is **what deploys do** if nobody taught the process how to leave.' },
+          { type: 'quote', text: 'Zero-downtime means the new box is already taking traffic. The old box still has to **walk its guests to the door**. It does not get to slam it.' },
+          {
+            type: 'kid',
+            items: [
+              'The cafeteria can close. The kids who already have a tray still get to finish eating.',
+              'You do not shove them out with a half-chewed sandwich and then wonder why the register is wrong.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. What graceful actually means',
+        blocks: [
+          { type: 'p', text: '**Graceful shutdown** is stopping the process in a **controlled order**: no new work, finish the work already started, release what you opened, then exit. It is manners for a machine.' },
+          {
+            type: 'ul',
+            items: [
+              '**Stop accepting** new HTTP (and new jobs). The door closes.',
+              '**Drain** in-flight requests and in-flight jobs. Conversations already started get an ending.',
+              '**Close** listeners, pools, files, sockets — in **reverse** of how you opened them.',
+              '**Log** that you left on purpose. Then **exit 0**.',
+            ],
+          },
+          { type: 'p', text: 'The rude version is: signal arrives, process gone, TCP reset to whoever was talking, transaction half-committed, worker vanished with a message that will be retried into a mess. Users see a random 502 during a “successful” deploy. That is not the network being evil. That is you yanking the cord.' },
+          {
+            type: 'kid',
+            items: [
+              'Rude host: 9pm, push the guests into the street, slam the door.',
+              'Polite host: finish the sentence, walk them out, wash the glasses, **then** lock up.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. A process is born, runs, and is asked to die',
+        blocks: [
+          { type: 'p', text: 'Your app is a **process**. The OS created it (`fork` / `exec`). The scheduler gave it CPU. It waits on I/O. It runs. Someday the OS (or Kubernetes, or you hitting Ctrl+C) decides **this life is over**.' },
+          { type: 'p', text: 'The OS does **not** start with murder. It has a **protocol**: send a **signal** — a tiny asynchronous integer, not a JSON body — that means “please stop.” Your code can **register a handler**. The handler is the whole art. If you never registered one, the **default** is: die now, no cleanup.' },
+          {
+            type: 'pre',
+            lines: `OS  →  SIGTERM / SIGINT  →  your handler
+     finish in-flight work
+     close pools
+     log "shutdown complete"
+     exit 0
+
+OS  →  (if you are still alive after the grace window)
+     SIGKILL  →  you do not get a handler. lights out.`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'The bell is a request to go home. The fire alarm that cannot be ignored is the principal pulling the plug.',
+              'You pack your bag between the bell and the bus. You do not pack after the bus has left.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Three signals — two you can catch',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Signal', 'Who sends it', 'Can you handle it?'],
+            rows: [
+              ['**SIGINT** (2)', 'Ctrl+C in a terminal', 'Yes. Same shutdown function as prod.'],
+              ['**SIGTERM** (15)', 'Default `kill`. systemd. Docker stop. Kubernetes on pod delete.', 'Yes. This is the polite production ask.'],
+              ['**SIGKILL** (9)', '`kill -9`. Orchestrator **after** the grace period.', '**No.** Cannot catch, cannot ignore. Power cord.'],
+            ],
+          },
+          { type: 'p', text: 'Handle **both** SIGINT and SIGTERM with the **same** function. If you only handle SIGTERM, local Ctrl+C skips the drain and you never practice the path that production will take. If you only handle SIGINT, Kubernetes will still SIGTERM you into a default death.' },
+          { type: 'p', text: 'Kubernetes default **termination grace** is **30 seconds** (you can set `terminationGracePeriodSeconds`). Docker stop is often **10**. Your internal force-exit timer must be **shorter** than that window. If you wait forever on a hung Redis, the orchestrator sends SIGKILL anyway — and you lost the “graceful” part plus whatever you were mid-write.' },
+          { type: 'quote', text: 'SIGKILL is not a strategy. It is what happens when your strategy ran out of clock.' },
+        ],
+      },
+      {
+        heading: '5. The walk — fail ready, then drain, then close',
+        blocks: [
+          { type: 'p', text: 'Register handlers **at boot**, before you listen. When the signal lands:' },
+          {
+            type: 'ul',
+            items: [
+              '**Flip not-ready.** `/health/ready` (or whatever the probe hits) returns **503**. Liveness stays **200** — you are alive, you are just not taking new seats. If liveness fails during drain, Kubernetes **restarts** you mid-cleanup. That is the opposite of graceful.',
+              '**Wait a beat** so the load balancer actually drops you. Endpoint updates are not instant. Closing the socket **before** the balancer notices is how you still get 502s with “we implemented shutdown.” A short sleep or a `preStop` hook exists for this race, not for decoration.',
+              '**Stop accepting** new HTTP. `server.close()` / `Shutdown(ctx)` : listening socket dies; **in-flight** requests keep their connections.',
+              '**Wait** for those requests (and keep-alives you are tracking) to finish, **bounded** by a timeout.',
+              '**Stop workers** taking new jobs. Let the current job finish or **nack** it so the broker can give it to someone still alive. Do not ACK work you did not complete.',
+              '**Close** Redis, then the DB pool, then anything else — **after** HTTP and jobs no longer need them.',
+              '**Log** duration. **exit 0**. Parallel: a timer fires **exit 1** if you overstay.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `SIGTERM
+  isShuttingDown = true          // ready probe → 503
+  sleep a few seconds            // balancer forgets this box
+  http.Shutdown / server.close   // no new accepts
+  wait in-flight  (timeout)
+  stop consumers; finish or nack
+  redis.quit
+  db.pool.end
+  log shutdown complete
+  exit 0
+
+// safety net, unref'd so it does not keep the process alive
+setTimeout(force exit 1, 25s)    // < k8s 30s`,
+          },
+        ],
+      },
+      {
+        heading: '6. Last in, first out',
+        blocks: [
+          { type: 'p', text: 'Boot order is usually: **config → database → cache → queue consumers → HTTP listen**. Shutdown is **the stack, inverted**. HTTP **depends** on the pool. Jobs **depend** on the pool. If you `pool.end()` first, in-flight handlers still try to query and you invent errors that look like an outage.' },
+          {
+            type: 'pre',
+            lines: `wrong:
+  close DB
+  then try to finish HTTP
+  → in-flight INSERT dies
+  → half a checkout
+
+right:
+  stop new HTTP + drain requests
+  stop new jobs + drain / nack
+  then close Redis
+  then close DB
+  then exit`,
+          },
+          { type: 'p', text: 'Student notes from this chapter hammer **LIFO**. The one exception people argue about is **workers vs HTTP**: both still need the DB, so **neither** closes the DB first. Stop **new** work on both, drain both, **then** pools. HTTP first vs workers first is a taste; **pools last** is the law.' },
+          {
+            type: 'kid',
+            items: [
+              'You do not unplug the kitchen before the tables have paid.',
+              'You stop seating new tables, let the seated ones finish, **then** wash the pans and lock the walk-in.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Health checks are part of shutdown',
+        blocks: [
+          { type: 'p', text: 'A **readiness** probe answers: “should this instance receive **new** traffic?” A **liveness** probe answers: “is this process **stuck** and should we kill it?” Mixing them is how drain turns into a restart loop.' },
+          {
+            type: 'table',
+            columns: ['Probe', 'During drain', 'If you get it wrong'],
+            rows: [
+              ['Readiness', '**503** the instant shutdown starts', 'Balancer keeps sending. You close the socket. 502s.'],
+              ['Liveness', '**200** until you actually exit', 'K8s thinks you are dead and SIGKILLs the cleanup.'],
+              ['Startup', 'Only about boot, not death', 'Unrelated — do not reuse it as readiness.'],
+            ],
+          },
+          { type: 'p', text: 'Failing readiness **does not kill the pod**. That is the point. You stay alive, finish the tray, then leave. The series pairs this with **zero-downtime deploys**: new replica ready **before** the old one is asked to die. Graceful shutdown is the old replica’s half of that handshake.' },
+        ],
+      },
+      {
+        heading: '8. Jobs, keep-alives, and the clock',
+        blocks: [
+          { type: 'p', text: 'HTTP is not the only in-flight work. A **queue consumer** holding a message with visibility timeout: if you die after doing the side effect but before ACK, the message comes back — that is why the Queues lesson insisted on **idempotent jobs**. If you die **before** the side effect, **nack / do not ACK** so another worker can take it. Shutdown is where those two lessons meet.' },
+          { type: 'p', text: '**Keep-alive** connections (HTTP/1.1 default, HTTP/2 always) are not closed just because you called `server.close()`. Idle keep-alives can hold the process open. Track connections and destroy idle ones once drain starts, or the timeout is what saves you.' },
+          { type: 'p', text: 'Size the grace window from **reality**: p99 of a request + drain delay + pool close. A 30s default is a guess. A 5-minute video encode in the HTTP handler will **never** drain in 30s — that work should not have been on the HTTP path (Queues again). Shutdown cannot fix a handler that was too fat.' },
+          {
+            type: 'kid',
+            items: [
+              'The bus will not wait an hour because someone started baking a cake at the bell.',
+              'Cake was a job. The tray still on the table is a request. Know which is which.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '9. What the logs should look like',
+        blocks: [
+          { type: 'p', text: 'If Observe cannot see the death, you will swear shutdown “works” while deploys drip 502s. Boot logs the **acquire** order. Shutdown logs the **release** order, with timestamps.' },
+          {
+            type: 'pre',
+            lines: `// boot
+INFO  database connected
+INFO  queue consumer started
+INFO  http listening :3000
+
+// Ctrl+C or SIGTERM
+WARN  SIGTERM received — draining
+INFO  readiness=false
+INFO  http: no new accepts; waiting in-flight
+INFO  http: drained
+INFO  consumers stopped
+INFO  redis quit
+INFO  db pool closed
+INFO  shutdown complete (1842ms)
+// process exits 0`,
+          },
+          { type: 'p', text: 'Alert on **force exits** and on **SIGKILL** (the pod that exceeded grace). Those are not vibes. They mean the timer is too tight or a dependency hung. Correlation with deploy events is the whole point of the last lesson.' },
+        ],
+      },
+      {
+        heading: '10. The shape in code — language does not matter',
+        blocks: [
+          { type: 'p', text: 'Frameworks all expose the same moves: listen for signals, shut down the HTTP server with a context/timeout, close the pool. Node `server.close`, Go `http.Server.Shutdown`, Python uvicorn lifespan, whatever. Copy the **order**, not a library name.' },
+          {
+            type: 'pre',
+            lines: `listen SIGTERM, SIGINT → shutdown(signal)
+
+async shutdown(signal):
+  log warn signal
+  ready = false
+  await sleep(drainDelay)          // balancer race
+  await http.stopAcceptingAndWait(deadline)
+  await workers.stop(deadline)     // nack incomplete
+  await redis.quit()
+  await db.end()
+  log info complete
+  exit 0
+
+in parallel:
+  after 25s: log error timeout; exit 1`,
+          },
+          { type: 'p', text: 'Register this **once** in a shared helper if you have many services. Forgetting it on the “small” one is how the small one becomes the 502 during every rollout.' },
+        ],
+      },
+      {
+        heading: '11. How you know it works',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              'Send a **slow** request (sleep 10s in a handler). SIGTERM the process. The client should get **200**, not a reset.',
+              'Hold an open **transaction**. Drain should **commit or roll back**, not leave an idle-in-transaction ghost.',
+              'Run a **job** mid-shutdown. Either it finishes or it is visible again on the broker — never ACK-and-die.',
+              'Watch **ready** go 503 **before** the listening port dies.',
+              'Exceed the timeout on purpose once. Confirm you **force-exit** and that the orchestrator did not need SIGKILL. Then fix the hung path.',
+            ],
+          },
+          { type: 'quote', text: 'A shutdown you never tested with in-flight work is just a comment in main().' },
+        ],
+      },
+      {
+        heading: '12. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Piece', 'Remember'],
+            rows: [
+              ['Why', 'Deploys kill processes. In-flight money must not die with them.'],
+              ['SIGINT / SIGTERM', 'Catch both. Same drain.'],
+              ['SIGKILL', 'Uncatchable. You already failed the clock.'],
+              ['Ready vs live', 'Ready 503. Live 200 until exit.'],
+              ['Order', 'Stop new → drain HTTP/jobs → pools last (LIFO).'],
+              ['Timeout', 'Your timer < orchestrator grace. Force-exit beats hung quit().'],
+              ['Jobs', 'Finish or nack. Never ACK work you did not do.'],
+              ['Logs', 'Death is an event. Observe it.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**The new box is ready. The old box still has guests.** Walk them out.',
+              '**Ready fails first. Pools close last.** SIGKILL means you talked too long.',
+              'Shutdown is not extra. It is the last chapter of every request that was still alive when the deploy started.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
