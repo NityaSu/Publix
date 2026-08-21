@@ -3145,7 +3145,7 @@ CREATE INDEX tasks_project_id_idx ON tasks (project_id);
   {
     id: 'bll',
     n: 13,
-    title: 'Business logic layer',
+    title: 'Business Logic Layer: Rules About the World, Not About HTTP or SQL',
     label: 'BLL',
     cluster: 'core',
     x: 120,
@@ -3155,6 +3155,185 @@ CREATE INDEX tasks_project_id_idx ON tasks (project_id);
       'Three layers: presentation (HTTP) → business → data access.',
       'SoC, SRP, open/closed, depend on abstractions — so I can test rules without spinning a server.',
       'Domain models (User, Order) plus services. Validation of meaning lives here; format checks can live at the gate.',
+    ],
+    sections: [
+      {
+        heading: '1. Why this lesson exists',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Handlers already named the **service**: business rules, no HTTP. This lesson is that layer as a **place**, not a function name. The product lives here — refunds, inventory, who may publish, when a cart becomes an order. If those sentences are in the route or in the SQL string, you do not have a backend. You have a database with extra steps.' },
+          { type: 'p', text: 'The **business logic layer (BLL)** is the office. Reception (HTTP) and the filing cabinet (SQL) are not allowed to invent company policy. You already drew that spine in **9 · Handlers**. Stay here until you can point at a rule and say **which layer owns it**.' },
+          { type: 'quote', text: 'HTTP is how the world knocks. SQL is how memory is kept. Business logic is what the company believes is allowed.' },
+          {
+            type: 'kid',
+            items: [
+              'Reception stamps envelopes. The cabinet stores folders. Neither one decides “Maya already borrowed this book.” That is the librarian.',
+              'If the rule is written on the envelope, every new door forgets it. Write it in the office handbook.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. Three layers',
+        blocks: [
+          { type: 'p', text: 'Same picture as the request lifecycle, named as **layers** this time so you can test and replace them.' },
+          {
+            type: 'table',
+            columns: ['Layer', 'Also called', 'Knows', 'Must not know'],
+            rows: [
+              ['Presentation', 'Handler / controller', 'HTTP, JSON, status codes, cookies', 'Prices, stock, who may refund'],
+              ['Business', 'Service / BLL / domain', 'Rules, orchestration, domain types', '`req`, `res`, SQL dialects'],
+              ['Data access', 'Repository / DAL', 'Queries, transactions, the store', 'Why a refund is allowed'],
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `POST /orders/42/refund
+handler     bind JSON, 401 if no user, call service, stamp 200 / 409
+service     "paid? window still open? restock? write refund + stock"
+repository  UPDATE orders … ; INSERT refunds … ; UPDATE inventory …`,
+          },
+          { type: 'p', text: 'A **job** or a **CLI** should be able to call the same service. If “refund” only exists inside `res.status(200)`, you buried the product in the door.' },
+        ],
+      },
+      {
+        heading: '3. What counts as business logic',
+        blocks: [
+          { type: 'p', text: 'Not “code that runs on the server.” **Meaning.** Sentences a product person could argue about without mentioning Node or Postgres.' },
+          {
+            type: 'ul',
+            items: [
+              '**Inventory** — cannot sell below zero, or you allow backorder and record a debt.',
+              '**Refunds** — only if paid, only inside 14 days, only once, restock or do not.',
+              '**Publish** — draft → review → live. Who may press the button. What “live” does to the URL.',
+              '**Unique in the product sense** — two orgs may both have a project named “API,” but not two projects in the **same** org.',
+              '**Money** — totals, tax, rounding. Never float. The database lesson will say DECIMAL; the **rule** for when tax applies lives here.',
+            ],
+          },
+          { type: 'p', text: 'CRUD is **how** you touch the row. BLL is **whether** you may, and **what else** must move with it. Charge the card and then insert the order — that order of operations is a rule, not a route.' },
+          {
+            type: 'kid',
+            items: [
+              '“Is this soup vegetarian?” is a rule. “PUT the soup bowl on table 4” is CRUD.',
+              'The kitchen can file a bowl perfectly and still poison the guest if nobody owns the recipe.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Format at the gate, meaning in the office',
+        blocks: [
+          { type: 'p', text: '**Validation of shape** can live at the gate (lesson 6): email looks like an email, `quantity` is a positive integer, JSON parsed. Fail → **400**, do not enter the service.' },
+          { type: 'p', text: '**Validation of meaning** lives here: that email is already an account, quantity 3 exceeds stock 2, this user is not the owner. Those are **409 / 403 / 422** after a rule ran — not “the JSON was ugly.”' },
+          {
+            type: 'pre',
+            lines: `// gate — format
+if (!looksLikeEmail(body.email)) return 400
+
+// BLL — meaning
+if (repo.findByEmail(email)) throw alreadyTaken      // handler maps → 409
+if (stock < qty) throw insufficientStock             // handler maps → 409`,
+          },
+          { type: 'quote', text: 'The gate asks “can I even read this?” The office asks “does this make sense in our world?”' },
+        ],
+      },
+      {
+        heading: '5. Domain models plus services',
+        blocks: [
+          { type: 'p', text: 'A **domain model** is a type that means something in the product: `User`, `Order`, `Note`. Not `Row42` and not the HTTP body. Fields the company cares about. Methods if the rule is small and belongs on that thing (`order.canRefund(now)`). Services if the rule **spans** two things (`checkoutService.place(cart, user)` talks to stock, payments, mail).' },
+          { type: 'p', text: 'Do not pass `req` into a model. Do not make `User` know SQL. The model is the vocabulary. The service is the paragraph. The repository is the filing.' },
+          {
+            type: 'pre',
+            lines: `// domain — meaning
+order.canRefund(now)           // window, status, not already refunded
+
+// service — orchestration
+refundService.refund(orderId, actor)
+  order = repo.get(orderId)
+  if !order.canRefund(now) throw notRefundable
+  payment.refund(order.chargeId)
+  repo.markRefunded(orderId)
+  mail.queueReceipt(order.email)`,
+          },
+          { type: 'p', text: 'If every rule is a pile of `if` in the handler, you do not have models. You have a script. If every rule is a SQL `CASE`, you hid the product in the cabinet — next lesson can store it, this lesson still has to **own** it.' },
+        ],
+      },
+      {
+        heading: '6. SoC, SRP, open/closed, depend on abstractions',
+        blocks: [
+          { type: 'p', text: 'Four names people throw at this layer. They are not decorations. They are how you keep the office from melting into the hallway.' },
+          {
+            type: 'ul',
+            items: [
+              '**Separation of concerns (SoC)** — HTTP, rules, SQL each have a room. A change to JSON shape should not rewrite the refund window.',
+              '**Single responsibility (SRP)** — `refundService` refunds. It does not also parse cookies and also migrate tables. One reason to change.',
+              '**Open/closed** — add a new payment vendor by plugging in a new adapter, not by editing `if stripe … else paypal` in twelve handlers. Open to extension, closed to “please do not touch that file.”',
+              '**Depend on abstractions** — the service calls `Payments.refund(id)`, not `StripeClient.post(...)`. Tests fake `Payments`. Prod wires Stripe. The rule file does not import the vendor.',
+            ],
+          },
+          { type: 'p', text: 'You do not need a 400-page DDD book to start. You need: **rules in one place**, **stores behind a narrow door**, **HTTP as a translator**.' },
+          {
+            type: 'kid',
+            items: [
+              'The office handbook does not name the brand of filing cabinet. Swap the cabinet, keep the rules.',
+              'One clerk, one job. The person who refunds is not also the receptionist and the carpenter.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Test the office without the building',
+        blocks: [
+          { type: 'p', text: 'If the rule is in the handler, a test needs a port, a JSON body, maybe a database. That is slow and brittle. If the rule is a function `canRefund(order, now)`, a test is **two objects and an assertion**. That is why this layer exists as a layer.' },
+          {
+            type: 'pre',
+            lines: `// no server, no Postgres
+assert canRefund({ status: "paid", refundedAt: null }, day(10)) === true
+assert canRefund({ status: "paid", refundedAt: null }, day(30)) === false`,
+          },
+          { type: 'p', text: 'Fake the repository (`inMemoryOrders`) when the service orchestrates. Fake payments. You are testing **policy**, not the network. Integration tests still exist — they belong with the database and HTTP lessons. Do not make every rule wait on them.' },
+          { type: 'quote', text: 'If I cannot test a refund without spinning a server, the rule is still trapped in the door.' },
+        ],
+      },
+      {
+        heading: '8. Three ways to hide the product',
+        blocks: [
+          { type: 'p', text: 'You will meet all three. They feel fast. They rot the same way.' },
+          {
+            type: 'table',
+            columns: ['Smell', 'Where the rule went', 'What breaks'],
+            rows: [
+              ['Fat controller', 'The handler', 'Jobs and CLIs cannot reuse it. Tests need HTTP.'],
+              ['Fat repository', 'The SQL file', 'Swap the store and you rewrite the company. Rules are unreadable CASE soup.'],
+              ['Fat framework magic', 'Hooks, observers, “on save”', 'Nobody can find the refund. Order of hooks is the product.'],
+            ],
+          },
+          { type: 'p', text: 'Triggers and constraints in Postgres are **good for integrity** (unique, `updated_at`, “amount > 0”). They are a poor home for “14-day refund if the user is on plan Pro.” Put invariants that must never be false in the database. Put **stories** in the BLL.' },
+        ],
+      },
+      {
+        heading: '9. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Question', 'Layer', 'Lesson'],
+            rows: [
+              ['What did they send, what status do I stamp?', 'Handler', '9 · Handlers'],
+              ['May they, and what else must move?', 'BLL / service', 'This node'],
+              ['How do I persist the result?', 'Repository + DB', '12 · Databases'],
+              ['Is this JSON even a number?', 'Gate', '6 · Validation'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Rules about the world live in the office.** Not in the route, not in the SQL string.',
+              '**Format at the gate. Meaning here.** Domain types plus services. Test them without a server.',
+              'Open **12 · Databases** for the cabinet. CRUD was the skeleton. This is why the skeleton moves.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
