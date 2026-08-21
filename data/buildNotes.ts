@@ -16,6 +16,15 @@ export interface BuildNote {
  */
 export const buildNotes: BuildNote[] = [
   {
+    slug: 'database-lab',
+    title: 'Database Lab',
+    summary:
+      'Tables, keys, and joins in a stepped playground — left join is one lesson, not the whole note.',
+    tag: 'Personal Learning',
+    date: '2026-08-21',
+    stack: ['SQL', 'Tables', 'Joins', 'NULL'],
+  },
+  {
     slug: 'docker-for-kids',
     title: 'Docker in Kid Version',
     summary:
