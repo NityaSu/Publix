@@ -50,7 +50,7 @@ export const buildNotes: BuildNote[] = [
       'Unsafe agent first → Docker cage → live dashboard. Screenshots and Phase 4 demos inside.',
     tag: 'Personal Learning',
     date: '2026-08-08',
-    stack: ['Python', 'Ollama', 'Docker', 'FastAPI', 'React'],
+    stack: ['Sandbox', 'Docker', 'Python', 'Ollama', 'FastAPI', 'React'],
   },
 ];
 

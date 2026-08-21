@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue';
 import BlogDemoMedia from '~/component/BlogDemoMedia.vue';
 import InsightsReadingShell from '~/component/InsightsReadingShell.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
@@ -6,7 +7,13 @@ import { mediaUrl } from '~/utils/media';
 
 const GITHUB_URL = 'https://github.com/NityaSu/supercage';
 
-const stackTags = ['Python', 'Ollama', 'Docker', 'FastAPI', 'React'] as const;
+const stackTags = ['Sandbox', 'Docker', 'Python', 'Ollama', 'FastAPI', 'React'] as const;
+
+const FLOW_TEXT = 'Unsafe agent first → Docker cage → live dashboard';
+const THINKING_MS = 4000;
+
+const sweeping = ref(true);
+let sweepTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** site-media object paths under images/blog/supercage and videos/blog/supercage */
 const demos = {
@@ -25,9 +32,24 @@ useHead({
     {
       name: 'description',
       content:
-        'A learning project: I built an unsafe AI coding agent first, then put it in a Docker cage, then connected a real dashboard.',
+        'A learning project: I wanted to understand sandbox by building one — unsafe agent first, then a Docker cage, then a live dashboard.',
     },
   ],
+});
+
+onMounted(() => {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) {
+    sweeping.value = false;
+    return;
+  }
+  sweepTimer = setTimeout(() => {
+    sweeping.value = false;
+  }, THINKING_MS);
+});
+
+onUnmounted(() => {
+  if (sweepTimer) clearTimeout(sweepTimer);
 });
 </script>
 
@@ -47,7 +69,13 @@ useHead({
             Building supercage: caging an AI coding agent
           </h1>
           <p class="mt-5 text-base md:text-lg ri-ink leading-relaxed">
-            I built an unsafe agent first, then put it in a Docker cage, then connected a real dashboard.
+            I wanted to understand
+            <span class="sc-sandbox">sandboxing</span>:
+            how to stop an AI agent from touching my real machine.
+          </p>
+
+          <p class="sc-chase mt-8" aria-label="Unsafe agent first, then Docker cage, then live dashboard">
+            <span class="sc-thinking" :class="{ 'is-done': !sweeping }">{{ FLOW_TEXT }}</span>
           </p>
           <div class="mt-6 flex flex-wrap gap-2">
             <span
@@ -67,24 +95,21 @@ useHead({
               Why this exists
             </h2>
             <p>
+              I named it
+              <strong class="font-bold text-accent">supercage</strong>
+              (super + cage) because it locks an AI agent inside a strict digital boundary—stopping it from running random commands or touching your real computer files.
+            </p>
+            <p>
               Modern AI coding agents don’t just chat. Through
-              <strong class="ri-ink font-medium">tool calling</strong>
-              — asking the model to invoke functions like “read this file” or “run this shell command” —
-              they can read and write files and execute commands on your machine.
+              <strong class="ri-ink font-medium">tool calling</strong>,
+              they can read files, write code, and run commands directly on your system. That power comes with real risks: if an agent runs directly on your machine, it has access to everything you do.
             </p>
             <p>
-              That is powerful. It is also dangerous. If the agent’s shell tool runs on the host, it can
-              touch everything your user account can touch.
-            </p>
-            <p>
-              Phase 1 made that concrete for me: when the agent ran <code class="text-accent/90">whoami</code>,
-              it returned my Mac username. When it wrote a file to Desktop, the file landed on my real Desktop —
-              not a fake folder inside a demo.
-            </p>
-            <p>
-              <strong class="ri-ink font-medium">supercage</strong> is a learning project. The point is
-              the cage: understand how tools like Cursor keep agents safer by isolating what they can reach.
-              It is not a production product.
+              Phase 1 proved this risk. When the agent ran
+              <code class="text-accent/90">whoami</code>,
+              it showed my actual Mac username, and when it created a file, it appeared directly on my real Desktop.
+              <strong class="font-bold text-accent">supercage</strong>
+              is a hands-on learning project built to test how sandboxes trap AI tools in a safe space to protect your main machine. It is a working test, not a finished product.
             </p>
             <p>
               Code:
@@ -368,5 +393,67 @@ useHead({
 code {
   font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.9em;
+}
+
+.sc-sandbox {
+  display: inline;
+  color: var(--ri-rule);
+  font-family: 'Montserrat', 'Montserrat fallback', sans-serif;
+  font-weight: 800;
+  font-size: 1.05em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sc-chase {
+  margin: 0;
+  font-family: 'Montserrat', 'Montserrat fallback', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.15rem, 3.4vw, 1.65rem);
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+}
+
+.sc-thinking {
+  text-transform: none;
+  background: linear-gradient(
+    90deg,
+    #555555 0%,
+    #555555 30%,
+    #cccccc 50%,
+    #555555 70%,
+    #555555 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: thinkingSweep 2s ease-in-out 2;
+}
+
+@keyframes thinkingSweep {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+.sc-thinking.is-done {
+  animation: none;
+  background: none;
+  -webkit-text-fill-color: #cccccc;
+  color: #cccccc;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-thinking {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: #cccccc;
+    color: #cccccc;
+  }
 }
 </style>
