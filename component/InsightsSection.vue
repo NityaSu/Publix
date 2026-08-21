@@ -88,7 +88,7 @@ const latestNotes = publicBuildNotes.slice(0, 2);
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 class="font-display font-extrabold uppercase ri-ink text-2xl sm:text-3xl md:text-4xl">
-            Build notes
+            Build Notes
           </h2>
           <p class="mt-3 max-w-2xl text-sm md:text-base ri-ink leading-relaxed">
             Simple notes on my personal learning, written for myself just to review for fun. Not necessarily meant for others, but I’m generous enough to keep it public!

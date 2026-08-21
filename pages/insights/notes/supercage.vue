@@ -61,7 +61,7 @@ onUnmounted(() => {
         <header class="max-w-3xl">
           <div class="flex flex-wrap items-start justify-between gap-4">
             <p class="flex items-center gap-2 text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
-              Build notes
+              Build Notes
             </p>
             <InsightsReadingToggle />
           </div>
@@ -379,7 +379,7 @@ onUnmounted(() => {
                 to="/insights/notes"
                 class="text-sm ri-sub hover:text-accent transition-colors"
               >
-                ← Back to Build notes
+                ← Back to Build Notes
               </NuxtLink>
             </p>
           </div>

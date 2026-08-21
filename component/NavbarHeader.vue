@@ -43,8 +43,8 @@ const navLinks: NavLink[] = [
     label: 'Insights',
     type: 'dropdown',
     children: [
-      { label: 'My Thoughts', to: '/insights', icon: Lightbulb },
-      { label: 'Build notes', to: '/insights/notes', icon: NotebookPen },
+      { label: 'Random Thoughts', to: '/insights', icon: Lightbulb },
+      { label: 'Build Notes', to: '/insights/notes', icon: NotebookPen },
     ],
   },
   { label: 'Projects', type: 'route', to: '/projects' },
@@ -190,18 +190,20 @@ const goHomeTop = async () => {
               </button>
 
               <div
-                class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-2 min-w-[160px]"
+                class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-2 min-w-[13.5rem]"
               >
                 <div class="rounded-lg border border-white/10 bg-surface py-2 shadow-glow-sm">
                   <button
                     v-for="child in link.children"
                     :key="child.label"
                     type="button"
-                    class="flex w-full items-center gap-2 px-4 py-2 font-dm font-medium text-sm text-muted hover:text-accent hover:bg-white/5 transition-colors"
+                    class="flex w-full items-center gap-2.5 px-4 py-2 font-dm font-medium text-sm text-muted hover:text-accent hover:bg-white/5 transition-colors text-left"
                     @click="selectDropdownChild(child)"
                   >
-                    <component :is="child.icon" v-if="child.icon" :size="14" />
-                    {{ child.label }}
+                    <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+                      <component :is="child.icon" v-if="child.icon" :size="14" class="h-3.5 w-3.5" />
+                    </span>
+                    <span>{{ child.label }}</span>
                   </button>
                 </div>
               </div>
@@ -255,11 +257,13 @@ const goHomeTop = async () => {
                 v-for="child in link.children"
                 :key="child.label"
                 type="button"
-                class="flex items-center gap-2 font-dm font-medium text-sm text-muted hover:text-accent transition-colors"
+                class="flex w-full items-center gap-2.5 font-dm font-medium text-sm text-muted hover:text-accent transition-colors text-left"
                 @click="selectDropdownChild(child)"
               >
-                <component :is="child.icon" v-if="child.icon" :size="14" />
-                {{ child.label }}
+                <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+                  <component :is="child.icon" v-if="child.icon" :size="14" class="h-3.5 w-3.5" />
+                </span>
+                <span>{{ child.label }}</span>
               </button>
             </div>
           </div>

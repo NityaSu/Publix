@@ -4,7 +4,7 @@ import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import { publicBuildNotes, buildNotePath } from '~/data/buildNotes';
 
 useHead({
-  title: 'Build notes',
+  title: 'Build Notes',
   meta: [
     {
       name: 'description',
@@ -37,7 +37,7 @@ function formatDate(iso: string) {
               Insights
             </p>
             <h1 class="mt-4 font-display font-extrabold uppercase ri-ink text-4xl sm:text-5xl md:text-6xl">
-              Build notes
+              Build Notes
             </h1>
           </div>
           <InsightsReadingToggle />
@@ -94,7 +94,7 @@ function formatDate(iso: string) {
             to="/insights"
             class="text-sm ri-sub hover:text-accent transition-colors"
           >
-            ← Back to My Thoughts
+            ← Back to Random Thoughts
           </NuxtLink>
         </p>
       </section>
