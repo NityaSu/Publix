@@ -20,7 +20,7 @@ export const buildNotes: BuildNote[] = [
     title: 'Docker in Kid Version',
     summary:
       'Image is the recipe, Docker is the kitchen, container is the cookie — map on the left, lesson on the right.',
-    tag: 'Learning project',
+    tag: 'Personal Learning',
     date: '2026-08-19',
     stack: ['Docker', 'Containers', 'Kid version'],
   },
@@ -39,7 +39,7 @@ export const buildNotes: BuildNote[] = [
     title: 'Backend From First Principle',
     summary:
       'A 31-node map of how a backend is actually built — request path, data, async work, and what keeps it alive.',
-    tag: 'Learning project',
+    tag: 'Personal Learning',
     date: '2026-08-18',
     stack: ['HTTP', 'REST', 'Databases', 'Systems'],
   },
@@ -48,7 +48,7 @@ export const buildNotes: BuildNote[] = [
     title: 'Building supercage: caging an AI coding agent',
     summary:
       'Unsafe agent first → Docker cage → live dashboard. Screenshots and Phase 4 demos inside.',
-    tag: 'Learning project',
+    tag: 'Personal Learning',
     date: '2026-08-08',
     stack: ['Python', 'Ollama', 'Docker', 'FastAPI', 'React'],
   },
