@@ -5845,7 +5845,7 @@ second resumes: balance = 0 - 100 = -100`,
   {
     id: 'twelve',
     n: 28,
-    title: 'Twelve-factor discipline',
+    title: 'Twelve-Factor Discipline: A Checklist for Apps That Must Run in More Than One Place',
     label: '12-factor',
     cluster: 'keep',
     x: 1310,
@@ -5855,6 +5855,187 @@ second resumes: balance = 0 - 100 = -100`,
       'Config in env. Backing services as attached resources. Processes are disposable.',
       'Logs to stdout — the platform ships them. No snowflake servers.',
       'Dev/prod parity. Admin tasks as one-off processes, not hidden SSH.',
+    ],
+    sections: [
+      {
+        heading: '1. Why this checklist exists',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: '**Twelve-factor** is a 2011 Heroku essay that named how SaaS apps actually survive: same code on a laptop, in staging, and in prod; no pet server; config not baked into the binary. It is not a religion and not “the only architecture.” It is a **checklist** for apps that must **run in more than one place**.' },
+          { type: 'p', text: 'This map already taught the pieces under other names: **19 · Config**, **20 · Observe**, **21 · Shutdown**, **12 · Databases**. This node is the **poster on the wall** so you can audit a repo in one pass. If a factor is a whole lesson, this page points there instead of rewriting it.' },
+          { type: 'quote', text: 'Twelve-factor is how you stop having a “prod machine” that nobody dares reboot.' },
+          {
+            type: 'kid',
+            items: [
+              'The recipe is the same at home and in the cafeteria. The pantry and the oven settings change. You do not rewrite the recipe for each kitchen.',
+              'A snowflake server is a locker only one kid has the key to. When that kid is sick, the hallway is stuck.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. I–II · One codebase, explicit dependencies',
+        blocks: [
+          { type: 'p', text: '**I. Codebase** — one repo, many deploys. Not a fork per environment. Staging is the **same git history** with different config, not `backend-prod-FINAL-v2`. Multiple apps? Multiple repos (or a monorepo with **clear** package boundaries). One app smeared across three undocumented copies is how prod drifts.' },
+          { type: 'p', text: '**II. Dependencies** — declare them (`package.json`, `go.mod`, `requirements.txt`) and **isolate** them (lockfile, vendoring, containers). Do not assume ImageMagick or a system Python package is “already on the box.” The box will change. The lockfile is the bill of materials.' },
+          {
+            type: 'pre',
+            lines: `// this laptop
+import cowsay   // "it works, I brew-installed it"
+
+// prod
+ModuleNotFoundError: cowsay
+
+// twelve-factor
+package.json / go.mod lists it
+lockfile pins the version
+the image has nothing extra`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'One cookbook on the shelf. Three kitchens cook from it. You do not keep a secret fourth cookbook titled “the real one.”',
+              'If the recipe says “salt,” the kitchen must **bring salt**. It must not assume the neighbor already has some.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. III · Config in the environment',
+        blocks: [
+          { type: 'p', text: '**III. Config** — everything that **changes between deploys** lives outside the code: URLs, keys, feature flags, pool size. Code in git. Secrets **never** in git. The usual wire is **environment variables** (and a vault when you have many machines). **19 · Config** is the full DNA lesson. The twelve-factor rule is the slogan: **same artifact, different env.**' },
+          { type: 'p', text: 'Hardcoded `postgres://localhost` in a source file is the anti-pattern. A `.env` on your laptop is fine as a **local overlay**. In prod, the platform **injects** the values. Validate at boot — Config already yelled this — so a missing `RESEND_API_KEY` refuses to start instead of limping.' },
+          { type: 'quote', text: 'If you have to recompile to change the database host, that host was not config. It was a bug waiting for a new region.' },
+        ],
+      },
+      {
+        heading: '4. IV · Backing services are attached resources',
+        blocks: [
+          { type: 'p', text: '**IV. Backing services** — database, cache, queue, email, object storage. Treat each as a **resource you attach** by URL/credential, not as “the Postgres that lives on this box.” Swap a local Redis for ElastiCache by changing config, not by rewriting the service.' },
+          { type: 'p', text: 'Your **12 · Databases** lesson is the ledger. Caching, queues, Resend, Supabase buckets: same idea. The app should not care **whose logo** is on the disk. It cares that `DATABASE_URL` answers.' },
+          {
+            type: 'kid',
+            items: [
+              'The kitchen borrows a fridge. Tomorrow a different fridge, same plugs. You do not build the fridge into the stove.',
+              'Email is a backing service too. The contact form talks to Resend by a key — not by “the mail program installed on the Vercel box.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '5. V · Build, release, run — three stages',
+        blocks: [
+          { type: 'p', text: '**V. Build, release, run** — strict separate stages. **Build** turns git into an artifact (image, bundle). **Release** is that artifact **plus** a config snapshot. **Run** is the process in prod. You do not “hot-edit a file on the server.” You do not bake prod secrets into the image. A rollback is “run the previous release,” not “SSH and remember what we changed.”' },
+          {
+            type: 'pre',
+            lines: `git commit
+  → build   (npm run build / docker build)     artifact
+  → release (artifact + env for this deploy)   named, immutable
+  → run     (start the process)                disposable`,
+          },
+          { type: 'p', text: '**31 · DevOps** is CI/CD as a pipeline. This factor is the **law** that pipeline is enforcing. Mixing stages is how you get “works on the box we SSH into.”' },
+        ],
+      },
+      {
+        heading: '6. VI–IX · Processes: stateless, a port, scale-out, disposable',
+        blocks: [
+          { type: 'p', text: '**VI. Processes** — the app is one or more **stateless** processes. Session in a store, uploads in object storage, never “a file I wrote to `/tmp` and will read on the next request.” The next request may hit **another** process. Local disk is a scratch pad that dies with the container.' },
+          { type: 'p', text: '**VII. Port binding** — the process **exports HTTP** (or whatever) by **binding a port**. It is not a plugin inside Apache that the OS already started. `PORT=3000` from the environment; the platform routes to it. That is how Vercel, Heroku, and containers all look the same from the app’s point of view.' },
+          { type: 'p', text: '**VIII. Concurrency** — scale **out** by running **more processes** (or more containers), not by turning one process into a god. **24 · Concurrency** is the CPU story. This factor is the **ops** story: more copies of a small process, behind a load balancer.' },
+          { type: 'p', text: '**IX. Disposability** — fast boot, graceful stop. SIGTERM: stop taking work, finish in-flight, close the pool. **21 · Shutdown** is the full sequence. Twelve-factor just insists you **can** kill a process at any time and start another. Cattle, not pets.' },
+          {
+            type: 'table',
+            columns: ['Factor', 'Do', 'Do not'],
+            rows: [
+              ['VI Stateless', 'Session in Redis / JWT. Files in a bucket.', 'User uploads on the app disk.'],
+              ['VII Port', 'Listen on `PORT`.', 'Assume you are a module inside a preinstalled server.'],
+              ['VIII Scale', 'More processes.', 'One mega-process that holds all the work in RAM forever.'],
+              ['IX Disposable', 'Boot in seconds. Drain on SIGTERM.', 'A boot that needs a 10-minute ritual. Kill -9 as the only stop.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. X · Dev/prod parity',
+        blocks: [
+          { type: 'p', text: '**X. Dev/prod parity** — keep the **gaps** small: time (hours between deploys, not months), people (who writes it also ships it), tools (Postgres locally if prod is Postgres — not SQLite “because it is easier,” then surprise JSON vs ARRAY in prod). Docker Compose is a cheap way to make the laptop look like a tiny prod: same engine, smaller.' },
+          { type: 'p', text: 'Parity is never perfect. The point is **no surprise adapters**. If you must fake a vendor locally, fake it **behind the same interface** the BLL already depends on — not a totally different code path that only exists on your machine.' },
+          {
+            type: 'kid',
+            items: [
+              'Practice in a kitchen that uses the same stove. A toy oven teaches you nothing about the cafeteria fire.',
+              'If homework is pencil and the exam is a welding torch, you did not keep parity.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '8. XI · Logs are a stream',
+        blocks: [
+          { type: 'p', text: '**XI. Logs** — the app **writes events to stdout/stderr**. It does not rotate files, ship to S3, or manage log disks. The **platform** (container runtime, Vercel, a collector) grabs the stream. **20 · Observe** is levels, JSON, request ids, metrics, traces. This factor is only: **do not become your own syslog.**' },
+          {
+            type: 'pre',
+            lines: `// twelve-factor
+console.log(JSON.stringify({ msg: "refund.ok", orderId, requestId }))
+
+// not twelve-factor
+fs.appendFileSync("/var/log/myapp.log", line)
+  + a cron that gzips last week
+  + SSH to grep`,
+          },
+          { type: 'quote', text: 'The process talks. The platform remembers. If you need to SSH to read last Tuesday, the stream never left the box.' },
+        ],
+      },
+      {
+        heading: '9. XII · Admin as one-off processes',
+        blocks: [
+          { type: 'p', text: '**XII. Admin processes** — migrations, a REPL, “backfill these users,” run as **one-off processes** against the **same release and config** as the app. `npm run migrate` in CI, `heroku run`, `kubectl exec` of a job — not a secret SSH into a pet and `python` in a tmux nobody named.' },
+          { type: 'p', text: 'The one-off should use the **same dependency isolation** as the web process. A migration that only works because you globally installed psql 14 on that one box will fail on the next box.' },
+          {
+            type: 'kid',
+            items: [
+              'Sunday inventory is a **shift** with the same uniform as weekday staff — not a stranger with a master key and no nametag.',
+              'Do not hide the mop in a closet only the night janitor knows. Put it on the schedule.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '10. What twelve-factor is not',
+        blocks: [
+          { type: 'p', text: 'It is **not** microservices. A modulated monolith can be twelve-factor. It is **not** “never use a local disk for a cache that may vanish.” It **is** “do not require that disk to still be there on the next request.”' },
+          { type: 'p', text: 'It is **not** a reason to skip a vault, skip tracing, or skip a domain. It was written for **Heroku-shaped** apps. You still need **19–21** and **31** when the product is real. Use the checklist to **find snowflakes**, not to win an argument about Kubernetes.' },
+          { type: 'p', text: 'Some apps **should** be stateful (games, live collaboration). Then you **name** the state store and still keep config, logs, and deploys disciplined. Breaking factor VI on purpose is different from never having heard of it.' },
+        ],
+      },
+      {
+        heading: '11. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Factor', 'In one line', 'This map'],
+            rows: [
+              ['I Codebase', 'One repo, many deploys.', 'Git. Not a fork per env.'],
+              ['II Dependencies', 'Declare and isolate.', 'Lockfile. Image.'],
+              ['III Config', 'Env / vault. Same artifact.', '**19 · Config**'],
+              ['IV Backing services', 'Attached by URL.', '**12 · Databases**, cache, queue, mail'],
+              ['V Build/release/run', 'Three stages. Immutable release.', '**31 · DevOps**'],
+              ['VI–IX Process', 'Stateless, port, scale-out, killable.', '**21 · Shutdown**, **24 · Concurrency**'],
+              ['X Parity', 'Laptop looks like a tiny prod.', 'Same engine, smaller.'],
+              ['XI Logs', 'Stdout. Platform ships.', '**20 · Observe**'],
+              ['XII Admin', 'One-off, same release.', 'Migrations as jobs, not SSH folklore.'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Same code, different env.** Config and backing services are attached, not baked in.',
+              '**Processes are cattle.** Bind a port, log to stdout, die on SIGTERM, scale by copies.',
+              'Open **19 · Config** and **31 · DevOps** when you want the how. This node is the checklist.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
