@@ -314,7 +314,7 @@ onUnmounted(() => {
 <template>
   <div ref="shellEl" class="mf" :class="{ 'is-fs': isFullscreen }" aria-label="Database lab">
     <header class="lj-top">
-      <NuxtLink to="/insights/notes" class="mf-brand">DB LAB</NuxtLink>
+      <NuxtLink to="/insights/notes" class="mf-brand">DATABASE LAB</NuxtLink>
       <div class="mf-meta">
         <span class="mf-step">7 lessons</span>
         <button
@@ -495,30 +495,32 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="legend">
-          <div class="legend-item">
-            <div class="legend-dot is-match" />
-            matched
+        <div class="lj-dock">
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-dot is-match" />
+              matched
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot is-null" />
+              unmatched (NULL)
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot is-hidden" />
+              hidden
+            </div>
           </div>
-          <div class="legend-item">
-            <div class="legend-dot is-null" />
-            unmatched (NULL)
-          </div>
-          <div class="legend-item">
-            <div class="legend-dot is-hidden" />
-            hidden
-          </div>
-        </div>
 
-        <div class="controls-bar">
-          <button
-            type="button"
-            class="ctrl-btn primary"
-            @click="goNext"
-          >
-            {{ step.nextLabel }}
-          </button>
-          <button type="button" class="ctrl-btn" @click="resetLesson">Reset</button>
+          <div class="controls-bar">
+            <button
+              type="button"
+              class="ctrl-btn primary"
+              @click="goNext"
+            >
+              {{ step.nextLabel }}
+            </button>
+            <button type="button" class="ctrl-btn" @click="resetLesson">Reset</button>
+          </div>
         </div>
       </section>
 
@@ -762,11 +764,31 @@ onUnmounted(() => {
   flex: 1 1 420px;
   min-width: 0;
   min-height: 0;
-  padding: 22px;
+  padding: 22px 22px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.lj-stage {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
+  background: var(--mf-panel);
+  border: 1px solid var(--mf-line);
+  border-radius: 12px;
+  padding: 22px;
+  position: relative;
+}
+
+.lj-dock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+  background: var(--mf-graph);
 }
 
 .lj-explanation {
@@ -840,15 +862,6 @@ onUnmounted(() => {
 .insight :deep(strong) {
   color: var(--mf-text);
   font-weight: 700;
-}
-
-.lj-stage {
-  background: var(--mf-panel);
-  border: 1px solid var(--mf-line);
-  border-radius: 12px;
-  padding: 22px;
-  position: relative;
-  min-height: 280px;
 }
 
 .stage-label {
@@ -1028,6 +1041,7 @@ onUnmounted(() => {
 .result-area {
   margin-top: 12px;
   padding-top: 18px;
+  padding-bottom: 8px;
   border-top: 1px dashed var(--mf-line);
 }
 
