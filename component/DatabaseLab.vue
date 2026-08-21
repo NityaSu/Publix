@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
@@ -23,6 +23,18 @@ interface ArenaLine {
   kind: 'match' | 'null';
 }
 
+type StageCorner = 'nw' | 'ne' | 'sw' | 'se';
+
+const STAGE_MIN_W = 300;
+const STAGE_MIN_H = 220;
+const STAGE_STORAGE = 'publix-db-lab-stage';
+const STAGE_CORNERS: { id: StageCorner; label: string }[] = [
+  { id: 'nw', label: 'Resize from top left' },
+  { id: 'ne', label: 'Resize from top right' },
+  { id: 'sw', label: 'Resize from bottom left' },
+  { id: 'se', label: 'Resize from bottom right' },
+];
+
 const activeId = ref<LessonId>('table');
 const stepIndex = ref(0);
 const hoverCustomerId = ref<number | null>(null);
@@ -32,7 +44,32 @@ const isFullscreen = ref(false);
 const shellEl = ref<HTMLElement | null>(null);
 const lessonEl = ref<HTMLElement | null>(null);
 const arenaEl = ref<HTMLElement | null>(null);
+const wrapEl = ref<HTMLElement | null>(null);
+const stageEl = ref<HTMLElement | null>(null);
+const innerEl = ref<HTMLElement | null>(null);
 const lines = ref<ArenaLine[]>([]);
+const stageBox = reactive({ x: 0, y: 0, w: 0, h: 0 });
+const userSized = ref(false);
+const resizing = ref(false);
+const moving = ref(false);
+const contentScale = ref(1);
+const contentShift = reactive({ x: 0, y: 0 });
+const naturalSize = reactive({ w: 1, h: 1 });
+
+const stageStyle = computed(() => {
+  if (!stageBox.w || !stageBox.h) {
+    return { width: '100%', height: '100%' };
+  }
+  return {
+    width: `${stageBox.w}px`,
+    height: `${stageBox.h}px`,
+    transform: `translate(${stageBox.x}px, ${stageBox.y}px)`,
+  };
+});
+
+const innerStyle = computed(() => ({
+  transform: `translate(${contentShift.x}px, ${contentShift.y}px) scale(${contentScale.value})`,
+}));
 
 const {
   bodyEl,
@@ -187,6 +224,21 @@ function bezier(x1: number, y1: number, x2: number, y2: number) {
   return `M ${x1} ${y1} C ${cp} ${y1}, ${cp} ${y2}, ${x2} ${y2}`;
 }
 
+const arenaView = reactive({ w: 100, h: 100 });
+
+function toLocal(
+  left: number,
+  top: number,
+  arenaRect: DOMRect,
+  scale: number,
+) {
+  const k = scale || 1;
+  return {
+    x: (left - arenaRect.left) / k,
+    y: (top - arenaRect.top) / k,
+  };
+}
+
 function measureLines() {
   const arena = arenaEl.value;
   if (!arena) {
@@ -195,42 +247,41 @@ function measureLines() {
     return;
   }
 
+  arenaView.w = Math.max(1, arena.clientWidth);
+  arenaView.h = Math.max(1, arena.clientHeight);
+
   const arenaRect = arena.getBoundingClientRect();
+  const scale = contentScale.value || 1;
   const next: ArenaLine[] = [];
+  const edges = joinRows(joinKind.value, trap.value, Boolean(visual.value.orphan));
 
   if (visual.value.matches) {
-    for (const order of visibleOrders.value) {
-      if (trap.value === 'on' && order.item !== TRAP_ITEM) continue;
-      const customer = customers.find((item) => item.id === order.customerId);
-      if (!customer) continue;
-      const customerEl = arena.querySelector<HTMLElement>(`#c-${customer.id}`);
-      const orderEl = arena.querySelector<HTMLElement>(`#o-${order.id}`);
+    for (const row of edges) {
+      if (!row.matched || !row.customer || !row.order) continue;
+      const customerEl = arena.querySelector<HTMLElement>(`#c-${row.customer.id}`);
+      const orderEl = arena.querySelector<HTMLElement>(`#o-${row.order.id}`);
       if (!customerEl || !orderEl) continue;
-      if (customerGone(customer.id)) continue;
+      if (customerGone(row.customer.id)) continue;
       const cRect = customerEl.getBoundingClientRect();
       const oRect = orderEl.getBoundingClientRect();
+      const from = toLocal(cRect.right, cRect.top + cRect.height / 2, arenaRect, scale);
+      const to = toLocal(oRect.left, oRect.top + oRect.height / 2, arenaRect, scale);
       next.push({
-        d: bezier(
-          cRect.right - arenaRect.left,
-          cRect.top + cRect.height / 2 - arenaRect.top,
-          oRect.left - arenaRect.left,
-          oRect.top + oRect.height / 2 - arenaRect.top,
-        ),
+        d: bezier(from.x, from.y, to.x, to.y),
         kind: 'match',
       });
     }
 
     if (visual.value.nulls) {
-      for (const customer of unmatchedCustomers.value) {
-        if (customerGone(customer.id)) continue;
-        if (visual.value.result && !keptCustomerIds.value.has(customer.id)) continue;
-        const customerEl = arena.querySelector<HTMLElement>(`#c-${customer.id}`);
+      for (const row of edges) {
+        if (row.matched || !row.customer || row.order) continue;
+        if (customerGone(row.customer.id)) continue;
+        const customerEl = arena.querySelector<HTMLElement>(`#c-${row.customer.id}`);
         if (!customerEl) continue;
         const cRect = customerEl.getBoundingClientRect();
-        const x1 = cRect.right - arenaRect.left;
-        const y1 = cRect.top + cRect.height / 2 - arenaRect.top;
+        const from = toLocal(cRect.right, cRect.top + cRect.height / 2, arenaRect, scale);
         next.push({
-          d: bezier(x1, y1, x1 + 72, y1),
+          d: bezier(from.x, from.y, from.x + 72, from.y),
           kind: 'null',
         });
       }
@@ -243,19 +294,211 @@ function measureLines() {
     nullBadgeStyle.value = { display: 'none' };
     return;
   }
-  const first = unmatchedCustomers.value.find(
-    (customer) => !customerGone(customer.id) && keptCustomerIds.value.has(customer.id),
+  const first = edges.find(
+    (row) => !row.matched && row.customer && !customerGone(row.customer.id),
   );
-  const el = first ? arena.querySelector<HTMLElement>(`#c-${first.id}`) : null;
+  const el = first?.customer
+    ? arena.querySelector<HTMLElement>(`#c-${first.customer.id}`)
+    : null;
   if (!el) {
     nullBadgeStyle.value = { display: 'none' };
     return;
   }
   const rect = el.getBoundingClientRect();
+  const badge = toLocal(rect.right, rect.top, arenaRect, scale);
   nullBadgeStyle.value = {
-    top: `${rect.top - arenaRect.top + 8}px`,
-    left: `${rect.right - arenaRect.left + 16}px`,
+    top: `${badge.y + 8}px`,
+    left: `${badge.x + 16}px`,
   };
+}
+
+function wrapBounds() {
+  const el = wrapEl.value;
+  if (!el) return { maxW: 0, maxH: 0 };
+  return { maxW: el.clientWidth, maxH: el.clientHeight };
+}
+
+function clampStage() {
+  const { maxW, maxH } = wrapBounds();
+  if (maxW <= 0 || maxH <= 0) return;
+  const minW = Math.min(STAGE_MIN_W, maxW);
+  const minH = Math.min(STAGE_MIN_H, maxH);
+  stageBox.w = Math.min(Math.max(stageBox.w, minW), maxW);
+  stageBox.h = Math.min(Math.max(stageBox.h, minH), maxH);
+  stageBox.x = Math.min(Math.max(stageBox.x, 0), Math.max(0, maxW - stageBox.w));
+  stageBox.y = Math.min(Math.max(stageBox.y, 0), Math.max(0, maxH - stageBox.h));
+}
+
+function fillStage() {
+  const { maxW, maxH } = wrapBounds();
+  if (maxW <= 0 || maxH <= 0) return;
+  stageBox.x = 0;
+  stageBox.y = 0;
+  stageBox.w = maxW;
+  stageBox.h = maxH;
+}
+
+function persistStage() {
+  if (!import.meta.client || !userSized.value) return;
+  localStorage.setItem(
+    STAGE_STORAGE,
+    JSON.stringify({ x: stageBox.x, y: stageBox.y, w: stageBox.w, h: stageBox.h }),
+  );
+}
+
+function readStoredStage() {
+  if (!import.meta.client) return false;
+  const raw = localStorage.getItem(STAGE_STORAGE);
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as { x?: number; y?: number; w?: number; h?: number };
+    if (![parsed.x, parsed.y, parsed.w, parsed.h].every((n) => Number.isFinite(n))) return false;
+    stageBox.x = parsed.x as number;
+    stageBox.y = parsed.y as number;
+    stageBox.w = parsed.w as number;
+    stageBox.h = parsed.h as number;
+    userSized.value = true;
+    clampStage();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function syncStageToWrap() {
+  if (userSized.value) clampStage();
+  else fillStage();
+  applyFit();
+}
+
+function measureNatural() {
+  const inner = innerEl.value;
+  if (!inner) return;
+  naturalSize.w = Math.max(1, inner.scrollWidth);
+  naturalSize.h = Math.max(1, inner.scrollHeight);
+}
+
+function applyFit() {
+  const stage = stageEl.value;
+  if (!stage) return;
+  const pad = 24;
+  const availW = Math.max(48, stage.clientWidth - pad);
+  const availH = Math.max(48, stage.clientHeight - pad);
+  const next = Math.min(availW / naturalSize.w, availH / naturalSize.h);
+  contentScale.value = Math.min(Math.max(next, 0.38), 1.8);
+  const usedW = naturalSize.w * contentScale.value;
+  const usedH = naturalSize.h * contentScale.value;
+  contentShift.x = (stage.clientWidth - usedW) / 2;
+  contentShift.y = Math.max(10, (stage.clientHeight - usedH) / 2);
+  requestAnimationFrame(() => measureLines());
+}
+
+async function refitStage() {
+  await nextTick();
+  measureNatural();
+  applyFit();
+}
+
+let stageDrag: {
+  corner: StageCorner;
+  startX: number;
+  startY: number;
+  orig: { x: number; y: number; w: number; h: number };
+} | null = null;
+
+let stageMove: {
+  startX: number;
+  startY: number;
+  origX: number;
+  origY: number;
+} | null = null;
+
+function onStageHandleDown(corner: StageCorner, event: PointerEvent) {
+  if (event.button != null && event.button !== 0) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (!stageBox.w || !stageBox.h) fillStage();
+  userSized.value = true;
+  resizing.value = true;
+  stageDrag = {
+    corner,
+    startX: event.clientX,
+    startY: event.clientY,
+    orig: { x: stageBox.x, y: stageBox.y, w: stageBox.w, h: stageBox.h },
+  };
+  (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  document.body.style.userSelect = 'none';
+}
+
+function onStageHandleMove(event: PointerEvent) {
+  if (!stageDrag) return;
+  const dx = event.clientX - stageDrag.startX;
+  const dy = event.clientY - stageDrag.startY;
+  const { orig, corner } = stageDrag;
+  let { x, y, w, h } = orig;
+  if (corner.includes('e')) w = orig.w + dx;
+  if (corner.includes('w')) {
+    w = orig.w - dx;
+    x = orig.x + dx;
+  }
+  if (corner.includes('s')) h = orig.h + dy;
+  if (corner.includes('n')) {
+    h = orig.h - dy;
+    y = orig.y + dy;
+  }
+  stageBox.x = x;
+  stageBox.y = y;
+  stageBox.w = w;
+  stageBox.h = h;
+  clampStage();
+  applyFit();
+}
+
+function onStageHandleUp() {
+  if (!stageDrag) return;
+  stageDrag = null;
+  resizing.value = false;
+  document.body.style.removeProperty('user-select');
+  persistStage();
+  applyFit();
+}
+
+function canMoveStage(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  if (target.closest('.lj-handle')) return false;
+  if (target.closest('.trow, .res-row')) return false;
+  return Boolean(target.closest('.lj-stage'));
+}
+
+function onStageMoveDown(event: PointerEvent) {
+  if (event.button != null && event.button !== 0) return;
+  if (stageDrag || !canMoveStage(event.target)) return;
+  if (!stageBox.w || !stageBox.h) fillStage();
+  userSized.value = true;
+  moving.value = true;
+  stageMove = {
+    startX: event.clientX,
+    startY: event.clientY,
+    origX: stageBox.x,
+    origY: stageBox.y,
+  };
+  stageEl.value?.setPointerCapture(event.pointerId);
+  document.body.style.userSelect = 'none';
+}
+
+function onStageMoveMove(event: PointerEvent) {
+  if (!stageMove) return;
+  stageBox.x = stageMove.origX + (event.clientX - stageMove.startX);
+  stageBox.y = stageMove.origY + (event.clientY - stageMove.startY);
+  clampStage();
+}
+
+function onStageMoveUp() {
+  if (!stageMove) return;
+  stageMove = null;
+  moving.value = false;
+  document.body.style.removeProperty('user-select');
+  persistStage();
 }
 
 async function toggleFullscreen() {
@@ -283,12 +526,13 @@ function onFullscreenChange() {
 watch([stepIndex, activeId, rightOpen, leftPct], async () => {
   resultShown.value = false;
   await nextTick();
+  syncStageToWrap();
   if (visual.value.result) {
     requestAnimationFrame(() => {
       resultShown.value = true;
     });
   }
-  measureLines();
+  await refitStage();
 });
 
 let resizeObserver: ResizeObserver | null = null;
@@ -298,16 +542,21 @@ onMounted(async () => {
   if (lessonById(hash)) selectLesson(hash);
   document.addEventListener('fullscreenchange', onFullscreenChange);
   await nextTick();
-  measureLines();
-  if (arenaEl.value) {
-    resizeObserver = new ResizeObserver(() => measureLines());
-    resizeObserver.observe(arenaEl.value);
+  if (!readStoredStage()) fillStage();
+  await refitStage();
+  const observed = wrapEl.value ?? arenaEl.value;
+  if (observed) {
+    resizeObserver = new ResizeObserver(() => {
+      syncStageToWrap();
+    });
+    resizeObserver.observe(observed);
   }
 });
 
 onUnmounted(() => {
   resizeObserver?.disconnect();
   document.removeEventListener('fullscreenchange', onFullscreenChange);
+  document.body.style.removeProperty('user-select');
 });
 </script>
 
@@ -315,8 +564,33 @@ onUnmounted(() => {
   <div ref="shellEl" class="mf" :class="{ 'is-fs': isFullscreen }" aria-label="Database lab">
     <header class="lj-top">
       <NuxtLink to="/insights/notes" class="mf-brand">DATABASE LAB</NuxtLink>
+      <nav class="lj-lessons" aria-label="Database lessons">
+        <button
+          v-for="lesson in lessons"
+          :key="lesson.id"
+          type="button"
+          class="lj-lesson-tab"
+          :class="{ 'is-on': lesson.id === activeId }"
+          :title="lesson.label"
+          :aria-label="`Lesson ${String(lesson.n).padStart(2, '0')} ${lesson.label}`"
+          @click="selectLesson(lesson.id)"
+        >
+          {{ String(lesson.n).padStart(2, '0') }}
+        </button>
+      </nav>
+      <div class="step-dots" role="tablist" aria-label="Steps in this lesson">
+        <button
+          v-for="(item, index) in active.steps"
+          :key="item.label"
+          type="button"
+          class="step-dot"
+          :class="{ active: index === stepIndex, done: index < stepIndex }"
+          :aria-label="item.label"
+          :aria-selected="index === stepIndex"
+          @click="setStep(index)"
+        />
+      </div>
       <div class="mf-meta">
-        <span class="mf-step">7 lessons</span>
         <button
           type="button"
           class="mf-tool"
@@ -337,38 +611,6 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <header class="lj-header">
-      <div>
-        <div class="lesson-tag">{{ active.tag }}</div>
-        <h2>{{ step.title }}</h2>
-      </div>
-      <div class="step-dots" role="tablist" aria-label="Steps in this lesson">
-        <button
-          v-for="(item, index) in active.steps"
-          :key="item.label"
-          type="button"
-          class="step-dot"
-          :class="{ active: index === stepIndex, done: index < stepIndex }"
-          :aria-label="item.label"
-          :aria-selected="index === stepIndex"
-          @click="setStep(index)"
-        />
-      </div>
-    </header>
-
-    <nav class="lj-lessons" aria-label="Database lessons">
-      <button
-        v-for="lesson in lessons"
-        :key="lesson.id"
-        type="button"
-        class="lj-lesson-tab"
-        :class="{ 'is-on': lesson.id === activeId }"
-        @click="selectLesson(lesson.id)"
-      >
-        {{ String(lesson.n).padStart(2, '0') }} {{ lesson.label }}
-      </button>
-    </nav>
-
     <div
       ref="bodyEl"
       class="mf-body"
@@ -377,14 +619,32 @@ onUnmounted(() => {
       <section
         class="mf-graph lj-playground"
         :style="leftStyle"
-        aria-label="Playground"
+        aria-label="Lab"
       >
-        <div class="lj-stage">
-          <div class="stage-label">{{ step.label }}</div>
+        <div
+          ref="wrapEl"
+          class="lj-stage-wrap"
+          :class="{ 'is-resizing': resizing, 'is-moving': moving }"
+        >
+          <div
+            ref="stageEl"
+            class="lj-stage"
+            :class="{ 'is-moving': moving }"
+            :style="stageStyle"
+            @pointerdown="onStageMoveDown"
+            @pointermove="onStageMoveMove"
+            @pointerup="onStageMoveUp"
+            @pointercancel="onStageMoveUp"
+          >
+            <div ref="innerEl" class="lj-stage-inner" :style="innerStyle">
+            <div class="stage-label">{{ step.label }}</div>
 
           <div ref="arenaEl" class="tables-arena" :class="{ 'is-one': !visual.showRight }">
             <div class="arrow-layer" aria-hidden="true">
-              <svg>
+              <svg
+                :viewBox="`0 0 ${arenaView.w} ${arenaView.h}`"
+                preserveAspectRatio="none"
+              >
                 <defs>
                   <linearGradient id="gradMatch" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stop-color="#4A9EFF" />
@@ -493,6 +753,21 @@ onUnmounted(() => {
               </div>
             </div>
           </div>
+            </div>
+
+            <button
+              v-for="corner in STAGE_CORNERS"
+              :key="corner.id"
+              type="button"
+              class="lj-handle"
+              :class="`is-${corner.id}`"
+              :aria-label="corner.label"
+              @pointerdown="onStageHandleDown(corner.id, $event)"
+              @pointermove="onStageHandleMove"
+              @pointerup="onStageHandleUp"
+              @pointercancel="onStageHandleUp"
+            />
+          </div>
         </div>
 
         <div class="lj-dock">
@@ -540,7 +815,10 @@ onUnmounted(() => {
         class="mf-lesson lj-explanation"
         aria-label="Explanation"
       >
-        <h3>{{ step.title }}</h3>
+        <div>
+          <p class="lesson-tag">{{ active.tag }}</p>
+          <h3>{{ step.title }}</h3>
+        </div>
         <p>{{ step.text }}</p>
 
         <div v-if="visual.venn && visual.venn !== 'none'" class="venn-mini">
@@ -609,12 +887,12 @@ onUnmounted(() => {
 }
 
 .lj-top {
-  height: 52px;
+  min-height: 52px;
   border-bottom: 1px solid var(--mf-line);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
+  gap: 16px;
+  padding: 0 16px 0 20px;
   flex-shrink: 0;
   background: var(--mf-bg);
 }
@@ -626,18 +904,15 @@ onUnmounted(() => {
   letter-spacing: 1px;
   color: var(--mf-text);
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .mf-meta {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.mf-step {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--mf-muted);
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .mf-tool {
@@ -659,16 +934,6 @@ onUnmounted(() => {
   color: #4A9EFF;
 }
 
-.lj-header {
-  background: var(--mf-bg);
-  padding: 16px 28px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-shrink: 0;
-}
-
 .lesson-tag {
   font-family: 'DM Mono', ui-monospace, monospace;
   font-size: 11px;
@@ -676,21 +941,15 @@ onUnmounted(() => {
   color: var(--lj-intent);
   text-transform: uppercase;
   letter-spacing: 0.12em;
-}
-
-.lj-header h2 {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--mf-text);
-  margin: 6px 0 0;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  margin: 0;
 }
 
 .step-dots {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--mf-line);
 }
 
 .step-dot {
@@ -715,17 +974,19 @@ onUnmounted(() => {
 
 .lj-lessons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 8px 16px;
-  background: var(--mf-graph);
-  border-top: 1px solid var(--mf-line);
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 2px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  overflow-x: auto;
 }
 
 .lj-lesson-tab {
   height: 28px;
-  padding: 0 10px;
+  min-width: 32px;
+  padding: 0 8px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -734,6 +995,11 @@ onUnmounted(() => {
   font-size: 11px;
   letter-spacing: 0.04em;
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lj-lesson-tab:hover {
+  color: var(--mf-text);
 }
 
 .lj-lesson-tab.is-on {
@@ -764,22 +1030,81 @@ onUnmounted(() => {
   flex: 1 1 420px;
   min-width: 0;
   min-height: 0;
-  padding: 22px 22px 16px;
+  padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   overflow: hidden;
 }
 
-.lj-stage {
+.lj-stage-wrap {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
+  position: relative;
+}
+
+.lj-stage-wrap.is-resizing,
+.lj-stage-wrap.is-moving {
+  user-select: none;
+}
+
+.lj-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  overflow: hidden;
   background: var(--mf-panel);
   border: 1px solid var(--mf-line);
   border-radius: 12px;
+  cursor: grab;
+}
+
+.lj-stage.is-moving {
+  cursor: grabbing;
+}
+
+.lj-stage-inner {
+  transform-origin: 0 0;
+  width: max-content;
+  min-width: 280px;
   padding: 22px;
-  position: relative;
+  box-sizing: border-box;
+}
+
+.lj-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 2px solid var(--lj-purple);
+  border-radius: 2px;
+  background: var(--mf-panel);
+  z-index: 6;
+}
+
+.lj-handle.is-nw {
+  top: 6px;
+  left: 6px;
+  cursor: nwse-resize;
+}
+
+.lj-handle.is-ne {
+  top: 6px;
+  right: 6px;
+  cursor: nesw-resize;
+}
+
+.lj-handle.is-sw {
+  bottom: 6px;
+  left: 6px;
+  cursor: nesw-resize;
+}
+
+.lj-handle.is-se {
+  bottom: 6px;
+  right: 6px;
+  cursor: nwse-resize;
 }
 
 .lj-dock {
@@ -809,6 +1134,7 @@ onUnmounted(() => {
   font-weight: 700;
   color: var(--mf-text);
   letter-spacing: -0.01em;
+  margin: 6px 0 0;
 }
 
 .lj-explanation p {
@@ -872,6 +1198,7 @@ onUnmounted(() => {
   letter-spacing: 0.15em;
   color: var(--mf-muted);
   margin-bottom: 18px;
+  cursor: grab;
 }
 
 .tables-arena {
@@ -880,7 +1207,7 @@ onUnmounted(() => {
   justify-content: center;
   align-items: flex-start;
   position: relative;
-  min-height: 220px;
+  min-height: 0;
 }
 
 .tables-arena.is-one {
@@ -1241,8 +1568,8 @@ onUnmounted(() => {
 
   .lj-playground {
     width: 100% !important;
-    flex: 0 0 54vh !important;
-    min-height: 300px;
+    flex: 0 0 62vh !important;
+    min-height: 320px;
   }
 
   .lj-explanation {
@@ -1254,8 +1581,15 @@ onUnmounted(() => {
     gap: 36px;
   }
 
-  .lj-header h2 {
-    font-size: 18px;
+  .lj-handle {
+    display: none;
+  }
+
+  .lj-stage {
+    position: relative;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
   }
 }
 

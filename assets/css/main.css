@@ -175,6 +175,11 @@ html:not(.fonts-loading):not(.fonts-loaded) body {
   }
 }
 
+/* Note pages hide the site header — fill the whole window */
+.insights-shell.is-immersive {
+  --insights-nav-offset: 0px;
+}
+
 .insights-shell[data-mode='light'] {
   --ri-bg: #f8f9fa;
   --ri-ink: #111111;

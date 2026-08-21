@@ -316,7 +316,7 @@ export const lessons: Lesson[] = [
     steps: [
       {
         label: 'Step 1: A normal LEFT JOIN',
-        title: 'Start from the LEFT JOIN you just learned',
+        title: 'A normal LEFT JOIN',
         text: 'Everyone is here: Alice twice, Carol once, Bob and Dave with NULL. Now you want only coffee — but you still want every customer listed.',
         sql: 'SELECT *\nFROM customers\nLEFT JOIN orders\n  ON customers.id = orders.customer_id;',
         insight:
