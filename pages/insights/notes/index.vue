@@ -9,7 +9,7 @@ useHead({
     {
       name: 'description',
       content:
-        'Longer write-ups about learning projects — optional notes, separate from project cards.',
+        'Simple notes on my personal learning — written for myself to review for fun, kept public anyway.',
     },
   ],
 });

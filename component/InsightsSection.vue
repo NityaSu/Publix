@@ -91,7 +91,7 @@ const latestNotes = publicBuildNotes.slice(0, 2);
             Build notes
           </h2>
           <p class="mt-3 max-w-2xl text-sm md:text-base ri-ink leading-relaxed">
-            Longer write-ups about learning projects — optional, separate from the project cards.
+            Simple notes on my personal learning, written for myself just to review for fun. Not necessarily meant for others, but I’m generous enough to keep it public!
           </p>
         </div>
         <NuxtLink
