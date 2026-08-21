@@ -2018,7 +2018,7 @@ createItem({ ...body, userId: ctx.userId })`,
   {
     id: 'crud',
     n: 10,
-    title: 'CRUD',
+    title: 'CRUD: Four Moves on a Resource — Create, Read, Update, Delete',
     label: 'CRUD',
     cluster: 'surface',
     x: 1185,
@@ -2028,6 +2028,180 @@ createItem({ ...body, userId: ctx.userId })`,
       'POST → 201 + Location. GET → 200. PUT/PATCH for replace vs partial. DELETE → 204 or 200.',
       'CRUD is the skeleton, not the product. Real backends have workflows, not just tables.',
       'Idempotency matters on writes that money or email can double.',
+    ],
+    sections: [
+      {
+        heading: '1. Why this lesson exists',
+        blocks: [
+          { type: 'h3', text: 'Core idea' },
+          { type: 'p', text: 'Most first backends are a table with four buttons: add a row, show a row, change a row, remove a row. Tutorials call that “an API.” It is not a product. It is the **skeleton** every persistence layer already understands — **CRUD**: create, read, update, delete.' },
+          { type: 'p', text: 'HTTP already had verbs for those moves. This lesson is the mapping so a client can **guess** what happens without reading your source. The next lesson (REST) is the full contract: paths, pagination, custom actions. Stay here until the four letters are boring.' },
+          { type: 'quote', text: 'CRUD is how you touch a resource. It is not why the resource exists.' },
+          {
+            type: 'kid',
+            items: [
+              'A locker has four jobs: put something in, look inside, swap what is there, empty it. That is CRUD. The locker is not the school.',
+              'If every kitchen invented a fifth button that meant “maybe soup,” dinner would be an argument. Four moves. Then recipes.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '2. The four letters',
+        blocks: [
+          { type: 'p', text: 'Say them as **operations on one kind of thing** (a user, a note, a book) — not as framework methods. The thing is the **resource**. CRUD is what you are allowed to do to it.' },
+          {
+            type: 'table',
+            columns: ['Letter', 'Operation', 'What changed in the world'],
+            rows: [
+              ['**C**', 'Create', 'A new record exists that did not exist before.'],
+              ['**R**', 'Read', 'Nothing. You looked. The store is the same.'],
+              ['**U**', 'Update', 'An existing record is different now.'],
+              ['**D**', 'Delete', 'That record is gone (or marked gone).'],
+            ],
+          },
+          { type: 'p', text: 'Read splits in two shapes you will use every day: **list** (many) and **get one**. Both are R. Create / update / delete usually target **one** record. List is the collection; the others punch a hole in it.' },
+        ],
+      },
+      {
+        heading: '3. Map onto HTTP',
+        blocks: [
+          { type: 'p', text: 'The browser and every HTTP client already speak verbs. Do not invent `POST /getUser`. The method **is** the verb. The path **is** the noun.' },
+          {
+            type: 'table',
+            columns: ['CRUD', 'HTTP method', 'Typical path'],
+            rows: [
+              ['Create', '**POST**', '`/notes`'],
+              ['Read list', '**GET**', '`/notes`'],
+              ['Read one', '**GET**', '`/notes/:id`'],
+              ['Update', '**PUT** or **PATCH**', '`/notes/:id`'],
+              ['Delete', '**DELETE**', '`/notes/:id`'],
+            ],
+          },
+          { type: 'p', text: 'Same path `/notes` — **method** decides list vs create. Same path `/notes/:id` — method decides read vs change vs remove. That split is the whole trick. REST will name it collection vs item. You already have it.' },
+          {
+            type: 'pre',
+            lines: `POST   /notes           // create
+GET    /notes           // list
+GET    /notes/42        // one
+PATCH  /notes/42        // change some fields
+PUT    /notes/42        // replace the whole record
+DELETE /notes/42        // remove`,
+          },
+          {
+            type: 'kid',
+            items: [
+              'The drawer is labeled **notes**. Opening it (GET) is not the same as dropping a new page in (POST).',
+              'You do not write “please delete” on a GET. The verb on the envelope is the instruction.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Status codes that match the move',
+        blocks: [
+          { type: 'p', text: 'CRUD without honest status codes is a shrug. The client should know **what happened** before it parses JSON. You already have the HTTP lesson. Here is the cheat sheet for these four moves.' },
+          {
+            type: 'table',
+            columns: ['Move', 'Success', 'Gone / missing'],
+            rows: [
+              ['Create (POST)', '**201** Created — body is the new row. Send **Location** with the new URL.', '409 if a unique rule blocked you.'],
+              ['Read (GET)', '**200** — list or one item. Empty list is still **200** + `[]`, not 404.', '**404** if that id does not exist.'],
+              ['Update (PUT/PATCH)', '**200** with the new representation, or **204** if you send no body.', '**404** if there is nothing to change.'],
+              ['Delete (DELETE)', '**204** No Content (usual). **200** if you return a leftover payload.', '**404** if it is already gone — still fine; delete is idempotent.'],
+            ],
+          },
+          { type: 'p', text: '**Location** on create is the polite part people skip: `Location: /notes/42` so the client does not have to guess the id you just minted. 201 without Location still works. 201 with Location is the contract adults use.' },
+          { type: 'quote', text: 'Do not 200 everything. Create is 201. Empty list is 200. Missing id is 404. The number is the sentence.' },
+        ],
+      },
+      {
+        heading: '5. PUT vs PATCH — replace vs a few fields',
+        blocks: [
+          { type: 'p', text: '**PUT** = send the **whole** record and replace what the server has. Miss a field, and a strict PUT may wipe it. **PATCH** = send **only what changed**. JSON APIs almost always PATCH. PUT was more natural when a full HTML form posted every input.' },
+          { type: 'p', text: 'Internally, your service may “read, merge, write” for both. On the **wire**, pick one and keep it. Mixing them on a public API is how integrators open Slack at 2am. REST will push PATCH for SPAs. Remember both names so you can read other people’s code.' },
+          {
+            type: 'pre',
+            lines: `PATCH /notes/42
+{ "title": "New title" }          // only title changes
+
+PUT /notes/42
+{ "id": 42, "title": "New title", "body": "...", "createdAt": "..." }
+                                   // the whole representation`,
+          },
+        ],
+      },
+      {
+        heading: '6. Idempotency — same call, same world',
+        blocks: [
+          { type: 'p', text: '**Idempotent** = doing it **N times** has the same effect as doing it once. Reads are easy: GET does not write. PUT and PATCH that set `title` to `"B"` stay `"B"` if you send them again. DELETE: first call removes the row; second call, there is nothing left to remove.' },
+          { type: 'p', text: '**POST is not idempotent.** Same body twice can mean **two rows**. A double-click on “Pay” or “Send email” is how you charge a card twice. Unique constraints save you sometimes. They are not a design. For money and mail, you want an **idempotency key** (client sends a token; you store “already did this”) — REST and queues will meet that again.' },
+          {
+            type: 'table',
+            columns: ['Method', 'Idempotent?', 'If they retry'],
+            rows: [
+              ['GET', 'Yes', 'Same read. No extra rows.'],
+              ['PUT / PATCH', 'Yes', 'Same fields, same result.'],
+              ['DELETE', 'Yes', 'Still gone. Often 404 the second time.'],
+              ['POST', 'No', 'A second create / charge / email unless you guard it.'],
+            ],
+          },
+          {
+            type: 'kid',
+            items: [
+              'Putting the same sticker on the locker a hundred times still leaves **one** sticker. PUT.',
+              'Dropping a new marble in the jar every time you press the button is POST. The jar grows.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Delete is a product decision',
+        blocks: [
+          { type: 'p', text: '**Hard delete** = `DELETE FROM notes WHERE id = 42`. The row is gone. Recovering it is backups or luck. **Soft delete** = set `deleted_at` and hide it from normal reads. Undo is a PATCH that clears the stamp. Lists must remember to filter `deleted_at IS NULL` or you “deleted” nothing anyone notices.' },
+          { type: 'p', text: 'GDPR-style “forget this person” is often **hard** (or anonymize). “User hit undo for 30 days” is **soft**. Pick one per resource. Do not mix them in the same table without a rule.' },
+          { type: 'p', text: 'From the client, both are still **DELETE /notes/:id**. The service decides how gone is gone. The handler still only speaks HTTP.' },
+        ],
+      },
+      {
+        heading: '8. CRUD is the skeleton, not the product',
+        blocks: [
+          { type: 'p', text: 'Archive, publish, invite, charge the card, “mark as spam” — those are **workflows**. They are not a fifth letter. They do not fit cleanly in C, R, U, or D. HTTP’s leftover verb for that is **POST** on a **verb path**: `POST /notes/42/publish`. Status follows **what happened** (often 200), not “POST always means 201.”' },
+          { type: 'p', text: 'A backend that is only CRUD on tables will still need auth, validation, a service layer, and a repository — the handlers lesson. CRUD is the **shape of the routes**, not a substitute for rules. If the product is “a spreadsheet on the internet,” CRUD may be most of the surface. If the product is “checkout,” CRUD is the easy third of the work.' },
+          { type: 'quote', text: 'Four buttons on a table are how you start. Workflows are why anyone stays.' },
+          {
+            type: 'kid',
+            items: [
+              'The locker operations are still four. “Lend this book to Maya until Friday” is a story, not a fifth button on the metal.',
+              'You can have a perfect CRUD API and still have no product — just a database with extra steps.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '9. Quick map',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Idea', 'On the wire', 'Do not confuse with'],
+            rows: [
+              ['Create', 'POST + 201 + Location', 'GET with a body'],
+              ['Read', 'GET 200. Empty list is 200 + []', '404 on an empty collection'],
+              ['Update', 'PATCH some fields, PUT the whole row', 'POST /updateNote'],
+              ['Delete', 'DELETE → 204. Soft vs hard is a service choice', 'GET /notes/42/delete'],
+              ['Workflow', 'POST on a verb path', 'A fifth CRUD letter'],
+            ],
+          },
+          {
+            type: 'callout',
+            lines: [
+              '**Method is the verb. Path is the noun.** That is CRUD on HTTP.',
+              '**201** create. **200** read. **204** delete. **404** that id is missing.',
+              'Open **11 · REST** when you want the full contract: plural paths, pagination, and custom actions.',
+            ],
+          },
+        ],
+      },
     ],
   },
   {
