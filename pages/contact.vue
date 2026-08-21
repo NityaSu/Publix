@@ -62,7 +62,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <main class="w-full px-6 md:px-20 lg:px-[160px] py-16 md:py-24">
+  <main class="w-full px-6 md:px-20 lg:px-[160px] pt-16 md:pt-24 pb-24 md:pb-32">
     <h1 class="font-display font-extrabold uppercase text-white text-4xl sm:text-5xl md:text-6xl">
       Contact
     </h1>
