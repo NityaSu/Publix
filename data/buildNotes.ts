@@ -19,10 +19,10 @@ export const buildNotes: BuildNote[] = [
     slug: 'database-lab',
     title: 'Database Lab',
     summary:
-      'Tables, keys, and joins in a stepped playground — left join is one lesson, not the whole note.',
+      'Tables, keys, joins, and indexes in a stepped playground — left join is one lesson, not the whole note.',
     tag: 'Personal Learning',
     date: '2026-08-21',
-    stack: ['SQL', 'Tables', 'Joins', 'NULL'],
+    stack: ['SQL', 'Tables', 'Joins', 'Indexes'],
   },
   {
     slug: 'docker-for-kids',

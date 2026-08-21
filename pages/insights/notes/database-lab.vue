@@ -8,7 +8,7 @@ useHead({
     {
       name: 'description',
       content:
-        'Tables, keys, and joins in a stepped playground — left join is one lesson, not the whole note.',
+        'Tables, keys, joins, and indexes in a stepped playground — left join is one lesson, not the whole note.',
     },
   ],
 });

@@ -5,7 +5,8 @@ export type LessonId =
   | 'inner'
   | 'left'
   | 'trap'
-  | 'family';
+  | 'family'
+  | 'index';
 
 export type JoinKind = 'inner' | 'left' | 'right' | 'full' | 'cross';
 
@@ -45,6 +46,7 @@ export interface StepVisual {
   keys?: 'left' | 'right' | 'both';
   venn?: VennMode;
   orphan?: boolean;
+  indexRace?: boolean;
 }
 
 export interface LessonStep {
@@ -80,6 +82,90 @@ export const orders: Order[] = [
 ];
 
 export const orphanOrder: Order = { id: 104, customerId: 9, item: 'Tea' };
+
+export interface IndexUser {
+  id: number;
+  name: string;
+}
+
+export interface IndexBranch {
+  id: string;
+  label: string;
+  lo: number;
+  hi: number;
+}
+
+export interface IndexLeaf {
+  id: string;
+  parent: string;
+  ids: number[];
+}
+
+export const indexUsers: IndexUser[] = [
+  { id: 1, name: 'Ada' },
+  { id: 2, name: 'Ben' },
+  { id: 3, name: 'Cam' },
+  { id: 4, name: 'Di' },
+  { id: 5, name: 'Eve' },
+  { id: 6, name: 'Fay' },
+  { id: 7, name: 'Gus' },
+  { id: 8, name: 'Hal' },
+  { id: 9, name: 'Ivy' },
+  { id: 10, name: 'Jax' },
+  { id: 11, name: 'Kim' },
+  { id: 12, name: 'Leo' },
+  { id: 13, name: 'Mo' },
+  { id: 14, name: 'Nic' },
+  { id: 15, name: 'Oli' },
+  { id: 16, name: 'Pip' },
+  { id: 17, name: 'Quin' },
+  { id: 18, name: 'Rio' },
+  { id: 19, name: 'Sky' },
+  { id: 20, name: 'Tess' },
+];
+
+export const indexRoot = {
+  id: 'root',
+  label: '1-7 | 8-14 | 15-20',
+};
+
+export const indexBranches: IndexBranch[] = [
+  { id: 'b0', label: '1-3 | 4-7', lo: 1, hi: 7 },
+  { id: 'b1', label: '8-10 | 11-14', lo: 8, hi: 14 },
+  { id: 'b2', label: '15-17 | 18-20', lo: 15, hi: 20 },
+];
+
+export const indexLeaves: IndexLeaf[] = [
+  { id: 'l0', parent: 'b0', ids: [1, 2, 3] },
+  { id: 'l1', parent: 'b0', ids: [4, 5, 6, 7] },
+  { id: 'l2', parent: 'b1', ids: [8, 9, 10] },
+  { id: 'l3', parent: 'b1', ids: [11, 12, 13, 14] },
+  { id: 'l4', parent: 'b2', ids: [15, 16, 17] },
+  { id: 'l5', parent: 'b2', ids: [18, 19, 20] },
+];
+
+export function shuffleIndexUsers() {
+  const next = [...indexUsers];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const current = next[i]!;
+    next[i] = next[j]!;
+    next[j] = current;
+  }
+  return next;
+}
+
+export function indexSeekPath(id: number) {
+  const branch = indexBranches.find((node) => id >= node.lo && id <= node.hi);
+  const leaf = indexLeaves.find((node) => node.ids.includes(id));
+  if (!branch || !leaf) return [] as string[];
+  return [indexRoot.id, branch.id, leaf.id];
+}
+
+export function clampIndexId(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(20, Math.max(1, Math.round(value)));
+}
 
 export const TRAP_ITEM = 'Coffee';
 
@@ -441,7 +527,7 @@ export const lessons: Lesson[] = [
         sql: 'SELECT *\nFROM customers\nFULL OUTER JOIN orders\n  ON customers.id = orders.customer_id;',
         insight:
           '**CROSS JOIN** (not shown): skip the handshake. Every customer with every order. Alice holds Tea she never bought. If a result explodes, look for a missing `ON`.',
-        nextLabel: 'Play again',
+        nextLabel: 'The index',
         visual: {
           showRight: true,
           matches: true,
@@ -451,6 +537,35 @@ export const lessons: Lesson[] = [
           orphan: true,
           venn: 'both',
         },
+      },
+    ],
+  },
+  {
+    id: 'index',
+    n: 8,
+    tag: 'Lesson 08 • Indexes',
+    label: 'Index',
+    title: 'Index race: scan vs seek',
+    steps: [
+      {
+        label: 'Step 1: Scan vs seek',
+        title: 'Why indexes matter',
+        text: 'Without an index the database walks the heap: row 1, row 2, row 3… until it finds you. That is a table scan. An index is a sorted map — a B-tree — so it can skip whole groups at once. That is an index seek. Pick an id and hit Race. Blue checks every row. Green jumps root → branch → leaf.',
+        sql: 'CREATE INDEX idx_users_id ON users(id);',
+        insight:
+          'Same question. Different number of looks. On twenty rows you can see it. On a million rows, scan is a million checks. Seek is still a handful.',
+        nextLabel: 'The catch',
+        visual: { indexRace: true, venn: 'none' },
+      },
+      {
+        label: 'Step 2: The catch',
+        title: 'Reads get faster. Writes pay for it.',
+        text: 'CREATE INDEX builds that tree and keeps it sorted. Next SELECT by id walks three nodes instead of the whole pile. But the tree is extra paper to update. Race again if you want — the picture does not change.',
+        sql: 'CREATE INDEX idx_users_id ON users(id);\n\nINSERT INTO users (id, name)\nVALUES (21, \'Zoe\');',
+        insight:
+          '**The catch:** indexes speed up reads but slow down writes. Every INSERT, UPDATE, and DELETE must also update the tree. Index the columns you search. Do not index everything.',
+        nextLabel: 'Play again',
+        visual: { indexRace: true, venn: 'none' },
       },
     ],
   },
@@ -574,9 +689,12 @@ const SQL_KEYWORDS = [
   'RIGHT JOIN',
   'INNER JOIN',
   'CROSS JOIN',
+  'CREATE INDEX',
+  'INSERT INTO',
   'SELECT',
   'FROM',
   'WHERE',
+  'VALUES',
   'AND',
   'ON',
 ];
@@ -591,11 +709,11 @@ export function highlightSql(sql: string) {
     .map((part, index) => {
       if (index % 2 === 1) return part;
       let out = part.replace(
-        /\b(customers|orders)\.(\w+)/g,
+        /\b(customers|orders|users)\.(\w+)/g,
         '<span class="sql-table">$1</span>.<span class="sql-col">$2</span>',
       );
       out = out.replace(
-        /\b(customers|orders)\b/g,
+        /\b(customers|orders|users)\b/g,
         '<span class="sql-table">$1</span>',
       );
       for (const keyword of SQL_KEYWORDS) {

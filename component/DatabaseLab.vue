@@ -3,6 +3,7 @@ import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-vu
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
+import IndexRace from '~/component/IndexRace.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
 import {
   TRAP_ITEM,
@@ -85,6 +86,8 @@ const {
 const active = computed(() => lessonById(activeId.value) ?? lessons[0]!);
 const step = computed(() => active.value.steps[stepIndex.value] ?? active.value.steps[0]!);
 const visual = computed(() => step.value.visual);
+const isIndexRace = computed(() => Boolean(visual.value.indexRace));
+const indexRaceEl = ref<{ resetBoard: () => void } | null>(null);
 const neighbors = computed(() => neighborLessons(activeId.value));
 const visibleOrders = computed(() => ordersFor(Boolean(visual.value.orphan)));
 const joinKind = computed(() => visual.value.join ?? 'left');
@@ -212,6 +215,7 @@ function resetLesson() {
   stepIndex.value = 0;
   hoverCustomerId.value = null;
   hoverOrderId.value = null;
+  indexRaceEl.value?.resetBoard();
   nextTick(() => measureLines());
 }
 
@@ -241,7 +245,7 @@ function toLocal(
 
 function measureLines() {
   const arena = arenaEl.value;
-  if (!arena) {
+  if (!arena || visual.value.indexRace) {
     lines.value = [];
     nullBadgeStyle.value = { display: 'none' };
     return;
@@ -467,6 +471,9 @@ function canMoveStage(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
   if (target.closest('.lj-handle')) return false;
   if (target.closest('.trow, .res-row')) return false;
+  if (target.closest('.idx-controls, .idx-scan-list, .idx-node, .idx-input, .idx-race-btn')) {
+    return false;
+  }
   return Boolean(target.closest('.lj-stage'));
 }
 
@@ -639,7 +646,9 @@ onUnmounted(() => {
             <div ref="innerEl" class="lj-stage-inner" :style="innerStyle">
             <div class="stage-label">{{ step.label }}</div>
 
-          <div ref="arenaEl" class="tables-arena" :class="{ 'is-one': !visual.showRight }">
+          <IndexRace v-if="isIndexRace" ref="indexRaceEl" />
+
+          <div v-else ref="arenaEl" class="tables-arena" :class="{ 'is-one': !visual.showRight }">
             <div class="arrow-layer" aria-hidden="true">
               <svg
                 :viewBox="`0 0 ${arenaView.w} ${arenaView.h}`"
@@ -772,18 +781,30 @@ onUnmounted(() => {
 
         <div class="lj-dock">
           <div class="legend">
-            <div class="legend-item">
-              <div class="legend-dot is-match" />
-              matched
-            </div>
-            <div class="legend-item">
-              <div class="legend-dot is-null" />
-              unmatched (NULL)
-            </div>
-            <div class="legend-item">
-              <div class="legend-dot is-hidden" />
-              hidden
-            </div>
+            <template v-if="isIndexRace">
+              <div class="legend-item">
+                <div class="legend-dot is-scan" />
+                table scan
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot is-seek" />
+                index seek
+              </div>
+            </template>
+            <template v-else>
+              <div class="legend-item">
+                <div class="legend-dot is-match" />
+                matched
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot is-null" />
+                unmatched (NULL)
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot is-hidden" />
+                hidden
+              </div>
+            </template>
           </div>
 
           <div class="controls-bar">
@@ -813,6 +834,7 @@ onUnmounted(() => {
         v-show="rightOpen"
         ref="lessonEl"
         class="mf-lesson lj-explanation"
+        :class="{ 'is-index': isIndexRace }"
         aria-label="Explanation"
       >
         <div>
@@ -1190,6 +1212,19 @@ onUnmounted(() => {
   font-weight: 700;
 }
 
+.lj-explanation.is-index .sql-block :deep(.sql-kw) {
+  color: #d946ef;
+}
+
+.lj-explanation.is-index .sql-block :deep(.sql-table) {
+  color: #22d3ee;
+}
+
+.lj-explanation.is-index .insight {
+  border-left-color: #10b981;
+  background: color-mix(in srgb, #10b981 10%, var(--mf-graph));
+}
+
 .stage-label {
   font-family: 'DM Mono', ui-monospace, monospace;
   font-size: 10px;
@@ -1521,6 +1556,14 @@ onUnmounted(() => {
 
 .legend-dot.is-hidden {
   background: var(--mf-dot);
+}
+
+.legend-dot.is-scan {
+  background: #3b82f6;
+}
+
+.legend-dot.is-seek {
+  background: #10b981;
 }
 
 .venn-mini {
