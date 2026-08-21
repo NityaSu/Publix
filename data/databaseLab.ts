@@ -6,7 +6,8 @@ export type LessonId =
   | 'left'
   | 'trap'
   | 'family'
-  | 'index';
+  | 'index'
+  | 'groupby';
 
 export type JoinKind = 'inner' | 'left' | 'right' | 'full' | 'cross';
 
@@ -47,6 +48,7 @@ export interface StepVisual {
   venn?: VennMode;
   orphan?: boolean;
   indexRace?: boolean;
+  groupBy?: boolean;
 }
 
 export interface LessonStep {
@@ -564,8 +566,27 @@ export const lessons: Lesson[] = [
         sql: 'CREATE INDEX idx_users_id ON users(id);\n\nINSERT INTO users (id, name)\nVALUES (21, \'Zoe\');',
         insight:
           '**The catch:** indexes speed up reads but slow down writes. Every INSERT, UPDATE, and DELETE must also update the tree. Index the columns you search. Do not index everything.',
-        nextLabel: 'Play again',
+        nextLabel: 'GROUP BY',
         visual: { indexRace: true, venn: 'none' },
+      },
+    ],
+  },
+  {
+    id: 'groupby',
+    n: 9,
+    tag: 'Lesson 09 • Aggregates',
+    label: 'GROUP BY',
+    title: 'Fold the pile into counts',
+    steps: [
+      {
+        label: 'Explain → Practice → Master',
+        title: 'GROUP BY folds rows',
+        text: 'A join can print Alice twice. A dashboard wants Alice once, with a number. GROUP BY is that fold.',
+        sql: 'SELECT customers.name, COUNT(orders.id) AS n\nFROM customers\nLEFT JOIN orders\n  ON customers.id = orders.customer_id\nGROUP BY customers.name;',
+        insight:
+          '**The rule:** GROUP BY one row per group. `COUNT(orders.id)` skips NULL, so Bob is 0 — and he still appears if you LEFT JOIN.',
+        nextLabel: 'Next',
+        visual: { groupBy: true, venn: 'none' },
       },
     ],
   },
@@ -691,12 +712,15 @@ const SQL_KEYWORDS = [
   'CROSS JOIN',
   'CREATE INDEX',
   'INSERT INTO',
+  'GROUP BY',
   'SELECT',
   'FROM',
   'WHERE',
   'VALUES',
+  'COUNT',
   'AND',
   'ON',
+  'AS',
 ];
 
 export function highlightSql(sql: string) {

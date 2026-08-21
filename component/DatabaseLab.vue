@@ -4,7 +4,9 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import IndexRace from '~/component/IndexRace.vue';
+import GroupByLesson from '~/component/GroupByLesson.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
+import { useGroupByLesson } from '~/composables/useGroupByLesson';
 import {
   TRAP_ITEM,
   customers,
@@ -87,7 +89,9 @@ const active = computed(() => lessonById(activeId.value) ?? lessons[0]!);
 const step = computed(() => active.value.steps[stepIndex.value] ?? active.value.steps[0]!);
 const visual = computed(() => step.value.visual);
 const isIndexRace = computed(() => Boolean(visual.value.indexRace));
+const isGroupBy = computed(() => Boolean(visual.value.groupBy));
 const indexRaceEl = ref<{ resetBoard: () => void } | null>(null);
+const groupBy = useGroupByLesson();
 const neighbors = computed(() => neighborLessons(activeId.value));
 const visibleOrders = computed(() => ordersFor(Boolean(visual.value.orphan)));
 const joinKind = computed(() => visual.value.join ?? 'left');
@@ -129,7 +133,9 @@ const unmatchedCustomers = computed(() =>
   customers.filter((customer) => !matchedCustomerIds.value.has(customer.id)),
 );
 
-const sqlHtml = computed(() => highlightSql(step.value.sql));
+const sqlHtml = computed(() =>
+  highlightSql(isGroupBy.value ? groupBy.story.value.sql : step.value.sql),
+);
 const insightHtml = computed(() => md(step.value.insight));
 const nullBadgeStyle = ref<Record<string, string>>({ display: 'none' });
 
@@ -200,6 +206,16 @@ function selectLesson(id: LessonId) {
 }
 
 function goNext() {
+  if (isGroupBy.value) {
+    if (groupBy.advance() === 'exit') {
+      if (neighbors.value.next) {
+        selectLesson(neighbors.value.next.id);
+        return;
+      }
+      selectLesson('table');
+    }
+    return;
+  }
   if (stepIndex.value < active.value.steps.length - 1) {
     stepIndex.value += 1;
     return;
@@ -216,6 +232,7 @@ function resetLesson() {
   hoverCustomerId.value = null;
   hoverOrderId.value = null;
   indexRaceEl.value?.resetBoard();
+  if (isGroupBy.value) groupBy.resetAll();
   nextTick(() => measureLines());
 }
 
@@ -245,7 +262,7 @@ function toLocal(
 
 function measureLines() {
   const arena = arenaEl.value;
-  if (!arena || visual.value.indexRace) {
+  if (!arena || visual.value.indexRace || visual.value.groupBy) {
     lines.value = [];
     nullBadgeStyle.value = { display: 'none' };
     return;
@@ -474,6 +491,9 @@ function canMoveStage(target: EventTarget | null) {
   if (target.closest('.idx-controls, .idx-scan-list, .idx-node, .idx-input, .idx-race-btn')) {
     return false;
   }
+  if (target.closest('.epm-tab, .epm-pill, .epm-chip, .epm-result-row, .epm-q')) {
+    return false;
+  }
   return Boolean(target.closest('.lj-stage'));
 }
 
@@ -585,7 +605,7 @@ onUnmounted(() => {
           {{ String(lesson.n).padStart(2, '0') }}
         </button>
       </nav>
-      <div class="step-dots" role="tablist" aria-label="Steps in this lesson">
+      <div class="step-dots" v-if="!isGroupBy" role="tablist" aria-label="Steps in this lesson">
         <button
           v-for="(item, index) in active.steps"
           :key="item.label"
@@ -647,7 +667,7 @@ onUnmounted(() => {
             <div class="stage-label">{{ step.label }}</div>
 
           <IndexRace v-if="isIndexRace" ref="indexRaceEl" />
-
+          <GroupByLesson v-else-if="isGroupBy" />
           <div v-else ref="arenaEl" class="tables-arena" :class="{ 'is-one': !visual.showRight }">
             <div class="arrow-layer" aria-hidden="true">
               <svg
@@ -791,6 +811,20 @@ onUnmounted(() => {
                 index seek
               </div>
             </template>
+            <template v-else-if="isGroupBy">
+              <div class="legend-item">
+                <div class="legend-dot is-match" />
+                folded group
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot is-null" />
+                zero / NULL
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot is-seek" />
+                correct
+              </div>
+            </template>
             <template v-else>
               <div class="legend-item">
                 <div class="legend-dot is-match" />
@@ -811,11 +845,20 @@ onUnmounted(() => {
             <button
               type="button"
               class="ctrl-btn primary"
+              :disabled="isGroupBy && groupBy.phase.value === 'practice' && !groupBy.canMaster.value"
               @click="goNext"
             >
-              {{ step.nextLabel }}
+              {{ isGroupBy ? groupBy.nextLabel.value : step.nextLabel }}
             </button>
             <button type="button" class="ctrl-btn" @click="resetLesson">Reset</button>
+            <button
+              v-if="isGroupBy && groupBy.phase.value === 'master'"
+              type="button"
+              class="ctrl-btn"
+              @click="groupBy.showAnswers()"
+            >
+              Show me the answer
+            </button>
           </div>
         </div>
       </section>
@@ -834,14 +877,14 @@ onUnmounted(() => {
         v-show="rightOpen"
         ref="lessonEl"
         class="mf-lesson lj-explanation"
-        :class="{ 'is-index': isIndexRace }"
+        :class="{ 'is-index': isIndexRace, 'is-groupby': isGroupBy }"
         aria-label="Explanation"
       >
         <div>
           <p class="lesson-tag">{{ active.tag }}</p>
-          <h3>{{ step.title }}</h3>
+          <h3>{{ isGroupBy ? groupBy.story.value.title : step.title }}</h3>
         </div>
-        <p>{{ step.text }}</p>
+        <p>{{ isGroupBy ? groupBy.story.value.text : step.text }}</p>
 
         <div v-if="visual.venn && visual.venn !== 'none'" class="venn-mini">
           <div
@@ -860,7 +903,26 @@ onUnmounted(() => {
 
         <div class="sql-block" v-html="sqlHtml" />
 
-        <div class="insight" v-html="insightHtml" />
+        <template v-if="isGroupBy">
+          <div class="epm-box is-rule">
+            <span>The rule</span>
+            {{ groupBy.story.value.rule }}
+          </div>
+          <div class="epm-box is-world">
+            <span>Real world</span>
+            {{ groupBy.story.value.world }}
+          </div>
+          <div class="epm-box is-miss">
+            <span>Common mistake</span>
+            {{ groupBy.story.value.mistake }}
+          </div>
+          <button type="button" class="epm-hint" @click="groupBy.toggleHint()">
+            {{ groupBy.hintOpen.value ? 'Hide hint' : 'Hint' }}
+          </button>
+          <p v-if="groupBy.hintOpen.value" class="epm-hint-text">{{ groupBy.story.value.hint }}</p>
+          <p v-if="groupBy.phase.value === 'master'" class="epm-scoreline">{{ groupBy.scoreLine.value }}</p>
+        </template>
+        <div v-else class="insight" v-html="insightHtml" />
       </section>
     </div>
   </div>
@@ -1225,6 +1287,71 @@ onUnmounted(() => {
   background: color-mix(in srgb, #10b981 10%, var(--mf-graph));
 }
 
+.lj-explanation.is-groupby .sql-block :deep(.sql-kw) {
+  color: #d946ef;
+}
+
+.lj-explanation.is-groupby .sql-block :deep(.sql-table) {
+  color: #22d3ee;
+}
+
+.epm-box {
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--mf-muted);
+  background: var(--mf-graph);
+  border-left: 3px solid var(--mf-line);
+}
+
+.epm-box span {
+  display: block;
+  margin-bottom: 4px;
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mf-text);
+}
+
+.epm-box.is-rule {
+  border-left-color: #d946ef;
+}
+
+.epm-box.is-world {
+  border-left-color: #3b82f6;
+}
+
+.epm-box.is-miss {
+  border-left-color: #f59e0b;
+}
+
+.epm-hint {
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--mf-line);
+  background: var(--mf-panel);
+  color: var(--mf-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.epm-hint-text,
+.epm-scoreline {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--mf-muted);
+}
+
+.epm-scoreline {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  color: #10b981;
+}
+
 .stage-label {
   font-family: 'DM Mono', ui-monospace, monospace;
   font-size: 10px;
@@ -1511,6 +1638,11 @@ onUnmounted(() => {
 .ctrl-btn:hover {
   border-color: var(--lj-blue);
   color: var(--lj-blue);
+}
+
+.ctrl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .ctrl-btn.primary {
