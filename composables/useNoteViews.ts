@@ -16,6 +16,10 @@ function useViewCounts() {
   return useState<ViewsMap>('note-views', () => ({}));
 }
 
+function useViewsHydrated() {
+  return useState<boolean>('note-views-hydrated', () => false);
+}
+
 function noteSlugFromPath(path: string) {
   const pathname = path.split('?')[0] ?? '';
   const match = pathname.match(/^\/insights\/notes\/([^/]+)$/);
@@ -24,27 +28,49 @@ function noteSlugFromPath(path: string) {
   return slug;
 }
 
+/**
+ * Load all note view counts in the browser.
+ * Avoids SSR/prerender baking an empty map into the payload — that made refresh
+ * always show 0 while client navigations (with in-memory POST updates) looked fine.
+ */
 export function useAllNoteViews() {
   const counts = useViewCounts();
-  const { data } = useFetch('/api/views', {
+  const hydrated = useViewsHydrated();
+
+  const { data, status } = useFetch<AllViewsResponse>('/api/views', {
     key: 'all-note-views',
-    server: true,
-    default: () => ({ views: {}, formatted: {} }),
+    server: false,
+    lazy: true,
+    // Never reuse a stale/empty payload from a previous visit or prerender.
+    getCachedData: () => undefined,
   });
 
-  watch(data, (next) => {
-    if (next?.views) counts.value = { ...counts.value, ...next.views };
-  }, { immediate: true });
+  watch(
+    data,
+    (next) => {
+      if (!next?.views) return;
+      counts.value = { ...counts.value, ...next.views };
+      hydrated.value = true;
+    },
+    { immediate: true },
+  );
 
-  return { counts, ready: true };
+  watch(status, (next) => {
+    if (next === 'success' || next === 'error') hydrated.value = true;
+  });
+
+  const ready = computed(() => hydrated.value);
+
+  return { counts, ready };
 }
 
 export function useNoteViews(slug: MaybeRef<string>) {
-  const { counts } = useAllNoteViews();
+  const { counts, ready } = useAllNoteViews();
   const key = computed(() => unref(slug));
   const views = computed(() => counts.value[key.value] ?? 0);
   const viewsFormatted = computed(() => formatViewCount(views.value));
-  return { views, viewsFormatted, ready: true };
+
+  return { views, viewsFormatted, ready };
 }
 
 /**
@@ -54,6 +80,7 @@ export function useNoteViews(slug: MaybeRef<string>) {
 export function useRecordNoteView() {
   const route = useRoute();
   const counts = useViewCounts();
+  const hydrated = useViewsHydrated();
   const lastSlug = ref('');
 
   async function record(slug: string) {
@@ -65,6 +92,7 @@ export function useRecordNoteView() {
         method: 'POST',
       });
       counts.value = { ...counts.value, [next.slug]: next.views };
+      hydrated.value = true;
     } catch {
       lastSlug.value = '';
     }

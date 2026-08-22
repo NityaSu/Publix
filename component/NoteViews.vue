@@ -19,11 +19,20 @@ const label = computed(() =>
 
 <template>
   <span
-    v-if="ready"
     class="note-views whitespace-nowrap tabular-nums"
-    :title="`${viewsFormatted} views`"
-    :aria-label="`${views} views`"
+    :class="{ 'is-pending': !ready }"
+    :title="ready ? `${viewsFormatted} views` : undefined"
+    :aria-label="ready ? `${views} views` : 'Loading view count'"
+    :aria-busy="!ready"
   >
-    {{ label }}
+    <template v-if="ready">{{ label }}</template>
+    <template v-else>&nbsp;</template>
   </span>
 </template>
+
+<style scoped>
+.note-views.is-pending {
+  opacity: 0;
+  min-width: 4ch;
+}
+</style>
