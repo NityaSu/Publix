@@ -26,33 +26,25 @@ function noteSlugFromPath(path: string) {
 
 export function useAllNoteViews() {
   const counts = useViewCounts();
-  const { data, status } = useFetch<AllViewsResponse>('/api/views', {
+  const { data } = useFetch('/api/views', {
     key: 'all-note-views',
+    server: true,
+    default: () => ({ views: {}, formatted: {} }),
   });
 
-  watch(
-    data,
-    (next) => {
-      if (!next?.views) return;
-      counts.value = { ...counts.value, ...next.views };
-    },
-    { immediate: true },
-  );
+  watch(data, (next) => {
+    if (next?.views) counts.value = { ...counts.value, ...next.views };
+  }, { immediate: true });
 
-  const ready = computed(
-    () => status.value === 'success' || Object.keys(counts.value).length > 0,
-  );
-
-  return { counts, ready };
+  return { counts, ready: true };
 }
 
 export function useNoteViews(slug: MaybeRef<string>) {
-  const { counts, ready } = useAllNoteViews();
+  const { counts } = useAllNoteViews();
   const key = computed(() => unref(slug));
   const views = computed(() => counts.value[key.value] ?? 0);
   const viewsFormatted = computed(() => formatViewCount(views.value));
-
-  return { views, viewsFormatted, ready };
+  return { views, viewsFormatted, ready: true };
 }
 
 /**
