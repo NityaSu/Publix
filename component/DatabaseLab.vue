@@ -2,11 +2,14 @@
 import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import NoteViews from '~/component/NoteViews.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import IndexRace from '~/component/IndexRace.vue';
 import GroupByLesson from '~/component/GroupByLesson.vue';
+import CoffeeShopLesson from '~/component/CoffeeShopLesson.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
 import { useGroupByLesson } from '~/composables/useGroupByLesson';
+import { useCoffeeShopLesson } from '~/composables/useCoffeeShopLesson';
 import {
   TRAP_ITEM,
   customers,
@@ -90,8 +93,33 @@ const step = computed(() => active.value.steps[stepIndex.value] ?? active.value.
 const visual = computed(() => step.value.visual);
 const isIndexRace = computed(() => Boolean(visual.value.indexRace));
 const isGroupBy = computed(() => Boolean(visual.value.groupBy));
+const isCoffeeShop = computed(() => Boolean(visual.value.coffeeShop));
+const isEpm = computed(() => isGroupBy.value || isCoffeeShop.value);
 const indexRaceEl = ref<{ resetBoard: () => void } | null>(null);
 const groupBy = useGroupByLesson();
+const coffee = useCoffeeShopLesson(activeId);
+const epm = computed(() => (isGroupBy.value ? groupBy : coffee));
+const vennMode = computed(() => {
+  if (isGroupBy.value) {
+    if (groupBy.phase.value === 'practice') {
+      const join = groupBy.joinKind.value;
+      if (join === 'left') return 'left' as const;
+      if (join === 'right') return 'right' as const;
+      return 'both' as const;
+    }
+    return 'left' as const;
+  }
+  if (isCoffeeShop.value && activeId.value === 'shopjoin') {
+    if (coffee.phase.value === 'practice') {
+      const join = coffee.joinKind.value;
+      if (join === 'left') return 'left' as const;
+      if (join === 'right') return 'right' as const;
+      return 'both' as const;
+    }
+    return 'left' as const;
+  }
+  return visual.value.venn ?? 'none';
+});
 const neighbors = computed(() => neighborLessons(activeId.value));
 const visibleOrders = computed(() => ordersFor(Boolean(visual.value.orphan)));
 const joinKind = computed(() => visual.value.join ?? 'left');
@@ -134,7 +162,7 @@ const unmatchedCustomers = computed(() =>
 );
 
 const sqlHtml = computed(() =>
-  highlightSql(isGroupBy.value ? groupBy.story.value.sql : step.value.sql),
+  highlightSql(isEpm.value ? epm.value.story.value.sql : step.value.sql),
 );
 const insightHtml = computed(() => md(step.value.insight));
 const nullBadgeStyle = ref<Record<string, string>>({ display: 'none' });
@@ -206,8 +234,8 @@ function selectLesson(id: LessonId) {
 }
 
 function goNext() {
-  if (isGroupBy.value) {
-    if (groupBy.advance() === 'exit') {
+  if (isEpm.value) {
+    if (epm.value.advance() === 'exit') {
       if (neighbors.value.next) {
         selectLesson(neighbors.value.next.id);
         return;
@@ -233,6 +261,7 @@ function resetLesson() {
   hoverOrderId.value = null;
   indexRaceEl.value?.resetBoard();
   if (isGroupBy.value) groupBy.resetAll();
+  if (isCoffeeShop.value) coffee.resetAll();
   nextTick(() => measureLines());
 }
 
@@ -262,7 +291,7 @@ function toLocal(
 
 function measureLines() {
   const arena = arenaEl.value;
-  if (!arena || visual.value.indexRace || visual.value.groupBy) {
+  if (!arena || visual.value.indexRace || visual.value.groupBy || visual.value.coffeeShop) {
     lines.value = [];
     nullBadgeStyle.value = { display: 'none' };
     return;
@@ -491,7 +520,7 @@ function canMoveStage(target: EventTarget | null) {
   if (target.closest('.idx-controls, .idx-scan-list, .idx-node, .idx-input, .idx-race-btn')) {
     return false;
   }
-  if (target.closest('.epm-tab, .epm-pill, .epm-chip, .epm-result-row, .epm-q')) {
+  if (target.closest('.epm-tab, .epm-pill, .epm-chip, .epm-result-row, .epm-q, .epm-row, .idx-race-btn, .shop')) {
     return false;
   }
   return Boolean(target.closest('.lj-stage'));
@@ -605,7 +634,7 @@ onUnmounted(() => {
           {{ String(lesson.n).padStart(2, '0') }}
         </button>
       </nav>
-      <div class="step-dots" v-if="!isGroupBy" role="tablist" aria-label="Steps in this lesson">
+      <div class="step-dots" v-if="!isEpm" role="tablist" aria-label="Steps in this lesson">
         <button
           v-for="(item, index) in active.steps"
           :key="item.label"
@@ -618,6 +647,7 @@ onUnmounted(() => {
         />
       </div>
       <div class="mf-meta">
+        <NoteViews slug="database-lab" class="mf-step hidden sm:inline" />
         <button
           type="button"
           class="mf-tool"
@@ -668,6 +698,7 @@ onUnmounted(() => {
 
           <IndexRace v-if="isIndexRace" ref="indexRaceEl" />
           <GroupByLesson v-else-if="isGroupBy" />
+          <CoffeeShopLesson v-else-if="isCoffeeShop" />
           <div v-else ref="arenaEl" class="tables-arena" :class="{ 'is-one': !visual.showRight }">
             <div class="arrow-layer" aria-hidden="true">
               <svg
@@ -811,14 +842,14 @@ onUnmounted(() => {
                 index seek
               </div>
             </template>
-            <template v-else-if="isGroupBy">
+            <template v-else-if="isEpm">
               <div class="legend-item">
                 <div class="legend-dot is-match" />
-                folded group
+                match / keep
               </div>
               <div class="legend-item">
                 <div class="legend-dot is-null" />
-                zero / NULL
+                filtered / NULL
               </div>
               <div class="legend-item">
                 <div class="legend-dot is-seek" />
@@ -845,17 +876,17 @@ onUnmounted(() => {
             <button
               type="button"
               class="ctrl-btn primary"
-              :disabled="isGroupBy && groupBy.phase.value === 'practice' && !groupBy.canMaster.value"
+              :disabled="isEpm && epm.phase.value === 'practice' && !epm.canMaster.value"
               @click="goNext"
             >
-              {{ isGroupBy ? groupBy.nextLabel.value : step.nextLabel }}
+              {{ isEpm ? epm.nextLabel.value : step.nextLabel }}
             </button>
             <button type="button" class="ctrl-btn" @click="resetLesson">Reset</button>
             <button
-              v-if="isGroupBy && groupBy.phase.value === 'master'"
+              v-if="isEpm && epm.phase.value === 'master'"
               type="button"
               class="ctrl-btn"
-              @click="groupBy.showAnswers()"
+              @click="epm.showAnswers()"
             >
               Show me the answer
             </button>
@@ -877,25 +908,25 @@ onUnmounted(() => {
         v-show="rightOpen"
         ref="lessonEl"
         class="mf-lesson lj-explanation"
-        :class="{ 'is-index': isIndexRace, 'is-groupby': isGroupBy }"
+        :class="{ 'is-index': isIndexRace, 'is-groupby': isEpm }"
         aria-label="Explanation"
       >
         <div>
           <p class="lesson-tag">{{ active.tag }}</p>
-          <h3>{{ isGroupBy ? groupBy.story.value.title : step.title }}</h3>
+          <h3>{{ isEpm ? epm.story.value.title : step.title }}</h3>
         </div>
-        <p>{{ isGroupBy ? groupBy.story.value.text : step.text }}</p>
+        <p>{{ isEpm ? epm.story.value.text : step.text }}</p>
 
-        <div v-if="visual.venn && visual.venn !== 'none'" class="venn-mini">
+        <div v-if="vennMode !== 'none'" class="venn-mini" aria-hidden="true">
           <div
             class="venn-circle left-c"
-            :class="{ active: visual.venn === 'left' || visual.venn === 'both' }"
+            :class="{ active: vennMode === 'left' || vennMode === 'both' }"
           >
             Left
           </div>
           <div
             class="venn-circle right-c"
-            :class="{ active: visual.venn === 'both' }"
+            :class="{ active: vennMode === 'right' || vennMode === 'both' }"
           >
             Right
           </div>
@@ -903,24 +934,24 @@ onUnmounted(() => {
 
         <div class="sql-block" v-html="sqlHtml" />
 
-        <template v-if="isGroupBy">
+        <template v-if="isEpm">
           <div class="epm-box is-rule">
             <span>The rule</span>
-            {{ groupBy.story.value.rule }}
+            {{ epm.story.value.rule }}
           </div>
           <div class="epm-box is-world">
             <span>Real world</span>
-            {{ groupBy.story.value.world }}
+            {{ epm.story.value.world }}
           </div>
           <div class="epm-box is-miss">
             <span>Common mistake</span>
-            {{ groupBy.story.value.mistake }}
+            {{ epm.story.value.mistake }}
           </div>
-          <button type="button" class="epm-hint" @click="groupBy.toggleHint()">
-            {{ groupBy.hintOpen.value ? 'Hide hint' : 'Hint' }}
+          <button type="button" class="epm-hint" @click="epm.toggleHint()">
+            {{ epm.hintOpen.value ? 'Hide hint' : 'Hint' }}
           </button>
-          <p v-if="groupBy.hintOpen.value" class="epm-hint-text">{{ groupBy.story.value.hint }}</p>
-          <p v-if="groupBy.phase.value === 'master'" class="epm-scoreline">{{ groupBy.scoreLine.value }}</p>
+          <p v-if="epm.hintOpen.value" class="epm-hint-text">{{ epm.story.value.hint }}</p>
+          <p v-if="epm.phase.value === 'master'" class="epm-scoreline">{{ epm.scoreLine.value }}</p>
         </template>
         <div v-else class="insight" v-html="insightHtml" />
       </section>

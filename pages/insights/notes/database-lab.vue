@@ -8,7 +8,7 @@ useHead({
     {
       name: 'description',
       content:
-        'Tables, keys, joins, indexes, and GROUP BY — explain, then practice, then master.',
+        'Coffee shop SQL: SELECT, JOIN, GROUP BY, subqueries, indexes, and transactions.',
     },
   ],
 });

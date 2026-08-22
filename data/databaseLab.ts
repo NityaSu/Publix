@@ -7,13 +7,19 @@ export type LessonId =
   | 'trap'
   | 'family'
   | 'index'
-  | 'groupby';
+  | 'groupby'
+  | 'select'
+  | 'shopjoin'
+  | 'shopgroup'
+  | 'subquery'
+  | 'shopindex'
+  | 'tx';
 
 export type JoinKind = 'inner' | 'left' | 'right' | 'full' | 'cross';
 
 export type TrapMode = 'off' | 'on' | 'where';
 
-export type VennMode = 'none' | 'left' | 'both';
+export type VennMode = 'none' | 'left' | 'right' | 'both';
 
 export interface Customer {
   id: number;
@@ -49,6 +55,7 @@ export interface StepVisual {
   orphan?: boolean;
   indexRace?: boolean;
   groupBy?: boolean;
+  coffeeShop?: boolean;
 }
 
 export interface LessonStep {
@@ -585,8 +592,116 @@ export const lessons: Lesson[] = [
         sql: 'SELECT customers.name, COUNT(orders.id) AS n\nFROM customers\nLEFT JOIN orders\n  ON customers.id = orders.customer_id\nGROUP BY customers.name;',
         insight:
           '**The rule:** GROUP BY one row per group. `COUNT(orders.id)` skips NULL, so Bob is 0 — and he still appears if you LEFT JOIN.',
+        nextLabel: 'SELECT',
+        visual: { groupBy: true, venn: 'left' },
+      },
+    ],
+  },
+  {
+    id: 'select',
+    n: 10,
+    tag: 'Lesson 10 • Coffee shop',
+    label: 'SELECT',
+    title: 'Find the January NYC promo list',
+    steps: [
+      {
+        label: 'Explain → Practice → Master',
+        title: 'SELECT & WHERE',
+        text: 'The owner wants every NYC customer who joined in January.',
+        sql: 'SELECT name, email\nFROM customers\nWHERE city = \'NYC\'\n  AND joined_at < \'2024-02-01\';',
+        insight: 'SELECT picks columns. WHERE keeps rows.',
         nextLabel: 'Next',
-        visual: { groupBy: true, venn: 'none' },
+        visual: { coffeeShop: true, venn: 'none' },
+      },
+    ],
+  },
+  {
+    id: 'shopjoin',
+    n: 11,
+    tag: 'Lesson 11 • Coffee shop',
+    label: 'JOIN',
+    title: 'Every customer, even silent ones',
+    steps: [
+      {
+        label: 'Explain → Practice → Master',
+        title: 'JOINs',
+        text: 'Show every customer and their orders — even Bob and Eve.',
+        sql: 'SELECT customers.name, orders.item\nFROM customers\nLEFT JOIN orders\n  ON customers.id = orders.customer_id;',
+        insight: 'LEFT keeps the left list. INNER drops people with no orders.',
+        nextLabel: 'Next',
+        visual: { coffeeShop: true, venn: 'left' },
+      },
+    ],
+  },
+  {
+    id: 'shopgroup',
+    n: 12,
+    tag: 'Lesson 12 • Coffee shop',
+    label: 'Buckets',
+    title: 'Spend per city, sales per category',
+    steps: [
+      {
+        label: 'Explain → Practice → Master',
+        title: 'GROUP BY',
+        text: 'How much did each city spend? What is the best-selling category?',
+        sql: 'SELECT customers.city, SUM(orders.price) AS spent\nFROM customers\nINNER JOIN orders\n  ON customers.id = orders.customer_id\nGROUP BY customers.city;',
+        insight: 'GROUP BY folds. HAVING filters groups. WHERE filters rows.',
+        nextLabel: 'Next',
+        visual: { coffeeShop: true, venn: 'none' },
+      },
+    ],
+  },
+  {
+    id: 'subquery',
+    n: 13,
+    tag: 'Lesson 13 • Coffee shop',
+    label: 'Nest',
+    title: 'Top spenders, queries inside queries',
+    steps: [
+      {
+        label: 'Explain → Practice → Master',
+        title: 'Subqueries & CTEs',
+        text: 'Who are our top 3 customers by total spend?',
+        sql: 'WITH totals AS (\n  SELECT customer_id, SUM(price) AS spent\n  FROM orders\n  GROUP BY customer_id\n)\nSELECT customers.name, totals.spent\nFROM customers\nINNER JOIN totals ON customers.id = totals.customer_id\nORDER BY totals.spent DESC\nLIMIT 3;',
+        insight: 'A CTE names the inner table. Same result as a subquery.',
+        nextLabel: 'Next',
+        visual: { coffeeShop: true, venn: 'none' },
+      },
+    ],
+  },
+  {
+    id: 'shopindex',
+    n: 14,
+    tag: 'Lesson 14 • Coffee shop',
+    label: 'Speed',
+    title: 'The search page takes too long',
+    steps: [
+      {
+        label: 'Explain → Practice → Master',
+        title: 'Indexes',
+        text: 'Find Eve by id. Scan walks. Seek jumps.',
+        sql: 'CREATE INDEX idx_customers_id ON customers(id);',
+        insight: 'Indexes speed reads and slow writes.',
+        nextLabel: 'Next',
+        visual: { coffeeShop: true, venn: 'none' },
+      },
+    ],
+  },
+  {
+    id: 'tx',
+    n: 15,
+    tag: 'Lesson 15 • Coffee shop',
+    label: 'Safe',
+    title: 'Transfer $50 without losing it',
+    steps: [
+      {
+        label: 'Explain → Practice → Master',
+        title: 'Transactions',
+        text: 'Move store credit from Alice to Bob. All of it, or none of it.',
+        sql: 'BEGIN;\nCOMMIT;\nROLLBACK;',
+        insight: 'Atomic: all succeed or all fail.',
+        nextLabel: 'Next',
+        visual: { coffeeShop: true, venn: 'none' },
       },
     ],
   },
@@ -705,20 +820,33 @@ export function joinRows(
 }
 
 const SQL_KEYWORDS = [
+  'CREATE INDEX',
+  'INSERT INTO',
+  'GROUP BY',
+  'ORDER BY',
   'FULL OUTER JOIN',
   'LEFT JOIN',
   'RIGHT JOIN',
   'INNER JOIN',
   'CROSS JOIN',
-  'CREATE INDEX',
-  'INSERT INTO',
-  'GROUP BY',
+  'ROLLBACK',
+  'COMMIT',
+  'BEGIN',
+  'HAVING',
   'SELECT',
   'FROM',
   'WHERE',
   'VALUES',
+  'LIMIT',
   'COUNT',
+  'UPDATE',
+  'WITH',
+  'SUM',
+  'AVG',
+  'MAX',
+  'MIN',
   'AND',
+  'SET',
   'ON',
   'AS',
 ];
@@ -733,11 +861,11 @@ export function highlightSql(sql: string) {
     .map((part, index) => {
       if (index % 2 === 1) return part;
       let out = part.replace(
-        /\b(customers|orders|users)\.(\w+)/g,
+        /\b(customers|orders|users|products|reviews)\.(\w+)/g,
         '<span class="sql-table">$1</span>.<span class="sql-col">$2</span>',
       );
       out = out.replace(
-        /\b(customers|orders|users)\b/g,
+        /\b(customers|orders|users|products|reviews)\b/g,
         '<span class="sql-table">$1</span>',
       );
       for (const keyword of SQL_KEYWORDS) {
