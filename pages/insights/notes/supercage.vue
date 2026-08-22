@@ -3,7 +3,23 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import BlogDemoMedia from '~/component/BlogDemoMedia.vue';
 import InsightsReadingShell from '~/component/InsightsReadingShell.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import NoteViews from '~/component/NoteViews.vue';
+import { noteBySlug } from '~/data/buildNotes';
 import { mediaUrl } from '~/utils/media';
+
+const note = noteBySlug('supercage');
+
+function formatDate(iso: string) {
+  try {
+    return new Intl.DateTimeFormat('en', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
 
 const GITHUB_URL = 'https://github.com/NityaSu/supercage';
 
@@ -68,6 +84,14 @@ onUnmounted(() => {
           <h1 class="mt-4 font-display font-extrabold ri-ink text-3xl sm:text-4xl md:text-5xl leading-tight">
             Building supercage: caging an AI coding agent
           </h1>
+          <p
+            v-if="note"
+            class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-dm text-xs tracking-wide ri-sub"
+          >
+            <time class="uppercase tracking-[0.14em]" :datetime="note.date">{{ formatDate(note.date) }}</time>
+            <span aria-hidden="true">·</span>
+            <NoteViews :slug="note.slug" />
+          </p>
           <p class="mt-5 text-base md:text-lg ri-ink leading-relaxed">
             I wanted to understand
             <span class="sc-sandbox">sandboxing</span>:

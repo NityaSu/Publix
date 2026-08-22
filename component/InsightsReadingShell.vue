@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useInsightsImmersive } from '~/composables/useInsightsImmersive';
 import { useInsightsReadingMode } from '~/composables/useInsightsReadingMode';
+import { useRecordNoteView } from '~/composables/useNoteViews';
 
 const { mode } = useInsightsReadingMode();
 const { immersive } = useInsightsImmersive();
+useRecordNoteView();
 </script>
 
 <template>

@@ -3,6 +3,7 @@ import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-vu
 import DockerConfigMaster from '~/component/DockerConfigMaster.vue';
 import DockerQuestGame from '~/component/DockerQuestGame.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import NoteViews from '~/component/NoteViews.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
 
@@ -248,6 +249,7 @@ onUnmounted(() => {
     <header class="mf-header">
       <NuxtLink to="/insights/notes" class="mf-brand">DOCKER IN KID VERSION</NuxtLink>
       <div class="mf-meta">
+        <NoteViews slug="docker-for-kids" class="mf-step" />
         <span class="mf-step">5 lessons</span>
         <button
           type="button"

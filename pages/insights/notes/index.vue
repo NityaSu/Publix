@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import InsightsReadingShell from '~/component/InsightsReadingShell.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import NoteViews from '~/component/NoteViews.vue';
 import { publicBuildNotes, buildNotePath } from '~/data/buildNotes';
 
 useHead({
@@ -53,16 +54,23 @@ function formatDate(iso: string) {
               :to="buildNotePath(note.slug)"
               class="group block border ri-border ri-surface px-6 py-5 transition-colors hover:border-accent/40"
             >
-              <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <p class="font-dm text-xs uppercase tracking-[0.16em] text-accent">
-                  {{ note.tag }}
-                </p>
-                <time
-                  class="font-dm text-xs uppercase tracking-[0.12em] ri-sub"
-                  :datetime="note.date"
-                >
-                  {{ formatDate(note.date) }}
-                </time>
+              <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p class="font-dm text-xs uppercase tracking-[0.16em] text-accent">
+                    {{ note.tag }}
+                  </p>
+                  <time
+                    class="font-dm text-xs uppercase tracking-[0.12em] ri-sub"
+                    :datetime="note.date"
+                  >
+                    {{ formatDate(note.date) }}
+                  </time>
+                </div>
+                <NoteViews
+                  :slug="note.slug"
+                  compact
+                  class="font-dm text-xs tracking-wide ri-sub"
+                />
               </div>
               <h2 class="mt-2 font-display font-bold ri-ink text-lg md:text-xl group-hover:text-accent transition-colors">
                 {{ note.title }}

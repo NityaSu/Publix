@@ -19,10 +19,10 @@ export const buildNotes: BuildNote[] = [
     slug: 'database-lab',
     title: 'Database Lab',
     summary:
-      'Tables, keys, joins, indexes, and GROUP BY in a stepped playground — left join is one lesson, not the whole note.',
+      'Coffee shop SQL from SELECT through transactions — plus the original join lab.',
     tag: 'Personal Learning',
     date: '2026-08-21',
-    stack: ['SQL', 'Tables', 'Joins', 'Indexes', 'GROUP BY'],
+    stack: ['SQL', 'Joins', 'GROUP BY', 'Indexes', 'Transactions'],
   },
   {
     slug: 'docker-for-kids',
@@ -64,6 +64,14 @@ export const buildNotes: BuildNote[] = [
 ];
 
 export const publicBuildNotes = buildNotes.filter((note) => !note.draft);
+
+export function noteBySlug(slug: string) {
+  return buildNotes.find((note) => note.slug === slug);
+}
+
+export function isBuildNoteSlug(slug: string) {
+  return buildNotes.some((note) => note.slug === slug);
+}
 
 export function isDraftNote(slug: string) {
   return buildNotes.some((note) => note.slug === slug && note.draft);

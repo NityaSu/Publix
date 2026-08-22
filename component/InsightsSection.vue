@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import InsightCard, { type InsightVariant } from '~/component/InsightCard.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import NoteViews from '~/component/NoteViews.vue';
 import { publicBuildNotes, buildNotePath } from '~/data/buildNotes';
 
 interface InsightItem {
@@ -109,9 +110,16 @@ const latestNotes = publicBuildNotes.slice(0, 2);
             :to="buildNotePath(note.slug)"
             class="group block border ri-border ri-surface px-6 py-5 transition-colors hover:border-accent/40"
           >
-            <p class="font-dm text-xs uppercase tracking-[0.16em] text-accent">
-              {{ note.tag }}
-            </p>
+            <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <p class="font-dm text-xs uppercase tracking-[0.16em] text-accent">
+                {{ note.tag }}
+              </p>
+              <NoteViews
+                :slug="note.slug"
+                compact
+                class="font-dm text-xs tracking-wide ri-sub"
+              />
+            </div>
             <h3 class="mt-2 font-display font-bold ri-ink text-lg md:text-xl group-hover:text-accent transition-colors">
               {{ note.title }}
             </h3>

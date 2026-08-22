@@ -2,6 +2,7 @@
 import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen, RefreshCw } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import NoteViews from '~/component/NoteViews.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
 import {
@@ -446,6 +447,7 @@ onUnmounted(() => {
     <header class="mf-header">
       <NuxtLink to="/insights/notes" class="mf-brand">FIRST PRINCIPLE</NuxtLink>
       <div class="mf-meta">
+        <NoteViews slug="backend-from-first-principle" class="mf-step" />
         <span class="mf-step">31 lessons</span>
         <button
           type="button"

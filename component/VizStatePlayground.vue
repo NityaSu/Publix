@@ -2,6 +2,7 @@
 import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen, RefreshCw } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
+import NoteViews from '~/component/NoteViews.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import VizCartDemo from '~/component/VizCartDemo.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
@@ -453,6 +454,7 @@ onUnmounted(() => {
     <header class="mf-header">
       <NuxtLink to="/insights/notes" class="mf-brand">STATE IN VIZ</NuxtLink>
       <div class="mf-meta">
+        <NoteViews slug="state-in-visualization" class="mf-step" />
         <span class="mf-step">13 lessons</span>
         <button
           type="button"
