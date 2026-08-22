@@ -1,6 +1,9 @@
 import { isBuildNoteSlug } from '~/data/buildNotes';
 import { formatViewCount } from '~/utils/views';
 
+/** Redis hash key — same shape as rauchg.com (`HINCRBY views <id> 1`). */
+const VIEWS_HASH = 'views';
+
 export type ViewPayload = {
   slug: string;
   views: number;
@@ -23,70 +26,48 @@ export function assertNoteSlug(raw: string): string {
   return slug;
 }
 
+function asCount(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export async function getViewCounts(): Promise<Record<string, number>> {
+  const redis = useRedis();
+  if (!redis) return {};
+
   try {
-    const supabase = useSupabase();
-
-    // Prefer security-definer RPC so RLS never hides rows from the notes list.
-    const rpc = await supabase.rpc('get_page_views');
-    if (!rpc.error && Array.isArray(rpc.data)) {
-      return Object.fromEntries(
-        rpc.data.map((row: { slug: string; views: number | string }) => [
-          String(row.slug),
-          Number(row.views) || 0,
-        ]),
-      );
-    }
-
-    if (rpc.error) {
-      console.error('[views] get_page_views rpc failed', rpc.error.message);
-    }
-
-    const { data, error } = await supabase.from('page_views').select('slug, views');
-    if (error) {
-      console.error('[views] select page_views failed', error.message);
-      return {};
-    }
-    if (!data) return {};
+    const all = await redis.hgetall<Record<string, string | number>>(VIEWS_HASH);
+    if (!all) return {};
     return Object.fromEntries(
-      data.map((row) => [String(row.slug), Number(row.views) || 0]),
+      Object.entries(all).map(([slug, value]) => [slug, asCount(value)]),
     );
   } catch (err) {
-    console.error('[views] getViewCounts failed', err);
+    console.error('[views] redis hgetall failed', err);
     return {};
   }
 }
 
 export async function getViewCount(slug: string): Promise<number> {
-  const all = await getViewCounts();
-  if (slug in all) return all[slug] ?? 0;
+  const redis = useRedis();
+  if (!redis) return 0;
 
   try {
-    const supabase = useSupabase();
-    const { data, error } = await supabase
-      .from('page_views')
-      .select('views')
-      .eq('slug', slug)
-      .maybeSingle();
-    if (error || !data) return 0;
-    return Number(data.views) || 0;
-  } catch {
+    const value = await redis.hget<string | number>(VIEWS_HASH, slug);
+    return asCount(value);
+  } catch (err) {
+    console.error('[views] redis hget failed', err);
     return 0;
   }
 }
 
 export async function incrementViewCount(slug: string): Promise<number> {
+  const redis = useRedis();
+  if (!redis) return 0;
+
   try {
-    const supabase = useSupabase();
-    const { data, error } = await supabase.rpc('increment_page_view', {
-      page_slug: slug,
-    });
-    if (error) {
-      console.error('[views] increment failed', error.message);
-      return getViewCount(slug);
-    }
-    return Number(data) || 0;
-  } catch {
-    return 0;
+    return asCount(await redis.hincrby(VIEWS_HASH, slug, 1));
+  } catch (err) {
+    console.error('[views] redis hincrby failed', err);
+    return getViewCount(slug);
   }
 }

@@ -27,6 +27,16 @@ export default defineNuxtConfig({
     resendApiKey: process.env.RESEND_API_KEY || '',
     contactToEmail: process.env.CONTACT_TO_EMAIL || 'suonnitya@gmail.com',
     resendFromEmail: process.env.RESEND_FROM_EMAIL || 'Nitya Suon <beth.t@example.com>',
+    // View counters (rauchg.com style) — Upstash Redis / Vercel KV
+    // Accept both Upstash console names and Vercel KV names.
+    kvRestApiUrl:
+      process.env.KV_REST_API_URL ||
+      process.env.UPSTASH_REDIS_REST_URL ||
+      '',
+    kvRestApiToken:
+      process.env.KV_REST_API_TOKEN ||
+      process.env.UPSTASH_REDIS_REST_TOKEN ||
+      '',
   },
   vite: {
     server: {
