@@ -1,10 +1,11 @@
 import { isBuildNoteSlug } from '~/data/buildNotes';
 import { formatViewCount } from '~/utils/views';
+import type { Ref } from 'vue';
 
 type ViewsMap = Record<string, number>;
 type AllViewsResponse = {
   views: ViewsMap;
-  formatted: Record<string, string>;
+  formatted?: Record<string, string>;
 };
 type ViewPayload = {
   slug: string;
@@ -20,6 +21,9 @@ function useViewsHydrated() {
   return useState<boolean>('note-views-hydrated', () => false);
 }
 
+/** Shared in-flight load so every NoteViews on the list shares one request. */
+let loadPromise: Promise<void> | null = null;
+
 function noteSlugFromPath(path: string) {
   const pathname = path.split('?')[0] ?? '';
   const match = pathname.match(/^\/insights\/notes\/([^/]+)$/);
@@ -28,36 +32,46 @@ function noteSlugFromPath(path: string) {
   return slug;
 }
 
+function mergeViews(into: ViewsMap, next: ViewsMap) {
+  return { ...into, ...next };
+}
+
+async function fetchAllViews(
+  counts: Ref<ViewsMap>,
+  hydrated: Ref<boolean>,
+) {
+  try {
+    const next = await $fetch<AllViewsResponse>('/api/views');
+    if (next?.views) {
+      counts.value = mergeViews(counts.value, next.views);
+    }
+  } catch (err) {
+    console.error('[views] client fetch failed', err);
+  } finally {
+    hydrated.value = true;
+    loadPromise = null;
+  }
+}
+
+function ensureViewsLoaded(
+  counts: Ref<ViewsMap>,
+  hydrated: Ref<boolean>,
+) {
+  if (!import.meta.client || hydrated.value || loadPromise) return;
+  loadPromise = fetchAllViews(counts, hydrated);
+}
+
 /**
- * Load all note view counts in the browser.
- * Avoids SSR/prerender baking an empty map into the payload — that made refresh
- * always show 0 while client navigations (with in-memory POST updates) looked fine.
+ * Load all note view counts in the browser (once).
+ * The notes index only GETs — it never POSTs — so this must succeed
+ * or refresh always looks like 0.
  */
 export function useAllNoteViews() {
   const counts = useViewCounts();
   const hydrated = useViewsHydrated();
 
-  const { data, status } = useFetch<AllViewsResponse>('/api/views', {
-    key: 'all-note-views',
-    server: false,
-    lazy: true,
-    // Never reuse a stale/empty payload from a previous visit or prerender.
-    getCachedData: () => undefined,
-  });
-
-  watch(
-    data,
-    (next) => {
-      if (!next?.views) return;
-      counts.value = { ...counts.value, ...next.views };
-      hydrated.value = true;
-    },
-    { immediate: true },
-  );
-
-  watch(status, (next) => {
-    if (next === 'success' || next === 'error') hydrated.value = true;
-  });
+  ensureViewsLoaded(counts, hydrated);
+  onMounted(() => ensureViewsLoaded(counts, hydrated));
 
   const ready = computed(() => hydrated.value);
 
@@ -91,7 +105,7 @@ export function useRecordNoteView() {
       const next = await $fetch<ViewPayload>(`/api/views/${slug}`, {
         method: 'POST',
       });
-      counts.value = { ...counts.value, [next.slug]: next.views };
+      counts.value = mergeViews(counts.value, { [next.slug]: next.views });
       hydrated.value = true;
     } catch {
       lastSlug.value = '';

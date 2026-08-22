@@ -26,17 +26,41 @@ export function assertNoteSlug(raw: string): string {
 export async function getViewCounts(): Promise<Record<string, number>> {
   try {
     const supabase = useSupabase();
+
+    // Prefer security-definer RPC so RLS never hides rows from the notes list.
+    const rpc = await supabase.rpc('get_page_views');
+    if (!rpc.error && Array.isArray(rpc.data)) {
+      return Object.fromEntries(
+        rpc.data.map((row: { slug: string; views: number | string }) => [
+          String(row.slug),
+          Number(row.views) || 0,
+        ]),
+      );
+    }
+
+    if (rpc.error) {
+      console.error('[views] get_page_views rpc failed', rpc.error.message);
+    }
+
     const { data, error } = await supabase.from('page_views').select('slug, views');
-    if (error || !data) return {};
+    if (error) {
+      console.error('[views] select page_views failed', error.message);
+      return {};
+    }
+    if (!data) return {};
     return Object.fromEntries(
       data.map((row) => [String(row.slug), Number(row.views) || 0]),
     );
-  } catch {
+  } catch (err) {
+    console.error('[views] getViewCounts failed', err);
     return {};
   }
 }
 
 export async function getViewCount(slug: string): Promise<number> {
+  const all = await getViewCounts();
+  if (slug in all) return all[slug] ?? 0;
+
   try {
     const supabase = useSupabase();
     const { data, error } = await supabase
