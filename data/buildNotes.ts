@@ -16,6 +16,15 @@ export interface BuildNote {
  */
 export const buildNotes: BuildNote[] = [
   {
+    slug: 'redis-views',
+    title: 'How This Site Counts Views with Redis',
+    summary:
+      'FROM→TO walkthrough of the live view counter — hard words in kid version (slug, HINCRBY, HASH…), then the real files.',
+    tag: 'Personal Learning',
+    date: '2026-08-22',
+    stack: ['Redis', 'Upstash', 'HINCRBY', 'Nuxt'],
+  },
+  {
     slug: 'database-lab',
     title: 'Database Lab',
     summary:
