@@ -281,18 +281,10 @@ onUnmounted(() => {
 }
 
 .sem-brand-super {
-  color: #111111;
+  color: var(--ri-ink);
 }
 
 .sem-brand-cage {
-  color: #888888;
-}
-
-:global(.insights-shell:not([data-mode='light'])) .sem-brand-super {
-  color: #ffffff;
-}
-
-:global(.insights-shell:not([data-mode='light'])) .sem-brand-cage {
   color: #888888;
 }
 

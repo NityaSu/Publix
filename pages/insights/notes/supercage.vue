@@ -79,8 +79,13 @@ onUnmounted(() => {
         <!-- Hero -->
         <header class="max-w-3xl">
           <div class="flex flex-wrap items-start justify-between gap-4">
-            <p class="flex items-center gap-2 text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em] text-accent">
-              Build Notes
+            <p class="flex items-center gap-2 text-xs md:text-sm font-display font-semibold uppercase tracking-[0.3em]">
+              <NuxtLink
+                to="/insights/notes"
+                class="text-accent hover:underline underline-offset-4"
+              >
+                Build Notes
+              </NuxtLink>
             </p>
             <InsightsReadingToggle />
           </div>
