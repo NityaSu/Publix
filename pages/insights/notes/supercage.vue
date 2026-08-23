@@ -4,6 +4,7 @@ import BlogDemoMedia from '~/component/BlogDemoMedia.vue';
 import InsightsReadingShell from '~/component/InsightsReadingShell.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import NoteViews from '~/component/NoteViews.vue';
+import SupercageEscapeMark from '~/component/SupercageEscapeMark.vue';
 import { noteBySlug } from '~/data/buildNotes';
 import { mediaUrl } from '~/utils/media';
 
@@ -29,6 +30,7 @@ const FLOW_TEXT = 'Unsafe agent first → Docker cage → live dashboard';
 const THINKING_MS = 4000;
 
 const sweeping = ref(true);
+const reduceMotion = ref(false);
 let sweepTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** site-media object paths under images/blog/supercage and videos/blog/supercage */
@@ -56,6 +58,7 @@ useHead({
 onMounted(() => {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce) {
+    reduceMotion.value = true;
     sweeping.value = false;
     return;
   }
@@ -114,36 +117,40 @@ onUnmounted(() => {
         </header>
 
         <div class="mt-12 md:mt-16 max-w-3xl space-y-6 text-sm md:text-base ri-ink leading-relaxed">
-          <section aria-labelledby="why-heading" class="space-y-4">
+          <section aria-labelledby="why-heading" class="sc-why space-y-4">
             <h2 id="why-heading" class="font-display font-bold ri-ink text-xl md:text-2xl">
               Why this exists
             </h2>
-            <p>
-              I named it
-              <strong class="font-bold text-accent">supercage</strong>
-              (super + cage) because it locks an AI agent inside a strict digital boundary—stopping it from running random commands or touching your real computer files.
-            </p>
-            <p>
-              Modern AI coding agents don’t just chat. Through
-              <strong class="ri-ink font-medium">tool calling</strong>,
-              they can read files, write code, and run commands directly on your system. That power comes with real risks: if an agent runs directly on your machine, it has access to everything you do.
-            </p>
-            <p>
-              Phase 1 proved this risk. When the agent ran
-              <code class="text-accent/90">whoami</code>,
-              it showed my actual Mac username, and when it created a file, it appeared directly on my real Desktop.
-              <strong class="font-bold text-accent">supercage</strong>
-              is a hands-on learning project built to test how sandboxes trap AI tools in a safe space to protect your main machine. It is a working test, not a finished product.
-            </p>
-            <p>
-              Code:
-              <a
-                :href="GITHUB_URL"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-accent hover:underline"
-              >github.com/NityaSu/supercage</a>
-            </p>
+            <div class="sc-why-body">
+              <SupercageEscapeMark :reduce-motion="reduceMotion" />
+
+              <p>
+                I named it
+                <strong class="font-bold text-accent">supercage</strong>
+                (super + cage) because it locks an AI agent inside a strict digital boundary—stopping it from running random commands or touching your real computer files.
+              </p>
+              <p>
+                Modern AI coding agents don’t just chat. Through
+                <strong class="ri-ink font-medium">tool calling</strong>,
+                they can read files, write code, and run commands directly on your system. That power comes with real risks: if an agent runs directly on your machine, it has access to everything you do.
+              </p>
+              <p>
+                Phase 1 proved this risk. When the agent ran
+                <code class="text-accent/90">whoami</code>,
+                it showed my actual Mac username, and when it created a file, it appeared directly on my real Desktop.
+                <strong class="font-bold text-accent">supercage</strong>
+                is a hands-on learning project built to test how sandboxes trap AI tools in a safe space to protect your main machine. It is a working test, not a finished product.
+              </p>
+              <p>
+                Code:
+                <a
+                  :href="GITHUB_URL"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-accent hover:underline"
+                >github.com/NityaSu/supercage</a>
+              </p>
+            </div>
           </section>
 
           <section aria-labelledby="arch-heading" class="space-y-4 pt-4">
@@ -190,6 +197,41 @@ onUnmounted(() => {
                 only <code class="text-accent/90">./workspace</code> mounted · network off by default
               </p>
             </div>
+
+            <figure
+              class="sc-cage mt-8"
+              role="img"
+              aria-label="Nested isolation: your computer contains a Docker container cage; the AI agent runs inside and cannot escape"
+            >
+              <div class="sc-cage-host">
+                <div class="sc-cage-label">
+                  <span class="sc-cage-dot sc-cage-dot--safe" aria-hidden="true" />
+                  Your computer <span class="sc-cage-tag">(safe)</span>
+                </div>
+                <div class="sc-cage-docker">
+                  <div class="sc-cage-label">
+                    <span class="sc-cage-dot sc-cage-dot--cage" aria-hidden="true" />
+                    Docker container <span class="sc-cage-tag">(cage)</span>
+                  </div>
+                  <div class="sc-cage-agent">
+                    <p class="sc-cage-agent-title">AI agent runs here</p>
+                    <ul class="sc-cage-actions">
+                      <li><span aria-hidden="true">•</span> npm install</li>
+                      <li><span aria-hidden="true">•</span> writes files</li>
+                      <li><span aria-hidden="true">•</span> starts server</li>
+                    </ul>
+                  </div>
+                  <p class="sc-cage-lock">
+                    <span class="sc-cage-lock-icon" aria-hidden="true" />
+                    Can’t escape this box
+                  </p>
+                </div>
+              </div>
+              <figcaption class="sc-cage-caption">
+                The agent can work hard inside the cage — your host stays outside it.
+              </figcaption>
+            </figure>
+
             <p>
               One more term:
               <strong class="ri-ink font-medium">SSE</strong>
@@ -472,12 +514,191 @@ code {
   color: #cccccc;
 }
 
+.sc-why-body::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.sc-why-body > p + p {
+  margin-top: 1rem;
+}
+
+/* Nested cage diagram */
+.sc-cage {
+  margin: 0;
+  max-width: 28rem;
+}
+
+.sc-cage-host {
+  border: 1px solid var(--ri-border);
+  background: color-mix(in srgb, var(--ri-surface) 88%, transparent);
+  padding: 0.85rem 0.9rem 1rem;
+  animation: scCageIn 0.7s ease-out both;
+}
+
+.sc-cage-docker {
+  margin-top: 0.65rem;
+  border: 1px dashed color-mix(in srgb, #4a9eff 55%, var(--ri-border));
+  background: color-mix(in srgb, #4a9eff 6%, transparent);
+  padding: 0.75rem 0.8rem 0.9rem;
+  animation: scCageIn 0.7s ease-out 0.12s both;
+}
+
+.sc-cage-agent {
+  margin-top: 0.55rem;
+  border: 1px solid color-mix(in srgb, #4a9eff 45%, var(--ri-border));
+  background: color-mix(in srgb, var(--ri-surface) 70%, transparent);
+  padding: 0.85rem 0.95rem;
+  animation: scCageIn 0.7s ease-out 0.24s both;
+}
+
+.sc-cage-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ri-ink);
+}
+
+.sc-cage-tag {
+  color: var(--ri-sub);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+.sc-cage-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.sc-cage-dot--safe {
+  background: #22c55e;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #22c55e 22%, transparent);
+}
+
+.sc-cage-dot--cage {
+  background: #4a9eff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #4a9eff 22%, transparent);
+  animation: scCagePulse 2.4s ease-in-out infinite;
+}
+
+.sc-cage-agent-title {
+  margin: 0;
+  font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ri-ink);
+}
+
+.sc-cage-actions {
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+  font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  color: var(--ri-sub);
+}
+
+.sc-cage-actions li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sc-cage-actions li span {
+  color: #4a9eff;
+}
+
+.sc-cage-lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.75rem 0 0;
+  font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #4a9eff 85%, white);
+}
+
+.sc-cage-lock-icon {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 1.5px solid currentColor;
+  border-radius: 1px;
+  position: relative;
+}
+
+.sc-cage-lock-icon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -0.35rem;
+  width: 0.35rem;
+  height: 0.3rem;
+  border: 1.5px solid currentColor;
+  border-bottom: none;
+  border-radius: 0.35rem 0.35rem 0 0;
+  transform: translateX(-50%);
+}
+
+.sc-cage-caption {
+  margin-top: 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ri-sub);
+}
+
+@keyframes scCageIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes scCagePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, #4a9eff 18%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, #4a9eff 28%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sc-thinking {
     animation: none;
     background: none;
     -webkit-text-fill-color: #cccccc;
     color: #cccccc;
+  }
+
+  .sc-cage-host,
+  .sc-cage-docker,
+  .sc-cage-agent {
+    animation: none;
+  }
+
+  .sc-cage-dot--cage {
+    animation: none;
   }
 }
 </style>
