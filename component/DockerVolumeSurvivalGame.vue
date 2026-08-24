@@ -15,12 +15,12 @@ const treasureShow = ref(false);
 const burnDisabled = ref(true);
 const launchDisabled = ref(true);
 
-const storyTitle = ref('📖 Story');
-const storyText = ref('Choose a mode above to start the adventure!');
+const storyTitle = ref('Story');
+const storyText = ref('Pick a mode above to start.');
 const reviewCards = ref<string[]>([
-  '<strong>Container</strong> = A temporary, isolated environment. Like a ship that can sink.',
-  '<strong>Volume</strong> = Persistent storage on your host. Like a waterproof safe on the ocean floor.',
-  '<strong>Command:</strong> <code>docker run</code> = Launch ship. <code>docker rm</code> = Burn/sink ship.',
+  '<strong>Container</strong> = temporary, isolated. Like a ship that can sink.',
+  '<strong>Volume</strong> = persistent storage on the host. Like a safe on the ocean floor.',
+  '<strong>Commands:</strong> <code>docker run</code> launches a ship. <code>docker rm</code> sinks it.',
 ]);
 
 const timers: ReturnType<typeof setTimeout>[] = [];
@@ -69,26 +69,26 @@ function setMode(mode: 'novol' | 'withvol') {
 
   if (mode === 'novol') {
     setStory(
-      'Without Volume Mode',
-      'The ship (Container) carries a notebook (Data) directly on its deck. There is no safe. If the ship sinks, the notebook sinks with it.',
+      'Without a volume',
+      'The ship (container) carries the notebook (data) on deck. No safe. If the ship sinks, the notebook sinks with it.',
     );
     updateReview([
-      '<strong>No Volume:</strong> Data lives INSIDE the container. When the container dies, data dies.',
-      '<strong>Real command:</strong> <code>docker-compose down</code> → Container deleted → Database files gone.',
-      '<strong>Result:</strong> Alice and Bob lose all their money. 💀',
+      '<strong>No volume:</strong> Data lives inside the container. When the container dies, data dies.',
+      '<strong>Real command:</strong> <code>docker-compose down</code> → container deleted → database files gone.',
+      '<strong>Result:</strong> Alice and Bob lose everything.',
     ]);
   } else {
     safeVisible.value = true;
     safeGlow.value = true;
     ropeExtended.value = true;
     setStory(
-      'With Volume Mode',
-      'The ship (Container) reads/writes data through a rope to a waterproof safe (Volume: pgdata) sitting on the ocean floor. The safe is separate from the ship.',
+      'With a volume',
+      'The ship reads and writes through a rope to a waterproof safe (volume: pgdata) on the ocean floor. The safe is separate from the ship.',
     );
     updateReview([
-      '<strong>With Volume:</strong> Data lives OUTSIDE the container, on your real computer.',
-      '<strong>Real command:</strong> <code>docker-compose down</code> → Container deleted → Volume folder on your hard drive STAYS.',
-      '<strong>Result:</strong> Even if the ship sinks, the safe remains. New ship can connect to the same safe. 🎉',
+      '<strong>With volume:</strong> Data lives outside the container, on your real disk.',
+      '<strong>Real command:</strong> <code>docker-compose down</code> → container deleted → volume folder stays.',
+      '<strong>Result:</strong> Ship sinks; safe remains. A new ship can reconnect.',
     ]);
   }
 }
@@ -118,25 +118,25 @@ function burnShip() {
 
     if (currentMode.value === 'novol') {
       setStory(
-        '💀 TRAGEDY: All Data Lost!',
-        "The ship burned and sank. The notebook was glued to the deck. It sank with the ship. There is no backup. Alice and Bob's transaction history is gone forever.",
+        'All data lost',
+        'The ship burned and sank. The notebook was on the deck — it sank too. No backup. Alice and Bob’s history is gone.',
       );
       updateReview([
         '<strong>What happened:</strong> <code>docker-compose down</code> removed the container.',
-        '<strong>Where was the data?</strong> Inside <code>/var/lib/postgresql/data</code> INSIDE the container.',
-        '<strong>Problem:</strong> Containers are cattle — meant to be destroyed and rebuilt. Data should NEVER live only inside them.',
-        '<strong>Moral:</strong> Never run a database in Docker without a volume!',
+        '<strong>Where was the data?</strong> Inside <code>/var/lib/postgresql/data</code> in the container.',
+        '<strong>Problem:</strong> Containers are meant to be destroyed and rebuilt. Data should never live only inside them.',
+        '<strong>Moral:</strong> Never run a database in Docker without a volume.',
       ]);
     } else {
       setStory(
-        '🔥 Ship Destroyed... But Wait!',
-        'The ship burned and sank. But the notebook was never on the ship — it was safely inside the waterproof safe (Volume: pgdata) on the ocean floor. The rope snapped, but the safe is untouched.',
+        'Ship gone — data stays',
+        'The ship burned and sank. The notebook was never on it — it was in the safe (volume: pgdata). The rope snapped; the safe is untouched.',
       );
       updateReview([
         '<strong>What happened:</strong> <code>docker-compose down</code> removed the container.',
-        '<strong>Where was the data?</strong> In the Volume folder on your REAL computer: <code>/var/lib/docker/volumes/pgdata/_data/</code>',
-        '<strong>Magic:</strong> The container was just "borrowing" that folder. Deleting the borrower doesn\'t delete the owner.',
-        '<strong>Next:</strong> Launch a new container. It will connect to the SAME safe. Same data. No loss.',
+        '<strong>Where was the data?</strong> On your machine: <code>/var/lib/docker/volumes/pgdata/_data/</code>',
+        '<strong>Why:</strong> The container was borrowing that folder. Deleting the borrower does not delete the owner.',
+        '<strong>Next:</strong> Launch a new container. It reconnects to the same safe.',
       ]);
     }
   }, 3500);
@@ -151,14 +151,14 @@ function launchNewShip() {
   if (currentMode.value === 'novol') {
     later(() => {
       setStory(
-        '🚢 New Ship Arrived... But Empty.',
-        'A brand new ship (fresh container) has arrived. But it has no notebook. No data. You must start from zero. This is what happens when you rebuild a container without a volume.',
+        'New ship — empty',
+        'A fresh container arrived with no notebook. You start from zero. That is a rebuild without a volume.',
       );
       updateReview([
-        '<strong>New container:</strong> Fresh, clean, empty. Like a brand new ship.',
-        '<strong>Old data:</strong> Gone. Buried at the bottom of the ocean.',
-        '<strong>Real world:</strong> You run <code>docker-compose up --build</code> and wonder why your database is empty. 😭',
-        '<strong>Fix:</strong> Add <code>volumes: pgdata:/var/lib/postgresql/data</code> to your docker-compose.yml!',
+        '<strong>New container:</strong> Fresh, clean, empty.',
+        '<strong>Old data:</strong> Gone.',
+        '<strong>Real world:</strong> <code>docker-compose up --build</code> and the database is empty.',
+        '<strong>Fix:</strong> Add <code>volumes: pgdata:/var/lib/postgresql/data</code> to compose.',
       ]);
     }, 1600);
   } else {
@@ -172,14 +172,14 @@ function launchNewShip() {
 
     later(() => {
       setStory(
-        '🎉 VICTORY: Data Survived!',
-        'The new ship arrived and immediately connected to the same underwater safe (Volume). The notebook was retrieved. Alice still has $70. Bob still has $80. All transaction history is intact!',
+        'Data survived',
+        'The new ship connected to the same underwater safe. Notebook retrieved. Alice still has $70. Bob still has $80.',
       );
       updateReview([
-        '<strong>New container:</strong> Fresh ship, but connected to the SAME volume.',
-        '<strong>Data:</strong> Instantly available. No restore needed. No backup needed.',
-        '<strong>Real command:</strong> <code>docker-compose up --build</code> → New container starts → Old volume reattached automatically.',
-        '<strong>The Rule:</strong> Containers die. Volumes live forever (until YOU delete them). 🛡️',
+        '<strong>New container:</strong> Fresh ship, same volume.',
+        '<strong>Data:</strong> Instantly available — no restore needed.',
+        '<strong>Real command:</strong> <code>docker-compose up --build</code> → new container → old volume reattached.',
+        '<strong>Rule:</strong> Containers die. Volumes live until you delete them.',
       ]);
     }, 3000);
   }
@@ -192,11 +192,11 @@ function resetGame() {
   resetVisuals();
   burnDisabled.value = true;
   launchDisabled.value = true;
-  setStory('📖 Story', 'Choose a mode above to start the adventure!');
+  setStory('Story', 'Pick a mode above to start.');
   updateReview([
-    '<strong>Container</strong> = A temporary, isolated environment. Like a ship that can sink.',
-    '<strong>Volume</strong> = Persistent storage on your host. Like a waterproof safe on the ocean floor.',
-    '<strong>Command:</strong> <code>docker run</code> = Launch ship. <code>docker rm</code> = Burn/sink ship.',
+    '<strong>Container</strong> = temporary, isolated. Like a ship that can sink.',
+    '<strong>Volume</strong> = persistent storage on the host. Like a safe on the ocean floor.',
+    '<strong>Commands:</strong> <code>docker run</code> launches a ship. <code>docker rm</code> sinks it.',
   ]);
 }
 
@@ -208,42 +208,46 @@ onUnmounted(() => {
 <template>
   <div class="dvsg" aria-label="Why Docker Volumes Matter">
     <header class="dvsg-header">
-      <h2>🐳 Why Docker Volumes Matter</h2>
-      <p>Click a mode below. Watch the ship burn. Learn why volumes matter.</p>
+      <div>
+        <h2 class="dvsg-title">Why Docker Volumes Matter</h2>
+        <p class="dvsg-sub">Burn the ship. See whether the data sinks — or lives in the volume.</p>
+      </div>
+      <div class="dvsg-stat" aria-label="Current step">
+        <span class="dvsg-stat-label">Step</span>
+        <span class="dvsg-stat-value">{{ step }}</span>
+      </div>
     </header>
 
-    <div class="mode-bar">
+    <nav class="dvsg-modes" aria-label="Choose mode">
       <button
         type="button"
-        class="mode-btn"
-        :class="{ active: currentMode === 'novol' }"
+        class="dvsg-mode"
+        :class="{ 'is-active': currentMode === 'novol' }"
         @click="setMode('novol')"
       >
-        ❌ Without Volume
+        Without volume
       </button>
       <button
         type="button"
-        class="mode-btn"
-        :class="{ active: currentMode === 'withvol' }"
+        class="dvsg-mode"
+        :class="{ 'is-active': currentMode === 'withvol' }"
         @click="setMode('withvol')"
       >
-        ✅ With Volume
+        With volume
       </button>
-    </div>
+    </nav>
 
-    <div class="scene">
-      <div class="step-counter">Step {{ step }}</div>
-
-      <div class="sky">
-        <div class="cloud">☁️</div>
-        <div class="cloud">☁️</div>
+    <div class="dvsg-scene" aria-hidden="true">
+      <div class="dvsg-sky">
+        <span class="dvsg-haze" />
+        <span class="dvsg-haze dvsg-haze-2" />
       </div>
 
       <div class="ship-wrapper" :class="{ sinking: shipSinking }">
         <div class="ship-body">🚢</div>
         <div class="notebook" :style="{ opacity: notebookOpacity }">📓</div>
         <div class="fire" :class="{ burning: fireBurning }">🔥</div>
-        <div class="label-tag ship-label">Container: my-app</div>
+        <div class="label-tag ship-label">container: my-app</div>
       </div>
 
       <div
@@ -251,55 +255,53 @@ onUnmounted(() => {
         :class="{ visible: safeVisible, glow: safeGlow, pulse: safePulse }"
       >
         🏦
-        <div class="label-tag safe-label">Volume: pgdata</div>
+        <div class="label-tag safe-label">volume: pgdata</div>
       </div>
       <div class="rope" :class="{ extended: ropeExtended }" />
 
       <div class="new-ship" :class="{ arrived: newShipArrived }">
         🚢
-        <div class="label-tag ship-label" style="top: -45px">New Container</div>
+        <div class="label-tag ship-label" style="top: -2.6rem">container: new</div>
       </div>
       <div class="treasure-retrieved" :class="{ show: treasureShow }">📓</div>
 
-      <div class="water">
-        <div class="wave" />
-        <div class="wave" />
-        <div class="wave" />
+      <div class="dvsg-water">
+        <div class="dvsg-water-line" />
       </div>
     </div>
 
-    <div class="story-panel">
+    <div class="dvsg-story">
       <h4>{{ storyTitle }}</h4>
       <p>{{ storyText }}</p>
     </div>
 
-    <div class="controls-bar">
+    <div class="dvsg-controls">
       <button
         type="button"
-        class="action-btn btn-burn"
+        class="dvsg-btn dvsg-btn-danger"
         :disabled="burnDisabled"
         @click="burnShip"
       >
-        🔥 Burn Ship
+        Burn ship
       </button>
       <button
         type="button"
-        class="action-btn btn-launch"
+        class="dvsg-btn dvsg-btn-primary"
         :disabled="launchDisabled"
         @click="launchNewShip"
       >
-        🚢 Launch New Ship
+        Launch new ship
       </button>
-      <button type="button" class="action-btn btn-reset" @click="resetGame">🔄 Reset</button>
+      <button type="button" class="dvsg-btn" @click="resetGame">Reset</button>
     </div>
 
-    <div class="review-panel">
-      <h4>🧠 Review Notes</h4>
+    <div class="dvsg-notes">
+      <h4>Maps to Docker</h4>
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div
         v-for="(card, i) in reviewCards"
         :key="i"
-        class="review-card"
+        class="dvsg-note"
         v-html="card"
       />
     </div>
@@ -308,182 +310,201 @@ onUnmounted(() => {
 
 <style scoped>
 .dvsg {
+  --dv-ink: #111111;
+  --dv-muted: #4b5563;
+  --dv-line: #d1d5db;
+  --dv-surface: #ffffff;
+  --dv-blue: #2563eb;
+  --dv-green: #15803d;
+  --dv-red: #b91c1c;
+  --dv-sky: #e8eef6;
+  --dv-water: #c5d4e8;
+  --dv-water-deep: #8fa8c9;
+  --dv-haze: rgba(255, 255, 255, 0.55);
   width: 100%;
-  max-width: 720px;
+  max-width: 38rem;
   margin: 0 auto;
-  background: linear-gradient(180deg, #87ceeb 0%, #e0f7fa 40%, #006994 100%);
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  position: relative;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 0.85rem 0.9rem 1rem;
+  border: 1px solid var(--dv-line);
+  border-radius: 12px;
+  background: var(--dv-surface);
+  color: var(--dv-ink);
+  box-shadow: 0 6px 20px rgba(17, 17, 17, 0.08);
+  font-family: 'Space Grotesk', 'Space Grotesk fallback', Helvetica Neue, Arial, sans-serif;
+}
+
+:global(.insights-shell[data-mode='dark']) .dvsg {
+  --dv-ink: #f3f3f3;
+  --dv-muted: #a3a3a3;
+  --dv-line: #2a2a2a;
+  --dv-surface: #1a1a1a;
+  --dv-blue: #4a9eff;
+  --dv-green: #4ade80;
+  --dv-red: #f87171;
+  --dv-sky: #121820;
+  --dv-water: #1a2433;
+  --dv-water-deep: #243447;
+  --dv-haze: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
 .dvsg-header {
-  background: #1565c0;
-  color: white;
-  padding: 16px 20px;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
-.dvsg-header h2 {
+.dvsg-title {
   margin: 0;
-  font-size: 22px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--dv-ink);
 }
 
-.dvsg-header p {
-  margin: 4px 0 0;
-  font-size: 13px;
+.dvsg-sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  color: var(--dv-muted);
+  line-height: 1.4;
+}
+
+.dvsg-stat {
+  min-width: 3.4rem;
+  text-align: center;
+  border: 1px solid var(--dv-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dv-blue) 6%, var(--dv-surface));
+  padding: 0.35rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.dvsg-stat-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dv-muted);
+  font-weight: 700;
+}
+
+.dvsg-stat-value {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dv-ink);
+}
+
+.dvsg-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.dvsg-mode {
+  border: 1px solid var(--dv-line);
+  background: var(--dv-surface);
+  color: var(--dv-ink);
+  border-radius: 999px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dvsg-mode:hover {
+  border-color: var(--dv-blue);
+}
+
+.dvsg-mode.is-active {
+  border-color: var(--dv-blue);
+  color: var(--dv-blue);
+  background: color-mix(in srgb, var(--dv-blue) 10%, var(--dv-surface));
+}
+
+.dvsg-scene {
+  position: relative;
+  height: 280px;
+  overflow: hidden;
+  border: 1px solid var(--dv-line);
+  border-radius: 10px;
+  background: var(--dv-sky);
+  margin-bottom: 0.75rem;
+}
+
+.dvsg-sky {
+  position: absolute;
+  inset: 0 0 42% 0;
+}
+
+.dvsg-haze {
+  position: absolute;
+  width: 7rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  background: var(--dv-haze);
+  top: 28px;
+  left: 18%;
   opacity: 0.9;
 }
 
-.mode-bar {
-  display: flex;
-  gap: 8px;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.9);
-  justify-content: center;
+.dvsg-haze-2 {
+  width: 5rem;
+  height: 1.6rem;
+  top: 52px;
+  left: auto;
+  right: 16%;
+  opacity: 0.7;
 }
 
-.mode-btn {
-  flex: 1;
-  padding: 10px 20px;
-  border: 2px solid #ccc;
-  border-radius: 24px;
-  background: white;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-  transition: all 0.2s;
-  color: #333;
-}
-
-.mode-btn:hover {
-  transform: translateY(-2px);
-}
-
-.mode-btn.active {
-  border-color: #1565c0;
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.scene {
-  position: relative;
-  height: 320px;
-  overflow: hidden;
-}
-
-.sky {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 180px;
-  background: linear-gradient(180deg, #87ceeb, #b3e5fc);
-}
-
-.cloud {
-  position: absolute;
-  font-size: 40px;
-  opacity: 0.8;
-  animation: dvsg-float 8s ease-in-out infinite;
-}
-
-.cloud:nth-child(1) {
-  top: 20px;
-  left: 60px;
-  animation-delay: 0s;
-}
-
-.cloud:nth-child(2) {
-  top: 40px;
-  right: 80px;
-  animation-delay: 3s;
-  font-size: 30px;
-}
-
-@keyframes dvsg-float {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(20px);
-  }
-}
-
-.water {
+.dvsg-water {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 140px;
-  background: linear-gradient(180deg, #29b6f6, #01579b);
-  overflow: hidden;
+  height: 42%;
+  background: linear-gradient(180deg, var(--dv-water), var(--dv-water-deep));
 }
 
-.wave {
+.dvsg-water-line {
   position: absolute;
-  width: 200%;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  animation: dvsg-wave 4s linear infinite;
-}
-
-.wave:nth-child(1) {
-  top: 10px;
-  animation-delay: 0s;
-}
-
-.wave:nth-child(2) {
-  top: 40px;
-  animation-delay: 1s;
-}
-
-.wave:nth-child(3) {
-  top: 70px;
-  animation-delay: 2s;
-}
-
-@keyframes dvsg-wave {
-  0% {
-    transform: translateX(-50%);
-  }
-  100% {
-    transform: translateX(0%);
-  }
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--dv-ink) 18%, transparent);
 }
 
 .ship-wrapper {
   position: absolute;
   left: 50%;
-  bottom: 110px;
+  bottom: 38%;
   transform: translateX(-50%);
-  transition: all 1.5s ease-in-out;
+  transition: transform 1.4s ease-in-out, opacity 1.4s ease-in-out;
   z-index: 10;
 }
 
 .ship-wrapper.sinking {
-  transform: translateX(-50%) translateY(180px) rotate(25deg);
-  opacity: 0.3;
+  transform: translateX(-50%) translateY(9rem) rotate(22deg);
+  opacity: 0.25;
 }
 
 .ship-body {
-  font-size: 80px;
+  font-size: 4.5rem;
   line-height: 1;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-  animation: dvsg-rock 3s ease-in-out infinite;
+  animation: dvsg-rock 4s ease-in-out infinite;
 }
 
 @keyframes dvsg-rock {
   0%,
   100% {
-    transform: rotate(-3deg);
+    transform: rotate(-2deg);
   }
   50% {
-    transform: rotate(3deg);
+    transform: rotate(2deg);
   }
 }
 
@@ -493,54 +514,42 @@ onUnmounted(() => {
 
 .notebook {
   position: absolute;
-  top: -25px;
+  top: -1.4rem;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 32px;
-  transition: all 1.5s ease-in-out;
+  font-size: 1.7rem;
+  transition: opacity 1.2s ease, transform 1.2s ease;
   z-index: 11;
 }
 
 .ship-wrapper.sinking .notebook {
-  transform: translateX(-50%) translateY(80px);
+  transform: translateX(-50%) translateY(4rem);
   opacity: 0;
 }
 
 .fire {
   position: absolute;
-  top: -15px;
+  top: -0.85rem;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 36px;
+  font-size: 1.85rem;
   opacity: 0;
   transition: opacity 0.3s;
   z-index: 12;
-  animation: dvsg-flicker 0.3s infinite;
 }
 
 .fire.burning {
   opacity: 1;
 }
 
-@keyframes dvsg-flicker {
-  0%,
-  100% {
-    transform: translateX(-50%) scale(1);
-  }
-  50% {
-    transform: translateX(-50%) scale(1.2);
-  }
-}
-
 .safe-box {
   position: absolute;
   left: 50%;
-  bottom: 40px;
+  bottom: 12%;
   transform: translateX(-50%) scale(0);
-  font-size: 50px;
+  font-size: 2.6rem;
   z-index: 8;
-  transition: all 0.8s ease-out;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  transition: transform 0.7s ease-out, filter 0.4s;
 }
 
 .safe-box.visible {
@@ -548,38 +557,38 @@ onUnmounted(() => {
 }
 
 .safe-box.glow {
-  filter: drop-shadow(0 0 20px #4caf50) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--dv-green) 55%, transparent));
 }
 
 .safe-box.pulse {
-  transform: translateX(-50%) scale(1.1);
+  transform: translateX(-50%) scale(1.08);
 }
 
 .rope {
   position: absolute;
   left: 50%;
-  bottom: 85px;
-  width: 3px;
+  bottom: 28%;
+  width: 2px;
   height: 0;
-  background: #8d6e63;
+  background: color-mix(in srgb, var(--dv-muted) 70%, transparent);
   transform: translateX(-50%);
-  transition: height 1s ease-out;
+  transition: height 0.9s ease-out;
   z-index: 9;
 }
 
 .rope.extended {
-  height: 60px;
+  height: 3.4rem;
 }
 
 .new-ship {
   position: absolute;
-  left: -100px;
-  bottom: 110px;
-  font-size: 80px;
+  left: -5rem;
+  bottom: 38%;
+  font-size: 4.5rem;
+  line-height: 1;
   z-index: 10;
-  transition: left 1.5s ease-out;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-  animation: dvsg-rock 3s ease-in-out infinite;
+  transition: left 1.4s ease-out;
+  animation: dvsg-rock 4s ease-in-out infinite;
 }
 
 .new-ship.arrived {
@@ -590,11 +599,11 @@ onUnmounted(() => {
 .treasure-retrieved {
   position: absolute;
   left: 50%;
-  bottom: 140px;
-  transform: translateX(-50%) translateY(60px);
-  font-size: 32px;
+  bottom: 48%;
+  transform: translateX(-50%) translateY(2.5rem);
+  font-size: 1.7rem;
   opacity: 0;
-  transition: all 1s ease-out;
+  transition: all 0.9s ease-out;
   z-index: 13;
 }
 
@@ -605,161 +614,136 @@ onUnmounted(() => {
 
 .label-tag {
   position: absolute;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 11px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
   white-space: nowrap;
+  color: var(--dv-ink);
+  background: color-mix(in srgb, var(--dv-surface) 92%, transparent);
+  border: 1px solid var(--dv-line);
+  border-radius: 6px;
+  padding: 0.15rem 0.4rem;
 }
 
 .ship-label {
-  top: -50px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: -2.85rem;
 }
 
 .safe-label {
-  bottom: -28px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #2e7d32;
+  bottom: -1.55rem;
+  color: var(--dv-green);
+  border-color: color-mix(in srgb, var(--dv-green) 40%, var(--dv-line));
 }
 
-.controls-bar {
-  display: flex;
-  gap: 10px;
-  padding: 16px 20px;
-  background: white;
-  justify-content: center;
-  flex-wrap: wrap;
-  border-top: 1px solid #e0e0e0;
-}
-
-.action-btn {
-  padding: 10px 18px;
-  border: none;
+.dvsg-story {
+  border: 1px solid var(--dv-line);
   border-radius: 10px;
+  background: color-mix(in srgb, var(--dv-blue) 5%, var(--dv-surface));
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.65rem;
+  min-height: 3.6rem;
+}
+
+.dvsg-story h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--dv-ink);
+}
+
+.dvsg-story p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--dv-muted);
+}
+
+.dvsg-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.dvsg-btn {
+  border: 1px solid var(--dv-line);
+  background: var(--dv-surface);
+  color: var(--dv-ink);
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
+  font-family: inherit;
 }
 
-.action-btn:disabled {
+.dvsg-btn:hover:not(:disabled) {
+  border-color: var(--dv-blue);
+  background: color-mix(in srgb, var(--dv-blue) 8%, var(--dv-surface));
+}
+
+.dvsg-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-.btn-burn {
-  background: #ff5722;
-  color: white;
+.dvsg-btn-primary {
+  border-color: var(--dv-blue);
+  background: color-mix(in srgb, var(--dv-blue) 10%, var(--dv-surface));
 }
 
-.btn-burn:hover:not(:disabled) {
-  background: #e64a19;
+.dvsg-btn-danger {
+  border-color: var(--dv-red);
+  background: color-mix(in srgb, var(--dv-red) 8%, var(--dv-surface));
 }
 
-.btn-launch {
-  background: #4caf50;
-  color: white;
+.dvsg-notes {
+  border-top: 1px solid var(--dv-line);
+  padding-top: 0.7rem;
 }
 
-.btn-launch:hover:not(:disabled) {
-  background: #388e3c;
+.dvsg-notes h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dv-muted);
 }
 
-.btn-reset {
-  background: #757575;
-  color: white;
-}
-
-.btn-reset:hover:not(:disabled) {
-  background: #616161;
-}
-
-.story-panel {
-  background: #fff8e1;
-  padding: 16px 20px;
-  border-left: 4px solid #ffc107;
-  min-height: 60px;
-}
-
-.story-panel h4 {
-  margin: 0 0 6px;
-  color: #f57f17;
-  font-size: 15px;
-}
-
-.story-panel p {
-  margin: 0;
-  font-size: 14px;
-  color: #333;
+.dvsg-note {
+  border: 1px solid var(--dv-line);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
   line-height: 1.5;
+  color: var(--dv-ink);
+  background: color-mix(in srgb, var(--dv-ink) 2%, var(--dv-surface));
 }
 
-.review-panel {
-  background: #e8f5e9;
-  padding: 16px 20px;
-  border-top: 1px solid #c8e6c9;
-}
-
-.review-panel h4 {
-  margin: 0 0 10px;
-  color: #2e7d32;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.review-card {
-  background: white;
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 8px;
-  font-size: 13px;
-  border-left: 3px solid #4caf50;
-  color: #333;
-  line-height: 1.45;
-}
-
-.review-card:last-child {
+.dvsg-note:last-child {
   margin-bottom: 0;
 }
 
-.review-card :deep(strong) {
-  color: #1565c0;
-}
-
-.review-card :deep(code) {
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  background: #f5f5f5;
-  padding: 1px 4px;
-  border-radius: 4px;
-}
-
-.step-counter {
-  position: absolute;
-  top: 10px;
-  right: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+.dvsg-note :deep(strong) {
+  color: var(--dv-blue);
   font-weight: 700;
-  color: #1565c0;
-  z-index: 20;
+}
+
+.dvsg-note :deep(code) {
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  color: var(--dv-blue);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cloud,
-  .wave,
   .ship-body,
-  .new-ship,
-  .fire {
+  .new-ship {
     animation: none;
   }
 }
