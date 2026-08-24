@@ -8,7 +8,7 @@ useHead({
     {
       name: 'description',
       content:
-        'Docker as a cookie kitchen — image is the recipe, Docker is the kitchen, container is the cookie.',
+        'Docker as a cookie kitchen — image is the recipe, Docker is the kitchen, container is the cookie — plus a ship game for why volumes matter.',
     },
   ],
 });

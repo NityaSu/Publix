@@ -2,12 +2,13 @@
 import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-vue-next';
 import DockerConfigMaster from '~/component/DockerConfigMaster.vue';
 import DockerQuestGame from '~/component/DockerQuestGame.vue';
+import DockerVolumeSurvivalGame from '~/component/DockerVolumeSurvivalGame.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import NoteViews from '~/component/NoteViews.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
 
-type SectionId = 'recipe' | 'kitchen' | 'cookies' | 'quest' | 'master';
+type SectionId = 'recipe' | 'kitchen' | 'cookies' | 'volumes' | 'quest' | 'master';
 
 const DK = '/docker-lesson';
 
@@ -112,8 +113,29 @@ const lessons: LessonSection[] = [
     },
   },
   {
-    id: 'quest',
+    id: 'volumes',
     n: 4,
+    label: 'Volumes',
+    tabIcon: icons.package,
+    title: 'Why Docker Volumes Matter',
+    titleIcon: icons.package,
+    blurb: 'Burn the ship (container). See if the notebook (data) sinks — or lives in the underwater safe (volume).',
+    tip: 'Try Without Volume first, then With Volume. Same fire. Totally different ending.',
+    gist: 'Containers are temporary ships. Volumes are waterproof safes on the host. Delete the container and data inside it is gone — data in a volume stays.',
+    remember: [
+      'Container dies → data inside it dies.',
+      'Volume lives on your real disk until you delete it.',
+      'Always mount a volume for databases (e.g. pgdata).',
+    ],
+    adult: {
+      kid: 'Underwater safe',
+      docker: 'volume',
+      meaning: 'Persistent host storage. Outlives containers.',
+    },
+  },
+  {
+    id: 'quest',
+    n: 5,
     label: 'Quest',
     tabIcon: icons.package,
     title: 'Docker Quest — real configs',
@@ -134,7 +156,7 @@ const lessons: LessonSection[] = [
   },
   {
     id: 'master',
-    n: 5,
+    n: 6,
     label: 'Master',
     tabIcon: icons.bulb,
     title: 'Docker Config Master — production stacks',
@@ -250,7 +272,7 @@ onUnmounted(() => {
       <NuxtLink to="/insights/notes" class="mf-brand">DOCKER IN KID VERSION</NuxtLink>
       <div class="mf-meta">
         <NoteViews slug="docker-for-kids" class="mf-step" />
-        <span class="mf-step">5 lessons</span>
+        <span class="mf-step">6 lessons</span>
         <button
           type="button"
           class="mf-tool"
@@ -288,7 +310,10 @@ onUnmounted(() => {
 
         <div
           class="dk-stage"
-          :class="{ 'is-quest': activeId === 'quest' || activeId === 'master' }"
+          :class="{
+            'is-quest':
+              activeId === 'volumes' || activeId === 'quest' || activeId === 'master',
+          }"
         >
           <div class="dk-tabs dk-tabs-bar" role="tablist" aria-label="Docker analogy parts">
             <button
@@ -310,7 +335,8 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <DockerQuestGame v-if="activeId === 'quest'" />
+          <DockerVolumeSurvivalGame v-if="activeId === 'volumes'" />
+          <DockerQuestGame v-else-if="activeId === 'quest'" />
           <DockerConfigMaster v-else-if="activeId === 'master'" />
 
           <div v-else class="dk" aria-label="Docker cookie analogy">
@@ -499,6 +525,21 @@ onUnmounted(() => {
               the “cage” is a throwaway cookie: a container baked from an image, with only the project
               workspace mounted. The host kitchen stays safe because the bite happens inside that cookie.
             </p>
+          </section>
+
+          <section v-if="activeId === 'volumes'" class="mf-block">
+            <h2>How to play</h2>
+            <ul class="mf-bullets">
+              <li><strong>Without Volume</strong> — notebook rides on the ship. Burn it → data sinks forever.</li>
+              <li><strong>With Volume</strong> — notebook lives in the underwater safe. Burn the ship → safe stays.</li>
+              <li><strong>Launch New Ship</strong> — empty rebuild vs reconnecting to the same volume.</li>
+            </ul>
+            <div class="mf-callout">
+              <p>
+                Quest Level 4 practices the compose syntax. This game is the picture: why that
+                <code>volumes:</code> line exists.
+              </p>
+            </div>
           </section>
 
           <section v-if="activeId === 'quest'" class="mf-block">
