@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-vue-next';
 import DockerConfigMaster from '~/component/DockerConfigMaster.vue';
+import DockerConceptsPlayground from '~/component/DockerConceptsPlayground.vue';
 import DockerQuestGame from '~/component/DockerQuestGame.vue';
 import DockerVolumeSurvivalGame from '~/component/DockerVolumeSurvivalGame.vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
@@ -8,7 +9,7 @@ import NoteViews from '~/component/NoteViews.vue';
 import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
 
-type SectionId = 'recipe' | 'kitchen' | 'cookies' | 'volumes' | 'quest' | 'master';
+type SectionId = 'recipe' | 'kitchen' | 'cookies' | 'volumes' | 'concepts' | 'quest' | 'master';
 
 const DK = '/docker-lesson';
 
@@ -134,8 +135,29 @@ const lessons: LessonSection[] = [
     },
   },
   {
-    id: 'quest',
+    id: 'concepts',
     n: 5,
+    label: 'Concepts',
+    tabIcon: icons.bulb,
+    title: 'Docker Concepts Playground',
+    titleIcon: icons.bulb,
+    blurb: 'Three visual drills: port mapping, Compose orchestration, and Dockerfile layers.',
+    tip: 'Switch tabs inside the playground — Port, Compose, Dockerfile.',
+    gist: 'See why -p host:container exists, why compose beats five docker run commands, and how each Dockerfile line becomes a cached layer.',
+    remember: [
+      'Port map: host door → container door (`-p 8080:8080`).',
+      'Compose: one file, one up — services, networks, order.',
+      'Dockerfile: each instruction = a layer (cache-friendly).',
+    ],
+    adult: {
+      kid: 'Concept drills',
+      docker: 'ports · compose · Dockerfile',
+      meaning: 'Visual mental models before writing configs.',
+    },
+  },
+  {
+    id: 'quest',
+    n: 6,
     label: 'Quest',
     tabIcon: icons.package,
     title: 'Docker Quest — real configs',
@@ -156,7 +178,7 @@ const lessons: LessonSection[] = [
   },
   {
     id: 'master',
-    n: 6,
+    n: 7,
     label: 'Master',
     tabIcon: icons.bulb,
     title: 'Docker Config Master — production stacks',
@@ -272,7 +294,7 @@ onUnmounted(() => {
       <NuxtLink to="/insights/notes" class="mf-brand">DOCKER IN KID VERSION</NuxtLink>
       <div class="mf-meta">
         <NoteViews slug="docker-for-kids" class="mf-step" />
-        <span class="mf-step">6 lessons</span>
+        <span class="mf-step">7 lessons</span>
         <button
           type="button"
           class="mf-tool"
@@ -312,7 +334,10 @@ onUnmounted(() => {
           class="dk-stage"
           :class="{
             'is-quest':
-              activeId === 'volumes' || activeId === 'quest' || activeId === 'master',
+              activeId === 'volumes' ||
+              activeId === 'concepts' ||
+              activeId === 'quest' ||
+              activeId === 'master',
           }"
         >
           <div class="dk-tabs dk-tabs-bar" role="tablist" aria-label="Docker analogy parts">
@@ -336,6 +361,7 @@ onUnmounted(() => {
           </div>
 
           <DockerVolumeSurvivalGame v-if="activeId === 'volumes'" />
+          <DockerConceptsPlayground v-else-if="activeId === 'concepts'" />
           <DockerQuestGame v-else-if="activeId === 'quest'" />
           <DockerConfigMaster v-else-if="activeId === 'master'" />
 
@@ -539,6 +565,18 @@ onUnmounted(() => {
                 Quest Level 4 practices the compose syntax. This game is the picture: why that
                 <code>volumes:</code> line exists.
               </p>
+            </div>
+          </section>
+
+          <section v-if="activeId === 'concepts'" class="mf-block">
+            <h2>What’s inside</h2>
+            <ul class="mf-bullets">
+              <li><strong>Port mapping</strong> — with vs without <code>-p 8080:8080</code>; send a request and watch.</li>
+              <li><strong>Compose</strong> — start services one by one vs <code>docker-compose up</code>.</li>
+              <li><strong>Dockerfile</strong> — step through build layers (FROM → CMD).</li>
+            </ul>
+            <div class="mf-callout">
+              <p>Volumes covers persistence. Concepts covers ports, orchestration, and image layers — then Quest drills the configs.</p>
             </div>
           </section>
 
