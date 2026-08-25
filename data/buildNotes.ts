@@ -16,6 +16,15 @@ export interface BuildNote {
  */
 export const buildNotes: BuildNote[] = [
   {
+    slug: 'vector-database',
+    title: 'Vector Database — Similarity Search',
+    summary:
+      'Documents as points in space: place a query, rank by distance, and see why HNSW beats brute force.',
+    tag: 'Personal Learning',
+    date: '2026-08-25',
+    stack: ['Vectors', 'Embeddings', 'HNSW', 'Similarity'],
+  },
+  {
     slug: 'redis-views',
     title: 'How This Site Counts Views with Redis',
     summary:
