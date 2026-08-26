@@ -2215,7 +2215,7 @@ PUT /notes/42
     gist: 'REST is a contract: plural nouns in the path, verbs in the method, JSON in camelCase. Design the interface first — then code. Pagination, sort, filter, and sane defaults are part of that contract, not extras.',
     remember: [
       'Collection `GET/POST /books`. Item `GET/PATCH/DELETE /books/:id`. Same path, different method.',
-      'POST is the only non-idempotent method — and the bucket for custom actions (`POST /orgs/:id/archive`).',
+      'POST is not idempotent (custom actions live here). Money/mail: Idempotency-Key so a retry is not a second charge.',
       'List: 200 + empty array, never 404. Create: 201. Delete: 204. Missing item: 404. Defaults: page 1, limit 10, sort createdAt desc.',
     ],
     sections: [
@@ -2323,11 +2323,25 @@ item        /books/:id-or-slug`,
             ],
           },
           { type: 'p', text: '`HEAD` (headers only) and `OPTIONS` (CORS: is this origin allowed?) exist. Daily CRUD is the five methods above.' },
+          { type: 'p', text: 'POST is still allowed to create twice. Networks time out. The user does not know if Pay succeeded, so they click again. Without a guard: two charges. **$94.50** becomes **$189**.' },
+          { type: 'p', text: 'For money and mail, the client sends a token the server has never seen for **this** intent. First request: charge, store the key with the response. Second request with the **same** key: do not charge again; **replay the first response** (same status, same body). Ten clicks, one charge. A **new** purchase needs a **new** key — reuse `pay_abc123` for a second ticket and you correctly refuse to charge again, which is also how a client that mints keys wrong shoots itself.' },
+          {
+            type: 'pre',
+            lines: `POST /v1/payments
+Idempotency-Key: pay_abc123
+
+{ "orderId": "...", "amount": 94.50 }
+
+// first  → charge, store key + response
+// retry  → same key → replay. no second charge`,
+          },
+          { type: 'p', text: 'A unique constraint on the key is the last line of defense when two retries land at once. It is not a substitute for the header. CRUD named this; this is the meeting. Queues will meet it again: a **job** retry is recovery, not a double-click — the worker itself must be safe to run twice.' },
           {
             type: 'kid',
             items: [
               'Putting the same sticker on the locker a hundred times still leaves **one** sticker. That is PUT.',
               'Dropping a new marble in the jar every time you press the button is POST. The jar grows.',
+              'The lunch ticket has a serial number. Showing the same ticket twice still gets **one** tray. That is the key.',
             ],
           },
         ],
@@ -2503,7 +2517,7 @@ POST /projects/:id/clone            → 404  (source gone)`,
               ['REST', 'Representations of state, transferred over HTTP, under six constraints.'],
               ['URL', '`https://api.example.com/v1/books` — api subdomain, version, plural resource.'],
               ['Path', 'Plural always. Slug: lowercase + hyphens. `/` is hierarchy.'],
-              ['Idempotent', 'GET, PUT, PATCH, DELETE. POST is not — each call may create.'],
+              ['Idempotent', 'GET, PUT, PATCH, DELETE. POST is not. Money/mail: Idempotency-Key; replay the first response.'],
               ['PATCH vs PUT', 'Some fields vs whole replace. SPAs mostly PATCH.'],
               ['Custom action', 'POST `/resource/:id/verb`. Status is 200 or 201 from the outcome.'],
               ['Collection', 'GET list + POST create. Same path.'],
