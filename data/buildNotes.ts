@@ -16,6 +16,16 @@ export interface BuildNote {
  */
 export const buildNotes: BuildNote[] = [
   {
+    slug: 'hrms',
+    title: 'HRMS · First Principles',
+    summary:
+      'Map-only nodes (Backend FP style). Click AuthN, AuthZ, Status, Redis, or Schema to open a deep studio extracted from hrms_api.',
+    tag: 'Private review',
+    date: '2026-08-27',
+    stack: ['AuthN', 'AuthZ', 'Redis', 'HTTP', 'ERD'],
+    draft: true,
+  },
+  {
     slug: 'rate-limit',
     title: 'Rate Limit — 10 req/min per IP',
     summary:
