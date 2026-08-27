@@ -8,8 +8,9 @@ useHead({
     {
       name: 'description',
       content:
-        'Interactive lesson: documents as points in vector space, distance as similarity, and why HNSW indexes beat brute force.',
+        'Private review: documents as points in vector space, distance as similarity, and why HNSW indexes beat brute force.',
     },
+    { name: 'robots', content: 'noindex, nofollow, noarchive' },
   ],
 });
 </script>

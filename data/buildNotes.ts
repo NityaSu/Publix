@@ -16,13 +16,44 @@ export interface BuildNote {
  */
 export const buildNotes: BuildNote[] = [
   {
+    slug: 'rate-limit',
+    title: 'Rate Limit — 10 req/min per IP',
+    summary:
+      'The Minute Door: watch a fixed window fill with stamps, set the dial, and map English → Cloudflare → Redis for POST /api/views.',
+    tag: 'Private review',
+    date: '2026-08-26',
+    stack: ['Rate limit', '429', 'IP', 'Redis', 'Cloudflare'],
+    draft: true,
+  },
+  {
+    slug: 'bot-defense',
+    title: 'Bots at the Edge',
+    summary:
+      'Humans, scrapers, stuffing, AI crawlers — score signals and practice allow / challenge / block like a Cloudflare edge.',
+    tag: 'Private review',
+    date: '2026-08-26',
+    stack: ['Cloudflare', 'WAF', 'Bot Management', 'Rate limits'],
+    draft: true,
+  },
+  {
+    slug: 'database-design',
+    title: 'Schema Design for Backends',
+    summary:
+      'From product questions to tables, FKs, uniqueness, and indexes — the schema skills companies expect from backend engineers.',
+    tag: 'Private review',
+    date: '2026-08-26',
+    stack: ['PostgreSQL', 'Schema', 'Constraints', 'Indexes'],
+    draft: true,
+  },
+  {
     slug: 'vector-database',
     title: 'Vector Database — Similarity Search',
     summary:
       'Documents as points in space: place a query, rank by distance, and see why HNSW beats brute force.',
-    tag: 'Personal Learning',
+    tag: 'Private review',
     date: '2026-08-25',
     stack: ['Vectors', 'Embeddings', 'HNSW', 'Similarity'],
+    draft: true,
   },
   {
     slug: 'redis-views',
