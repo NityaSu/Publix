@@ -8,7 +8,7 @@ useHead({
     {
       name: 'description',
       content:
-        'How this site counts Build Note views with Redis — kid-version keywords (slug, HINCRBY, HASH), FROM→TO process hops, and the real code path.',
+        'Why Redis for view counts, then one page: Upstash → env → API → HINCRBY — how this site does it.',
     },
   ],
 });
