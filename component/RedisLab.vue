@@ -3,12 +3,15 @@ import { ArrowRight, Maximize2, Minimize2 } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import NoteViews from '~/component/NoteViews.vue';
+import { useInsightsReadingMode } from '~/composables/useInsightsReadingMode';
 import {
   redisPageById,
   redisPages,
   redisPathSteps,
   type RedisPageId,
 } from '~/data/redisLab';
+
+const { mode, isLight } = useInsightsReadingMode();
 
 const pageId = ref<RedisPageId>('why');
 const isFullscreen = ref(false);
@@ -61,7 +64,13 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
 </script>
 
 <template>
-  <div ref="shellEl" class="rx" :class="{ 'is-fs': isFullscreen }" aria-label="Redis views note">
+  <div
+    ref="shellEl"
+    class="rx"
+    :class="{ 'is-fs': isFullscreen, 'is-light': isLight, 'is-dark': !isLight }"
+    :data-mode="mode"
+    aria-label="Redis views note"
+  >
     <header class="rx-header">
       <NuxtLink to="/insights/notes" class="rx-brand">VIEW COUNTS</NuxtLink>
       <nav class="rx-tabs" aria-label="Pages">
@@ -140,58 +149,59 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
 
       <!-- Text -->
       <article class="rx-read" aria-label="Lesson">
-        <p class="rx-kicker">Page {{ page.n }} of 2</p>
-        <h1>{{ page.title }}</h1>
-        <p class="rx-lead">{{ page.lead }}</p>
+        <div class="rx-read-inner">
+          <p class="rx-kicker">Page {{ page.n }} of 2</p>
+          <h1>{{ page.title }}</h1>
+          <p class="rx-lead">{{ page.lead }}</p>
 
-        <template v-for="(block, i) in page.blocks" :key="i">
-          <h3 v-if="block.type === 'h3'">{{ block.text }}</h3>
-          <p v-else-if="block.type === 'p'" class="rx-p" v-html="md(block.text)" />
-          <ul v-else-if="block.type === 'ul'" class="rx-ul">
-            <li v-for="item in block.items" :key="item" v-html="md(item)" />
-          </ul>
-          <div v-else-if="block.type === 'pre'" class="rx-pre">
-            <p v-if="block.caption" class="rx-file">{{ block.caption }}</p>
-            <pre>{{ block.lines }}</pre>
-          </div>
-          <div v-else-if="block.type === 'table'" class="rx-table">
-            <table>
-              <thead>
-                <tr>
-                  <th v-for="col in block.columns" :key="col">{{ col }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(row, r) in block.rows" :key="r">
-                  <td v-for="(cell, c) in row" :key="c" v-html="md(cell)" />
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-else-if="block.type === 'callout'" class="rx-callout">
-            <p v-for="line in block.lines" :key="line" v-html="md(line)" />
-          </div>
-          <!-- viz blocks are shown in the left strip; skip duplicates in text -->
-        </template>
+          <template v-for="(block, i) in page.blocks" :key="i">
+            <h3 v-if="block.type === 'h3'">{{ block.text }}</h3>
+            <p v-else-if="block.type === 'p'" class="rx-p" v-html="md(block.text)" />
+            <ul v-else-if="block.type === 'ul'" class="rx-ul">
+              <li v-for="item in block.items" :key="item" v-html="md(item)" />
+            </ul>
+            <div v-else-if="block.type === 'pre'" class="rx-pre">
+              <p v-if="block.caption" class="rx-file">{{ block.caption }}</p>
+              <pre>{{ block.lines }}</pre>
+            </div>
+            <div v-else-if="block.type === 'table'" class="rx-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th v-for="col in block.columns" :key="col">{{ col }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, r) in block.rows" :key="r">
+                    <td v-for="(cell, c) in row" :key="c" v-html="md(cell)" />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-else-if="block.type === 'callout'" class="rx-callout">
+              <p v-for="line in block.lines" :key="line" v-html="md(line)" />
+            </div>
+          </template>
 
-        <div class="rx-pager">
-          <button
-            v-if="pageId === 'path'"
-            type="button"
-            class="rx-tool"
-            @click="selectPage('why')"
-          >
-            ← Why Redis
-          </button>
-          <span v-else />
-          <button
-            v-if="pageId === 'why'"
-            type="button"
-            class="rx-tool"
-            @click="selectPage('path')"
-          >
-            Apply path →
-          </button>
+          <div class="rx-pager">
+            <button
+              v-if="pageId === 'path'"
+              type="button"
+              class="rx-tool"
+              @click="selectPage('why')"
+            >
+              ← Why Redis
+            </button>
+            <span v-else />
+            <button
+              v-if="pageId === 'why'"
+              type="button"
+              class="rx-tool"
+              @click="selectPage('path')"
+            >
+              Apply path →
+            </button>
+          </div>
         </div>
       </article>
     </div>
@@ -199,12 +209,13 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
 </template>
 
 <style scoped>
+/* Follow Insights reading-mode tokens from .insights-shell — both modes stay in sync. */
 .rx {
-  --bg: #111;
-  --panel: #1a1a1a;
-  --text: #f3f3f3;
-  --muted: #9a9a9a;
-  --line: #2a2a2a;
+  --bg: var(--ri-bg, #111111);
+  --panel: var(--ri-surface, #1a1a1a);
+  --text: var(--ri-ink, #ffffff);
+  --muted: var(--ri-sub, #888888);
+  --line: var(--ri-border, rgba(255, 255, 255, 0.12));
   --accent: #4a9eff;
   height: calc(100dvh - var(--insights-nav-offset, 4rem));
   display: flex;
@@ -213,13 +224,23 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   color: var(--text);
   overflow: hidden;
 }
-.rx.is-fs { height: 100dvh; }
-:global(.insights-shell[data-mode='light']) .rx {
-  --bg: #fff;
-  --panel: #fafafa;
-  --text: #37352f;
-  --muted: #787774;
-  --line: #eaeaea;
+.rx.is-fs {
+  height: 100dvh;
+}
+/* Explicit fallbacks if shell tokens are missing (e.g. fullscreen edge cases) */
+.rx.is-light {
+  --bg: #f8f9fa;
+  --panel: #ffffff;
+  --text: #111111;
+  --muted: #6b7280;
+  --line: rgba(17, 24, 39, 0.12);
+}
+.rx.is-dark {
+  --bg: #111111;
+  --panel: #1a1a1a;
+  --text: #ffffff;
+  --muted: #888888;
+  --line: rgba(255, 255, 255, 0.12);
 }
 .rx-header {
   min-height: 52px;
@@ -229,6 +250,8 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   gap: 14px;
   padding: 0 16px 0 20px;
   flex-shrink: 0;
+  background: var(--bg);
+  color: var(--text);
 }
 .rx-brand {
   font-family: 'DM Mono', ui-monospace, monospace;
@@ -238,7 +261,11 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   color: var(--text);
   text-decoration: none;
 }
-.rx-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.rx-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .rx-tab {
   height: 30px;
   padding: 0 12px;
@@ -258,6 +285,7 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   display: flex;
   align-items: center;
   gap: 10px;
+  color: var(--text);
 }
 .rx-step {
   font-family: 'DM Mono', ui-monospace, monospace;
@@ -282,6 +310,8 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   flex: 1;
   min-height: 0;
   display: flex;
+  background: var(--bg);
+  color: var(--text);
 }
 .rx-viz {
   width: min(300px, 34vw);
@@ -293,6 +323,7 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   flex-direction: column;
   gap: 10px;
   background: var(--panel);
+  color: var(--text);
 }
 .rx-viz-title {
   margin: 0;
@@ -308,7 +339,12 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   line-height: 1.45;
   color: var(--muted);
 }
-.rx-speed { display: flex; flex-direction: column; gap: 8px; }
+.rx-speed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text);
+}
 .rx-speed-row {
   display: grid;
   grid-template-columns: 64px 1fr auto;
@@ -316,11 +352,25 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   align-items: center;
   font-family: 'DM Mono', ui-monospace, monospace;
   font-size: 10px;
+  color: var(--text);
 }
-.rx-bar { display: block; height: 8px; border-radius: 2px; }
-.rx-bar-slow { width: 90%; background: #e6a817; }
-.rx-bar-fast { width: 14%; background: var(--accent); }
-.rx-speed-row em { font-style: normal; color: var(--muted); }
+.rx-bar {
+  display: block;
+  height: 8px;
+  border-radius: 2px;
+}
+.rx-bar-slow {
+  width: 90%;
+  background: #e6a817;
+}
+.rx-bar-fast {
+  width: 14%;
+  background: var(--accent);
+}
+.rx-speed-row em {
+  font-style: normal;
+  color: var(--muted);
+}
 .rx-pipe {
   display: flex;
   flex-wrap: wrap;
@@ -328,11 +378,13 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   gap: 6px;
   font-family: 'DM Mono', ui-monospace, monospace;
   font-size: 11px;
+  color: var(--text);
 }
 .rx-pipe span {
   padding: 4px 8px;
   border: 1px solid var(--line);
   background: var(--bg);
+  color: var(--text);
 }
 .rx-mini-tree {
   margin: 0;
@@ -342,6 +394,7 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   font-family: 'DM Mono', ui-monospace, monospace;
   font-size: 11px;
   line-height: 1.5;
+  color: var(--text);
 }
 .rx-step-btn {
   display: flex;
@@ -357,7 +410,10 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   font-size: 11px;
   cursor: pointer;
 }
-.rx-step-btn span { color: var(--accent); font-weight: 700; }
+.rx-step-btn span {
+  color: var(--accent);
+  font-weight: 700;
+}
 .rx-step-btn.is-on {
   border-color: var(--accent);
   color: var(--text);
@@ -395,11 +451,20 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   flex: 1;
   min-width: 0;
   overflow: auto;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+}
+.rx-read-inner {
+  width: 100%;
+  max-width: 40rem;
   padding: 28px 32px 48px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 720px;
+  box-sizing: border-box;
+  color: var(--text);
 }
 .rx-kicker {
   margin: 0;
@@ -415,8 +480,10 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.25;
+  color: var(--text);
 }
-.rx-lead, .rx-p {
+.rx-lead,
+.rx-p {
   margin: 0;
   font-size: 15px;
   line-height: 1.7;
@@ -426,6 +493,7 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   margin: 14px 0 0;
   font-size: 1.05rem;
   font-weight: 800;
+  color: var(--text);
 }
 .rx-ul {
   margin: 0;
@@ -454,12 +522,18 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   overflow: auto;
   border: 1px solid var(--line);
 }
-.rx-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.rx-table th, .rx-table td {
+.rx-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.rx-table th,
+.rx-table td {
   padding: 8px 10px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
+  color: var(--text);
 }
 .rx-table th {
   font-family: 'DM Mono', ui-monospace, monospace;
@@ -485,12 +559,17 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
   border-top: 1px solid var(--line);
 }
 @media (max-width: 860px) {
-  .rx-body { flex-direction: column; }
+  .rx-body {
+    flex-direction: column;
+  }
   .rx-viz {
     width: 100%;
     max-height: 36vh;
     border-right: none;
     border-bottom: 1px solid var(--line);
+  }
+  .rx-read-inner {
+    padding: 20px 18px 40px;
   }
 }
 </style>
