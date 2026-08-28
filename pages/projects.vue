@@ -74,10 +74,10 @@ const backToHero = () => {
           @keydown.enter="toggleMode"
         />
 
-        <p class="project-sub">Coming Soon · Building in Public</p>
+        <p class="project-sub">Selected work</p>
 
         <h1 class="project-headline">
-          Projects are <em class="project-emphasis">currently</em><br />in development.
+          A few things I've <em class="project-emphasis">currently</em><br />shipped.
         </h1>
 
         <div class="mt-8 md:mt-10 flex items-center gap-2">
