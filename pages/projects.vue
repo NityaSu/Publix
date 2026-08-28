@@ -4,22 +4,15 @@ import ProjectBot from '~/component/ProjectBot.vue';
 import ProjectCard from '~/component/ProjectCard.vue';
 import { projects } from '~/data/projects';
 
-type BotVersion = 'v1' | 'v2';
-
 useHead({
   title: 'Projects',
 });
 
 const mode = ref<'normal' | 'sleepy'>('normal');
-const version = ref<BotVersion>('v1');
 const showProjects = ref(false);
 
 const toggleMode = () => {
   mode.value = mode.value === 'normal' ? 'sleepy' : 'normal';
-};
-
-const setVersion = (next: BotVersion) => {
-  version.value = next;
 };
 
 const enterProjects = () => {
@@ -32,40 +25,15 @@ const backToHero = () => {
 </script>
 
 <template>
-  <main
-    class="relative min-h-screen w-full overflow-hidden bg-[#0d0d0d] project-page"
-    :class="{ 'v2-active': version === 'v2' }"
-  >
+  <main class="relative min-h-screen w-full overflow-hidden bg-[#0d0d0d] project-page">
     <!-- Intro view -->
     <section
       v-show="!showProjects"
       class="relative z-10 flex min-h-screen w-full items-center justify-center px-6"
     >
-      <!-- Version switcher -->
-      <div class="version-switcher">
-        <button
-          type="button"
-          class="version-btn v1"
-          :class="{ active: version === 'v1' }"
-          @click="setVersion('v1')"
-        >
-          Moondot V1
-        </button>
-        <button
-          type="button"
-          class="version-btn v2"
-          :class="{ active: version === 'v2' }"
-          @click="setVersion('v2')"
-        >
-          Moondot V2
-        </button>
-      </div>
-
       <div class="relative z-10 flex flex-col items-center text-center project-tagline">
-        <!-- Bot -->
         <ProjectBot
           :mode="mode"
-          :version="version"
           class="mb-6 cursor-pointer"
           role="button"
           tabindex="0"
@@ -80,29 +48,9 @@ const backToHero = () => {
           A few things I've <em class="project-emphasis">currently</em><br />shipped.
         </h1>
 
-        <div class="mt-8 md:mt-10 flex items-center gap-2">
-          <button
-            type="button"
-            class="oc-btn"
-            :class="{ active: mode === 'normal' }"
-            @click="mode = 'normal'"
-          >
-            Normal
-          </button>
-          <button
-            type="button"
-            class="oc-btn"
-            :class="{ active: mode === 'sleepy' }"
-            @click="mode = 'sleepy'"
-          >
-            Sleepy
-          </button>
-        </div>
-
         <button
           type="button"
-          class="mt-10 inline-flex items-center gap-2 rounded-none px-6 py-3 font-dm font-bold text-sm uppercase tracking-[0.14em] text-white shadow-glow-sm transition-all duration-300 hover:scale-105"
-          :class="version === 'v1' ? 'bg-[#3a7bd5]' : 'bg-[#e74c3c]'"
+          class="mt-10 inline-flex items-center gap-2 rounded-none bg-[#3a7bd5] px-6 py-3 font-dm font-bold text-sm uppercase tracking-[0.14em] text-white shadow-glow-sm transition-all duration-300 hover:scale-105"
           @click="enterProjects"
         >
           View Projects
@@ -150,50 +98,6 @@ const backToHero = () => {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.version-switcher {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
-  display: flex;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0;
-  padding: 4px;
-}
-
-.version-btn {
-  padding: 6px 14px;
-  border-radius: 0;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'DM Mono', 'DM Mono fallback', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-}
-
-.version-btn:hover {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.version-btn.active {
-  color: #fff;
-}
-
-.version-btn.v1.active {
-  background: #3a7bd5;
-}
-
-.version-btn.v2.active {
-  background: #e74c3c;
-}
-
 .project-tagline {
   pointer-events: none;
 }
@@ -227,37 +131,5 @@ const backToHero = () => {
   font-style: italic;
   font-family: Georgia, serif;
   font-weight: 500;
-}
-
-.oc-btn {
-  padding: 5px 12px;
-  border-radius: 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: 'DM Mono', 'DM Mono fallback', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-}
-
-.oc-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.project-page:not(.v2-active) .oc-btn.active {
-  background: #3a7bd5;
-  color: #fff;
-  border-color: #3a7bd5;
-}
-
-.project-page.v2-active .oc-btn.active {
-  background: #e74c3c;
-  color: #fff;
-  border-color: #e74c3c;
 }
 </style>
