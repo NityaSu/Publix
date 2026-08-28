@@ -6,7 +6,7 @@ const { immersive } = useInsightsImmersive();
 </script>
 
 <template>
-  <div class="min-h-screen bg-background">
+  <div class="min-h-screen" :class="{ 'bg-background': !immersive }">
     <NavbarHeader v-if="!immersive" />
     <NuxtLoadingIndicator color="#3a7bd5" :height="3" :throttle="0" />
     <NuxtLayout>

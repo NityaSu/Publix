@@ -14,9 +14,25 @@ export interface Project {
   images: string[];
   github?: string;
   demo?: string;
+  cover?: 'autowallet';
 }
 
 export const projects: Project[] = [
+  {
+    id: 'autowallet',
+    title: 'AutoWallet',
+    tagline: 'Virtual card and person-to-person send',
+    category: 'Fintech',
+    description:
+      'A virtual spend card with freeze, daily cap, and send to another handle. Next.js frontend first; balances are still mock. Postgres ledger is next.',
+    year: '2026',
+    status: 'shipped',
+    stack: ['Next.js', 'TypeScript', 'React', 'Tailwind'],
+    images: [],
+    github: 'https://github.com/NityaSu/autowallet',
+    demo: 'https://autowallet-eight.vercel.app/',
+    cover: 'autowallet',
+  },
   {
     id: 'ecommerce',
     title: 'E-commerce Platform',

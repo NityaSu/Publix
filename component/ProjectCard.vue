@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Github, ExternalLink, AlertCircle, Clock } from 'lucide-vue-next';
 import type { Project } from '~/data/projects';
 import ImageCarousel from '~/component/ImageCarousel.vue';
+import AutoWalletTicketThumb from '~/component/AutoWalletTicketThumb.vue';
 
 interface Props {
   project: Project;
@@ -14,6 +15,8 @@ const activeImage = ref(0);
 const showLightbox = ref(false);
 const lightboxIndex = ref(0);
 
+const isInternalDemo = computed(() => !!props.project.demo?.startsWith('/'));
+
 const openLightbox = (index: number) => {
   if (props.project.images.length === 0) return;
   lightboxIndex.value = index;
@@ -23,6 +26,9 @@ const openLightbox = (index: number) => {
 const closeLightbox = () => {
   showLightbox.value = false;
 };
+
+const coverClass =
+  'aspect-video flex items-center justify-center px-[18px] py-4 bg-[radial-gradient(700px_220px_at_80%_-10%,rgba(252,98,3,0.28),transparent_50%),linear-gradient(165deg,#2a1a10_0%,#140e0a_70%)]';
 
 const statusLabel = () => {
   if (props.project.status === 'placeholder') return { text: 'Coming Soon', icon: Clock };
@@ -54,6 +60,22 @@ const statusLabel = () => {
       image-class="h-full"
       @select="openLightbox"
     />
+    <a
+      v-else-if="project.cover === 'autowallet' && project.demo"
+      :href="project.demo"
+      target="_blank"
+      rel="noopener noreferrer"
+      :class="[coverClass, 'cursor-pointer transition-[filter] duration-200 hover:brightness-[1.08]']"
+      :aria-label="`Open ${project.title}`"
+    >
+      <AutoWalletTicketThumb />
+    </a>
+    <div
+      v-else-if="project.cover === 'autowallet'"
+      :class="coverClass"
+    >
+      <AutoWalletTicketThumb />
+    </div>
     <div
       v-else
       class="relative aspect-video w-full bg-[#0d0d0d] flex flex-col items-center justify-center gap-2 text-white/40"
@@ -100,8 +122,16 @@ const statusLabel = () => {
           <Github :size="14" />
           View Code
         </a>
+        <NuxtLink
+          v-if="isInternalDemo && project.demo"
+          :to="project.demo"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-white hover:bg-accent/20 hover:text-accent transition-colors"
+        >
+          <ExternalLink :size="14" />
+          Open demo
+        </NuxtLink>
         <a
-          v-if="project.demo"
+          v-else-if="project.demo"
           :href="project.demo"
           target="_blank"
           rel="noopener noreferrer"
