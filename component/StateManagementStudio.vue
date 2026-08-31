@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Bell, Database, ShoppingCart, User } from 'lucide-vue-next';
+import { Bell, CreditCard, Database, ShoppingCart, User } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const withStore = ref(true);
@@ -8,49 +8,13 @@ const stageRef = ref<HTMLElement | null>(null);
 const gridRef = ref<HTMLElement | null>(null);
 const storeRef = ref<HTMLElement | null>(null);
 
+type Pt = { x: number; y: number };
 type Spoke = { x1: number; y1: number; x2: number; y2: number };
+
 const spokeLines = ref<Spoke[]>([]);
-const hubPt = ref({ x: 0, y: 0 });
+const cardPins = ref<Pt[]>([]);
+const hubPt = ref<Pt>({ x: 0, y: 0 });
 const svgSize = ref({ w: 0, h: 0 });
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function nudgeToward(
-  from: { x: number; y: number },
-  toward: { x: number; y: number },
-  px: number,
-) {
-  const dx = toward.x - from.x;
-  const dy = toward.y - from.y;
-  const len = Math.hypot(dx, dy) || 1;
-  return { x: from.x + (dx / len) * px, y: from.y + (dy / len) * px };
-}
-
-function closestOnRect(
-  left: number,
-  top: number,
-  right: number,
-  bottom: number,
-  px: number,
-  py: number,
-) {
-  const x = clamp(px, left, right);
-  const y = clamp(py, top, bottom);
-  if (px >= left && px <= right && py >= top && py <= bottom) {
-    const dl = px - left;
-    const dr = right - px;
-    const dt = py - top;
-    const db = bottom - py;
-    const m = Math.min(dl, dr, dt, db);
-    if (m === dl) return { x: left, y: py };
-    if (m === dr) return { x: right, y: py };
-    if (m === dt) return { x: px, y: top };
-    return { x: px, y: bottom };
-  }
-  return { x, y };
-}
 
 function layoutSpokes() {
   const stage = stageRef.value;
@@ -58,48 +22,34 @@ function layoutSpokes() {
   const store = storeRef.value;
   if (!stage || !grid || !store || !withStore.value) {
     spokeLines.value = [];
+    cardPins.value = [];
     return;
   }
 
   const sr = stage.getBoundingClientRect();
-  const gr = grid.getBoundingClientRect();
   const st = store.getBoundingClientRect();
   svgSize.value = { w: sr.width, h: sr.height };
 
+  const pins = [...grid.querySelectorAll<HTMLElement>('.sm-card')].map((card) => {
+    const r = card.getBoundingClientRect();
+    return {
+      x: r.left + r.width / 2 - sr.left,
+      y: r.bottom - sr.top,
+    };
+  });
+  cardPins.value = pins;
+
   const hub = {
-    x: sr.width / 2,
-    y: (gr.bottom - sr.top + (st.top - sr.top)) / 2,
+    x: st.left + st.width / 2 - sr.left,
+    y: st.top - sr.top,
   };
   hubPt.value = hub;
-
-  const lines: Spoke[] = [...grid.querySelectorAll<HTMLElement>('.sm-card')].map((card) => {
-    const r = card.getBoundingClientRect();
-    const edge = closestOnRect(
-      r.left - sr.left,
-      r.top - sr.top,
-      r.right - sr.left,
-      r.bottom - sr.top,
-      hub.x,
-      hub.y,
-    );
-    // Sit the stroke on top of the card, not tucked under the border.
-    const p = nudgeToward(edge, {
-      x: r.left + r.width / 2 - sr.left,
-      y: r.top + r.height / 2 - sr.top,
-    }, 10);
-    return { x1: p.x, y1: p.y, x2: hub.x, y2: hub.y };
-  });
-
-  const storeEdge = closestOnRect(
-    st.left - sr.left,
-    st.top - sr.top,
-    st.right - sr.left,
-    st.bottom - sr.top,
-    hub.x,
-    hub.y,
-  );
-  lines.push({ x1: hub.x, y1: hub.y, x2: storeEdge.x, y2: storeEdge.y });
-  spokeLines.value = lines;
+  spokeLines.value = pins.map((pin) => ({
+    x1: pin.x,
+    y1: pin.y,
+    x2: hub.x,
+    y2: hub.y,
+  }));
 }
 
 let resizeObserver: ResizeObserver | null = null;
@@ -173,6 +123,7 @@ onMounted(async () => {
   resizeObserver = new ResizeObserver(() => layoutSpokes());
   resizeObserver.observe(stageRef.value);
   if (gridRef.value) resizeObserver.observe(gridRef.value);
+  if (storeRef.value) resizeObserver.observe(storeRef.value);
 });
 
 onUnmounted(() => {
@@ -218,8 +169,13 @@ onUnmounted(() => {
     <div ref="stageRef" class="sm-stage">
       <div ref="gridRef" class="sm-grid">
         <article class="sm-card">
-          <p class="sm-card-title">Product card</p>
-          <p class="sm-row">Price: $ {{ price }}</p>
+          <p class="sm-card-title">
+            <CreditCard :size="14" />
+            Product card
+          </p>
+          <p class="sm-row">
+            <span class="sm-value">Price: $ <b>{{ price }}</b></span>
+          </p>
           <button type="button" class="sm-btn" @click="addToCart">Add to cart</button>
           <p v-if="!withStore && productLocalCart > 0" class="sm-own">
             Own copy: added {{ productLocalCart }}
@@ -227,23 +183,26 @@ onUnmounted(() => {
         </article>
 
         <article class="sm-card">
-          <p class="sm-card-title">Cart badge</p>
-          <p class="sm-row sm-icon-row">
+          <p class="sm-card-title">
             <ShoppingCart :size="14" />
-            Items:
+            Cart badge
+          </p>
+          <p class="sm-row">
             <span class="sm-value" :class="{ 'is-stale': !withStore }">
-              {{ cart }}
-              <i v-if="!withStore" class="sm-dot" />
+              Items: <b>{{ cart }}</b>
+              <i v-if="!withStore" class="sm-stale" />
             </span>
           </p>
           <p v-if="!withStore" class="sm-own">Own copy: {{ cart }}</p>
         </article>
 
         <article class="sm-card">
-          <p class="sm-card-title">User profile</p>
-          <p class="sm-row sm-icon-row">
+          <p class="sm-card-title">
             <User :size="14" />
-            Name: {{ user }}
+            User profile
+          </p>
+          <p class="sm-row">
+            <span class="sm-value">Name: <b>{{ user }}</b></span>
           </p>
           <button type="button" class="sm-btn sm-btn-ghost" @click="toggleAuth">
             {{ loggedIn ? 'Log out' : 'Log in' }}
@@ -251,12 +210,14 @@ onUnmounted(() => {
         </article>
 
         <article class="sm-card">
-          <p class="sm-card-title">Notification</p>
-          <p class="sm-row sm-icon-row">
+          <p class="sm-card-title">
             <Bell :size="14" />
+            Notification
+          </p>
+          <p class="sm-row">
             <span class="sm-value" :class="{ 'is-stale': !withStore }">
-              {{ notice }}
-              <i v-if="!withStore" class="sm-dot" />
+              <b>{{ notice }}</b>
+              <i v-if="!withStore" class="sm-stale" />
             </span>
           </p>
           <p v-if="!withStore" class="sm-own">Own copy: {{ notice }}</p>
@@ -278,9 +239,11 @@ onUnmounted(() => {
           </span>
           <span class="sm-store-tag">Single source of truth</span>
         </div>
-        <pre class="sm-store-body">cart: {{ store.cart }}
-user: {{ store.user }}
-price: {{ store.price }}</pre>
+        <div class="sm-store-fields">
+          <p class="sm-field"><span>cart:</span> {{ store.cart }}</p>
+          <p class="sm-field"><span>user:</span> {{ store.user }}</p>
+          <p class="sm-field"><span>price:</span> {{ store.price }}</p>
+        </div>
       </article>
 
       <svg
@@ -298,7 +261,15 @@ price: {{ store.price }}</pre>
           :x2="line.x2"
           :y2="line.y2"
         />
-        <circle :cx="hubPt.x" :cy="hubPt.y" r="3.5" />
+        <circle
+          v-for="(pin, i) in cardPins"
+          :key="`pin-${i}`"
+          class="sm-pin"
+          :cx="pin.x"
+          :cy="pin.y"
+          r="4.5"
+        />
+        <circle class="sm-hub" :cx="hubPt.x" :cy="hubPt.y" r="4.5" />
       </svg>
     </div>
 
@@ -398,13 +369,20 @@ price: {{ store.price }}</pre>
 }
 
 .sm-spokes line {
-  stroke: #c4c4c4;
-  stroke-width: 1.25;
+  stroke: #c8c8c8;
+  stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 
-.sm-spokes circle {
-  fill: #1f1f1f;
+.sm-spokes .sm-pin {
+  fill: #d4d4d4;
+  stroke: #c0c0c0;
+  stroke-width: 1;
+}
+
+.sm-spokes .sm-hub {
+  fill: #1a1a1a;
+  stroke: none;
 }
 
 .sm-cross {
@@ -427,11 +405,15 @@ price: {{ store.price }}</pre>
   background: var(--mf-panel, #fff);
   border: 1px solid var(--mf-line, #eaeaea);
   border-radius: 8px;
-  padding: 12px 14px 14px;
+  padding: 12px 14px 16px;
   min-height: 118px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
 }
 
 .sm-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 700;
   margin: 0 0 10px;
@@ -443,29 +425,28 @@ price: {{ store.price }}</pre>
   margin: 0 0 10px;
 }
 
-.sm-icon-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .sm-value {
   position: relative;
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
-  padding: 1px 8px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--mf-muted, #787774) 10%, transparent);
-  font-family: 'DM Mono', ui-monospace, monospace;
-  font-size: 12px;
+  min-height: 26px;
+  padding: 2px 10px;
+  border-radius: 6px;
+  background: var(--mf-graph, #f4f4f4);
+  color: var(--mf-text, #37352f);
+  font-size: 13px;
+}
+
+.sm-value b {
+  font-weight: 700;
+  margin-left: 2px;
 }
 
 .sm-value.is-stale {
   padding-right: 14px;
 }
 
-.sm-dot {
+.sm-stale {
   position: absolute;
   top: -3px;
   right: -3px;
@@ -510,6 +491,7 @@ price: {{ store.price }}</pre>
   border: 1px solid var(--mf-line, #eaeaea);
   border-radius: 8px;
   padding: 12px 14px 14px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
 }
 
 .sm-store-head {
@@ -533,16 +515,23 @@ price: {{ store.price }}</pre>
   color: var(--mf-muted, #787774);
 }
 
-.sm-store-body {
+.sm-store-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.sm-field {
   margin: 0;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 6px;
-  background: var(--mf-graph, #fafafa);
-  border: 1px solid var(--mf-line, #eaeaea);
-  font-family: 'DM Mono', ui-monospace, monospace;
+  background: var(--mf-graph, #f4f4f4);
   font-size: 13px;
-  line-height: 1.7;
   color: var(--mf-text, #37352f);
+}
+
+.sm-field span {
+  color: var(--mf-muted, #787774);
 }
 
 .sm-caption {
