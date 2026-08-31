@@ -403,7 +403,7 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
   background: var(--mf-panel, #fff);
-  border: 1px solid var(--mf-line, #eaeaea);
+  border: 1px solid #c8c8c8;
   border-radius: 8px;
   padding: 12px 14px 16px;
   min-height: 118px;
@@ -488,7 +488,7 @@ onUnmounted(() => {
   z-index: 1;
   margin-top: 0;
   background: var(--mf-panel, #fff);
-  border: 1px solid var(--mf-line, #eaeaea);
+  border: 1px solid #c8c8c8;
   border-radius: 8px;
   padding: 12px 14px 14px;
   box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
