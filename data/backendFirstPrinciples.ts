@@ -1768,6 +1768,7 @@ SELECT * FROM invoices WHERE id = $1 AND user_id = $2`,
         heading: '16. Keep reading — the map is not the territory',
         blocks: [
           { type: 'p', text: 'OWASP Top 10 and the cheat-sheet series are the shared vocabulary. Hands-on labs (the usual web-security academies) train the attacker question until it is a reflex. Session-id randomness, cookie flags, injection — you will meet them again under different names. This chapter is **awareness plus the moves that show up in backend code**. The rest is homework on purpose.' },
+          { type: 'p', text: 'For the **same story told as frontend + wire + server in one sitting**, watch [Dimma’s web security talk](https://youtu.be/-GfSbk_VqSk). Then walk **Frontend · 17 · Security**. His backend cuts that belong here: **never trust the client** (curl skips the SPA), **user id from the session not the body**, **recalculate prices** on the server, **parameterized SQL**, **generic 500s** (log the stack internally), **hash + salt + slow** (Argon2id / bcrypt) — never encrypt passwords with a key you can steal in the same dump.' },
         ],
       },
       {
@@ -1795,6 +1796,7 @@ SELECT * FROM invoices WHERE id = $1 AND user_id = $2`,
             lines: [
               '**Ask where you assumed.** Then ask which language that string will be parsed as.',
               '**Authn is the building. Authz is the locker.** Query both.',
+              '**Watch.** [Dimma — front, wire, back](https://youtu.be/-GfSbk_VqSk). Then Frontend · Security for the tab half.',
               'No stack is finished. Layer the doors anyway.',
             ],
           },
