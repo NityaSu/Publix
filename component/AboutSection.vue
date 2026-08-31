@@ -2,6 +2,7 @@
 import { ref, onUnmounted } from 'vue';
 import { useIntersectionObserver } from '@vueuse/core';
 import { useNavigationStore } from '~/stores/navigationStore';
+import SlashRollLoader from '~/component/SlashRollLoader.vue';
 
 interface Stat {
   value: string;
@@ -40,6 +41,7 @@ const GITHUB_USERNAME = 'NityaSu';
 const GITHUB_CHART_URL = `https://ghchart.rshah.org/2f6bff/${GITHUB_USERNAME}`;
 const GITHUB_PROFILE_URL = `https://github.com/${GITHUB_USERNAME}`;
 
+const chartLoaded = ref(false);
 const sectionRef = ref<HTMLElement | null>(null);
 const navigationStore = useNavigationStore();
 
@@ -84,7 +86,7 @@ onUnmounted(() => {
         </p>
 
         <h2 class="mt-4 font-display font-extrabold uppercase text-white text-3xl sm:text-4xl md:text-5xl leading-tight">
-          From Bronze Medal to Breakthrough Code
+          Academic Foundation & Coding Journey
         </h2>
 
         <div class="mt-10 space-y-5">
@@ -141,14 +143,24 @@ onUnmounted(() => {
             aria-label="View GitHub contribution graph for NityaSu"
           >
             <div class="github-chart-scroll">
+              <div
+                v-if="!chartLoaded"
+                class="github-chart-loader"
+              >
+                <SlashRollLoader :size="64" label="Loading contribution graph" />
+              </div>
               <img
                 :src="GITHUB_CHART_URL"
                 alt="GitHub contribution graph for NityaSu"
                 width="663"
                 height="104"
                 class="github-chart-img"
+                :class="chartLoaded ? 'opacity-100' : 'opacity-0'"
+                :aria-hidden="!chartLoaded"
                 loading="lazy"
                 decoding="async"
+                @load="chartLoaded = true"
+                @error="chartLoaded = true"
               />
             </div>
           </a>
@@ -242,11 +254,23 @@ onUnmounted(() => {
 }
 
 .github-chart-scroll {
+  position: relative;
   overflow-x: auto;
   overflow-y: hidden;
+  min-height: 104px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: #c8cdd3 transparent;
+}
+
+.github-chart-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
 .github-chart-scroll::-webkit-scrollbar {

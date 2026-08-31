@@ -336,7 +336,7 @@ useIntersectionObserver(
         </p>
 
         <h2 class="mt-4 max-w-4xl font-display font-extrabold uppercase text-white text-3xl sm:text-4xl md:text-5xl leading-tight">
-          The Moment That Sparked Everything
+          The Moment That Changed How I Think
         </h2>
 
         <div class="mt-5">
