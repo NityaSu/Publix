@@ -138,11 +138,19 @@ function selectTopic(id: string) {
   });
 }
 
+function clearTopic() {
+  selectedId.value = null;
+}
+
 function md(text: string) {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(
+      /\[([^\]]+)\]\((https?:[^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+    )
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>');
@@ -345,6 +353,7 @@ function onWheel(event: WheelEvent) {
 }
 
 function onCanvasDown(event: PointerEvent) {
+  if (event.button !== 0) return;
   if ((event.target as HTMLElement).closest('.mf-node')) return;
   panning = true;
   panStart = { x: event.clientX, y: event.clientY, tx: transform.x, ty: transform.y };
@@ -368,7 +377,8 @@ function onCanvasMove(event: PointerEvent) {
   transform.y = panStart.ty + (event.clientY - panStart.y);
 }
 
-function onCanvasUp() {
+function onCanvasUp(event: PointerEvent) {
+  const wasDraggingNode = Boolean(dragId);
   if (dragId) {
     const node = nodeById.value[dragId];
     if (node) {
@@ -377,7 +387,11 @@ function onCanvasUp() {
     }
     dragId = null;
   }
+  const wasPanning = panning;
   panning = false;
+  if (wasDraggingNode || !wasPanning || event.type === 'pointercancel') return;
+  const moved = Math.hypot(event.clientX - panStart.x, event.clientY - panStart.y) > 6;
+  if (!moved) clearTopic();
 }
 
 function onNodeDown(event: PointerEvent, id: string) {
@@ -1136,6 +1150,11 @@ onUnmounted(() => {
 
 .mf-page :deep(strong) { font-weight: 700; }
 .mf-page :deep(em) { font-style: italic; }
+.mf-page :deep(a) {
+  color: #7b2d8e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .mf-kid {
   margin-top: 12px;
