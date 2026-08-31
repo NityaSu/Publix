@@ -16,6 +16,15 @@ export interface BuildNote {
  */
 export const buildNotes: BuildNote[] = [
   {
+    slug: 'frontend-from-first-principle',
+    title: 'Frontend From First Principle',
+    summary:
+      'A 24-node map of how a frontend is actually built — picture, memory, the wire, and why the browser is hostile. State, security, performance, reuse, and middleware go deep.',
+    tag: 'Personal Learning',
+    date: '2026-08-31',
+    stack: ['State', 'Security', 'DOM', 'Fetch'],
+  },
+  {
     slug: 'hrms',
     title: 'HRMS · First Principles',
     summary:
