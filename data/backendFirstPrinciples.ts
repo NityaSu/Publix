@@ -4349,6 +4349,67 @@ worker (consumer)
       'Still authenticate. Still authorize per channel. Presence and fan-out are the expensive parts.',
       'Fall back to poll if the network is hostile. Do not pretend every client can hold a socket.',
     ],
+    sections: [
+      {
+        heading: '1. Same idea as the frontend pipe',
+        blocks: [
+          { type: 'p', text: 'HTTP is a letter. A WebSocket is a phone call. Frontend · **26 · WebSocket** has the live-notice studio (admin publishes → every tab pops). This chapter is the **server chair**: handshake, snapshot vs broadcast, and why the DB row is still truth.' },
+        ],
+      },
+      {
+        heading: '2. Open the door — token or hang up',
+        blocks: [
+          { type: 'p', text: 'Connection is AuthN. No JWT on `handshake.auth.token` (or your cookie strategy) → emit an error → `disconnect(true)`. Do not let anonymous sockets sit on a namespace that later broadcasts user data.' },
+          {
+            type: 'pre',
+            lines: `@WebSocketGateway({ namespace: "/event" })
+export class InitGateway implements OnGatewayConnection {
+  async handleConnection(client: Socket) {
+    const token = client.handshake.auth?.token
+    if (!token) { client.disconnect(true); return }
+    const payload = await tokens.verify(token)
+    if (!payload) { client.disconnect(true); return }
+    client.data.userId = payload.sub
+  }
+}`,
+          },
+        ],
+      },
+      {
+        heading: '3. Snapshot to one socket, megaphone to all',
+        blocks: [
+          { type: 'p', text: '`client.emit` answers **this** tab’s `SubscribeMessage("notice:list")`. `this.server.emit` runs **after** the admin HTTP handler writes the table. Miss the broadcast and other tabs stay stale. Miss the snapshot and a late joiner sees nothing until the next edit.' },
+          {
+            type: 'pre',
+            lines: `@SubscribeMessage("notice:list")
+async onAsk(client: Socket) {
+  client.emit("notice:list", { data: await notices.findActive() })
+}
+
+async broadcastList() {
+  this.server.emit("notice:list", { data: await notices.findActive() })
+}
+
+// in the HTTP create/update/delete handler:
+await notices.save(dto)
+await noticeGateway.broadcastList()`,
+          },
+          { type: 'p', text: 'Private payloads (one user’s inbox) do not use `server.emit`. Look up that user’s socket id (Redis) and emit to **them**, or join a room after AuthZ. A notice list that every logged-in user may see is allowed to be a namespace broadcast.' },
+        ],
+      },
+      {
+        heading: '4. Quick map',
+        blocks: [
+          {
+            type: 'callout',
+            lines: [
+              '**Auth the handshake.** Broadcast public lists. Room/user emit for private.',
+              'The pipe is a hint. **GET /notices** still works when the socket dies. Frontend · 26 and · 25 (sessionStorage for “already seen”).',
+            ],
+          },
+        ],
+      },
+    ],
   },
   {
     id: 'errors',
