@@ -22,7 +22,8 @@ export type HrmsStudioBlock =
       gate: string;
       purpose: string;
       notes?: string[];
-    };
+    }
+  | { type: 'playground'; id: 'guards' };
 
 export interface HrmsStudioChapter {
   id: string;

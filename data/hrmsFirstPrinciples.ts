@@ -62,6 +62,15 @@ export const hrmsTopics: HrmsTopic[] = [
     studioPath: '/insights/notes/hrms/authn',
   },
   {
+    id: 'guards',
+    n: 3,
+    title: 'Guards — route protection & middleware',
+    label: 'Guards',
+    cluster: 'gate',
+    gist: 'Vue beforeEach, Axios Bearer, Gin AuthN/AuthZ. JWT in localStorage — not a cookie.',
+    studioPath: '/insights/notes/hrms/guards',
+  },
+  {
     id: 'authz',
     n: 2,
     title: 'AuthZ — what you may do',
@@ -72,7 +81,7 @@ export const hrmsTopics: HrmsTopic[] = [
   },
   {
     id: 'status',
-    n: 3,
+    n: 4,
     title: 'Status & response envelope',
     label: 'Status',
     cluster: 'contract',
@@ -81,7 +90,7 @@ export const hrmsTopics: HrmsTopic[] = [
   },
   {
     id: 'redis',
-    n: 4,
+    n: 5,
     title: 'Redis — permission cache & sessions',
     label: 'Redis',
     cluster: 'speed',
@@ -90,7 +99,7 @@ export const hrmsTopics: HrmsTopic[] = [
   },
   {
     id: 'schema',
-    n: 5,
+    n: 6,
     title: 'Schema Studio',
     label: 'Schema',
     cluster: 'data',
@@ -102,6 +111,9 @@ export const hrmsTopics: HrmsTopic[] = [
 /** Extra relates edges (sequential THEN edges come from topic order). */
 export const hrmsGraphEdges: HrmsEdge[] = [
   { from: 'authn', to: 'authz' },
+  { from: 'authn', to: 'guards' },
+  { from: 'authz', to: 'guards' },
+  { from: 'guards', to: 'status' },
   { from: 'authz', to: 'redis' },
   { from: 'authn', to: 'status' },
   { from: 'authz', to: 'status' },

@@ -38,7 +38,7 @@ export const hrmsAuthnStudio: HrmsStudioMeta = {
         {
           type: 'callout',
           lines: [
-            '**Hard rule in this codebase:** login issues an **access JWT**. There is **no server-side login session** written to Redis on success. Redis `SetSession` / `GetSession` exist as helpers, but AuthN middleware never reads them.',
+            '**Hard rule in this codebase:** login issues an **access JWT**. There is **no server-side login session** written to Redis on success. Redis `SetSession` / `GetSession` exist as helpers, but AuthN middleware never reads them. The **admin SPA** stores that JWT in **localStorage** (`auth_session`) and stamps `Authorization: Bearer` in Axios — see **Guards Studio**.',
             'Swagger names the security schemes `AdminBearerAuth` / `ClientBearerAuth` with `@securityDefinitions.apikey` — that is Swagger’s label for “API key in a header.” The **runtime** auth is still `Authorization: Bearer <jwt>`, not a separate API-key table.',
           ],
         },
