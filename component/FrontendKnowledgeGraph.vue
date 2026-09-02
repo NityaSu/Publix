@@ -7,6 +7,7 @@ import InsightsSplitHandle from '~/component/InsightsSplitHandle.vue';
 import { useInsightsSplit } from '~/composables/useInsightsSplit';
 import StateManagementStudio from '~/component/StateManagementStudio.vue';
 import FrontendSecurityStudio from '~/component/FrontendSecurityStudio.vue';
+import LiveNoticeStudio from '~/component/LiveNoticeStudio.vue';
 import {
   clusters,
   graphEdges,
@@ -636,6 +637,7 @@ onUnmounted(() => {
 
           <StateManagementStudio v-if="selectedTopic.studio === 'state'" />
           <FrontendSecurityStudio v-else-if="selectedTopic.studio === 'security'" />
+          <LiveNoticeStudio v-else-if="selectedTopic.studio === 'notice'" />
 
           <ul v-if="!selectedTopic.sections?.length" class="mf-bullets">
             <li v-for="line in selectedTopic.remember" :key="line">{{ line }}</li>
@@ -655,6 +657,9 @@ onUnmounted(() => {
                 <ul v-else-if="block.type === 'ul'" class="mf-bullets">
                   <li v-for="item in blockItems(block)" :key="item" v-html="md(item)" />
                 </ul>
+                <ol v-else-if="block.type === 'ol'" class="mf-bullets">
+                  <li v-for="item in blockItems(block)" :key="item" v-html="md(item)" />
+                </ol>
                 <pre v-else-if="block.type === 'pre'">{{ blockLines(block) }}</pre>
                 <hr v-else-if="block.type === 'hr'" class="mf-rule" />
                 <div v-else-if="block.type === 'table'" class="mf-table-wrap">
