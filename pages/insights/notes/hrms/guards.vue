@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import InsightsReadingShell from '~/component/InsightsReadingShell.vue';
-import HrmsKnowledgeGraph from '~/component/HrmsKnowledgeGraph.vue';
+import HrmsDeepStudio from '~/component/HrmsDeepStudio.vue';
+import { hrmsGuardsStudio } from '~/data/hrmsGuardsStudio';
 
 useHead({
-  title: 'HRMS · First Principles',
+  title: 'HRMS · Guards Studio',
   meta: [
     {
       name: 'description',
       content:
-        'Private map of your hrms_api + hrms-admin — click AuthN, AuthZ, Guards, Status, Redis, or Schema to open a deep studio.',
+        'Route protection in hrms-admin and hrms_api: Vue beforeEach, localStorage JWT, Axios interceptors, Gin AuthN/AuthZ.',
     },
     { name: 'robots', content: 'noindex, nofollow, noarchive' },
   ],
@@ -17,6 +18,6 @@ useHead({
 
 <template>
   <InsightsReadingShell>
-    <HrmsKnowledgeGraph />
+    <HrmsDeepStudio :studio="hrmsGuardsStudio" />
   </InsightsReadingShell>
 </template>

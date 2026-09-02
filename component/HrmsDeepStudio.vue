@@ -5,6 +5,7 @@ import InsightsReadingToggle from '~/component/InsightsReadingToggle.vue';
 import NoteViews from '~/component/NoteViews.vue';
 import type { HrmsStudioBlock, HrmsStudioMeta } from '~/data/hrmsStudioShared';
 import { hrmsNeighborTopics } from '~/data/hrmsFirstPrinciples';
+import HrmsGuardsPlayground from '~/component/HrmsGuardsPlayground.vue';
 
 const props = defineProps<{ studio: HrmsStudioMeta }>();
 
@@ -118,7 +119,7 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
         <p class="st-lead">{{ chapter.lead }}</p>
 
         <div v-if="chapter.files?.length" class="st-files">
-          <p class="st-label">In hrms_api</p>
+          <p class="st-label">Source files</p>
           <ul>
             <li v-for="f in chapter.files" :key="f">{{ f }}</li>
           </ul>
@@ -173,6 +174,7 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', onFs));
               <li v-for="n in block.notes" :key="n" v-html="md(n)" />
             </ul>
           </article>
+          <HrmsGuardsPlayground v-else-if="block.type === 'playground' && block.id === 'guards'" />
         </template>
 
         <div class="st-pager">
