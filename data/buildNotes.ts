@@ -19,19 +19,19 @@ export const buildNotes: BuildNote[] = [
     slug: 'frontend-from-first-principle',
     title: 'Frontend From First Principle',
     summary:
-      'A 24-node map of how a frontend is actually built — picture, memory, the wire, and why the browser is hostile. State, security, performance, reuse, and middleware go deep.',
+      'A 26-node map of how a frontend is actually built — picture, memory, the wire, and why the browser is hostile. State, storage, WebSockets, security, performance, reuse, and middleware go deep.',
     tag: 'Personal Learning',
     date: '2026-08-31',
-    stack: ['State', 'Security', 'DOM', 'Fetch'],
+    stack: ['State', 'Storage', 'WebSocket', 'Security', 'DOM', 'Fetch'],
   },
   {
     slug: 'hrms',
     title: 'HRMS · First Principles',
     summary:
-      'Map-only nodes (Backend FP style). Click AuthN, AuthZ, Status, Redis, or Schema to open a deep studio extracted from hrms_api.',
+      'Map-only nodes (Backend FP style). Click AuthN, AuthZ, Guards, Status, Redis, or Schema to open a deep studio extracted from hrms_api + hrms-admin.',
     tag: 'Private review',
     date: '2026-08-27',
-    stack: ['AuthN', 'AuthZ', 'Redis', 'HTTP', 'ERD'],
+    stack: ['AuthN', 'AuthZ', 'Guards', 'JWT', 'Redis', 'HTTP', 'ERD'],
     draft: true,
   },
   {

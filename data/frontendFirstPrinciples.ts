@@ -22,6 +22,7 @@ export type LessonBlock =
   | { type: 'h3'; text: string }
   | { type: 'p'; text: string }
   | { type: 'ul'; items: string[] }
+  | { type: 'ol'; items: string[] }
   | { type: 'quote'; text: string }
   | { type: 'pre'; lines: string }
   | { type: 'table'; columns: string[]; rows: string[][] }
@@ -41,7 +42,7 @@ export interface LessonSection {
   blocks?: LessonBlock[];
 }
 
-export type StudioId = 'state' | 'security';
+export type StudioId = 'state' | 'security' | 'notice';
 
 export interface TopicNode {
   id: string;
@@ -93,7 +94,7 @@ export const clusters: Cluster[] = [
   {
     id: 'wire',
     label: 'The wire',
-    blurb: 'Talking to servers: fetch, cache, forms. The network tab is the real API.',
+    blurb: 'Talking to servers: fetch, sockets, cache, forms. The network tab is the real API.',
     x: 280,
     y: 680,
     rx: 260,
@@ -168,8 +169,8 @@ export const topics: TopicNode[] = [
             columns: ['Room', 'If you skip it', 'This map'],
             rows: [
               ['Picture', 'It looks broken. Or nobody can tab to the button.', '**2–5, 9**'],
-              ['Memory', 'The badge says 0 after you added to cart.', '**10–13 · State**'],
-              ['Wire', 'The page lies, or hangs, or double-charges.', '**14–16**'],
+              ['Memory', 'The badge says 0 after you added to cart.', '**10–13 · State**, **25 · Storage**'],
+              ['Wire', 'The page lies, or hangs, or double-charges.', '**14–16**, **26 · WebSocket**'],
               ['Lock', 'A comment steals the session. A hidden button is the admin panel.', '**17–19 · Security**'],
               ['Keep-alive', 'It ships, then it janks. The card has 40 props.', '**20 · Perf**, **23 · Reusable**, **24 · Middleware**'],
             ],
@@ -179,7 +180,7 @@ export const topics: TopicNode[] = [
       {
         heading: '3. How to walk this map',
         blocks: [
-          { type: 'p', text: 'Click **11 · State** and toggle the shop. Click **17 · Security** — play the wall, then [five pillars](https://youtu.be/kCRYqHPZVzQ) and [Dimma’s front / wire / back](https://youtu.be/-GfSbk_VqSk). Then **20 · Perf**, **23 · Reusable**, and **24 · Middleware**.' },
+          { type: 'p', text: 'Click **11 · State** and toggle the shop. Click **17 · Security** — play the wall, then [five pillars](https://youtu.be/kCRYqHPZVzQ) and [Dimma’s front / wire / back](https://youtu.be/-GfSbk_VqSk). Then **20 · Perf**, **23 · Reusable**, **24 · Middleware**, **25 · Storage**, and **26 · WebSocket** (the live-notice studio).' },
           {
             type: 'callout',
             lines: [
@@ -494,7 +495,7 @@ listeners.push(() => render(store.cart))`,
       {
         heading: '8. Persistence is a copy, not truth',
         blocks: [
-          { type: 'p', text: '`localStorage.setItem("cart", …)` makes a **copy on disk**. It is not the warehouse. It is also **readable by any JS on this origin** — which means XSS can read it. Tokens in storage are a **17 · Security** hole. A cart cache in storage is a product choice; a **session id** in storage is a mistake.' },
+          { type: 'p', text: '`localStorage.setItem("cart", …)` makes a **copy on disk**. It is not the warehouse. It is also **readable by any JS on this origin** — which means XSS can read it. Tokens in storage are a **17 · Security** hole. A cart cache in storage is a product choice; a **session id** in storage is a mistake. The three drawers — cookie, localStorage, sessionStorage — are **25 · Storage**. A live notice that must not nag twice in one tab is **sessionStorage**, and the push that delivers it is **26 · WebSocket**.' },
         ],
       },
       {
@@ -1248,7 +1249,7 @@ never 204 because the SPA omitted the button`,
         heading: '1. The name is literal — it runs in the middle',
         blocks: [
           { type: 'p', text: 'The best first-principles explainer is still the backend one, said out loud: [Why Every Developer Needs to Understand Middleware](https://www.youtube.com/watch?v=Lb-5ziwsqpc) (the airport metaphor). A request is a passenger. The handler is the flight. **Middleware is security, stamps, and the people who can send you home before you board.** `next()` means “this checkpoint is done.” No `next()` and no response means the passenger stands in the hallway forever.' },
-          { type: 'p', text: 'That is Express `function (req, res, next)`. It is also Vue Router `beforeEach`, Nuxt route middleware, Next.js `middleware.ts` at the edge, and an Axios / `$fetch` interceptor. Different runtimes. **Same shape.**' },
+          { type: 'p', text: 'That is Express `function (req, res, next)`. It is also Vue Router `beforeEach`, Nuxt route middleware, Next.js `middleware.ts` at the edge, and an Axios / `$fetch` interceptor. Different runtimes. **Same shape.** The HRMS specimen is **Guards Studio**: Vue `beforeEach` + Axios Bearer + Gin `AuthN` / `RequireResourcePermission`, with the JWT in **localStorage** (`auth_session`) — not a cookie. Open [HRMS · Guards](/insights/notes/hrms/guards).' },
           {
             type: 'pre',
             lines: `navigation / HTTP request
@@ -1330,6 +1331,358 @@ GET /api/invoices/17`,
       },
     ],
   },
+  {
+    id: 'storage',
+    n: 25,
+    title: 'Browser Storage: Cookie, localStorage, sessionStorage',
+    label: 'Storage',
+    cluster: 'memory',
+    x: 1320,
+    y: 300,
+    gist: 'Do not treat JWT, Session, Cookie, localStorage, and sessionStorage as five separate choices. They are three layers: token shape, server strategy, and storage location. The right drawer depends on lifetime, not fashion.',
+    studio: 'notice',
+    remember: [
+      'Cookie = browser sends automatically on every HTTP request. HttpOnly = JS cannot read it. Good for session ids.',
+      'localStorage = a locker in the building. Survives tab close and reboot. Theme, “don’t show tour again.”',
+      'sessionStorage = sticky note on this desk. Dies when the tab closes. Perfect for “already shown this popup this visit.”',
+    ],
+    sections: [
+      {
+        heading: '1. Before we start — three layers',
+        blocks: [
+          { type: 'p', text: 'People often ask, “Should we use Session or JWT?” or “Cookie or localStorage?” Those questions are not opposites. Think of it as three separate questions:' },
+          {
+            type: 'ol',
+            items: [
+              '**Token shape:** JWT (signed JSON) or opaque random string?',
+              '**Server strategy:** Does the server remember you (session) or does it only verify a token you carry (stateless)?',
+              '**Storage location:** Where does the browser keep the token? Cookie, localStorage, or sessionStorage?',
+            ],
+          },
+          { type: 'p', text: 'Real example: in an app with an announcement popup, an admin writes a new notice, the server pushes it over WebSocket, and the tab shows the popup. Where do we store “I already saw this”? The answer is a storage lesson, not a WebSocket lesson.' },
+        ],
+      },
+      {
+        heading: '2. Analogy for memory',
+        blocks: [
+          {
+            type: 'table',
+            columns: ['Drawer', 'Analogy', 'Lifetime', 'Sent with HTTP?'],
+            rows: [
+              ['**Cookie**', 'A stamp the bank gives you; you show it every visit', 'Until expiry or browser clears it', 'Yes — automatically'],
+              ['**localStorage**', 'A locker in the building', 'Until you removeItem or clear site data', 'No'],
+              ['**sessionStorage**', 'A sticky note on this desk', 'Until the tab closes', 'No'],
+            ],
+          },
+          {
+            type: 'ul',
+            items: [
+              '**Cookie** is good for session ids because the browser sends it automatically. HttpOnly flag means JavaScript cannot read it (XSS protection).',
+              '**localStorage** is good for theme, “don’t show the tour again,” cart cache — anything that should be remembered for a long time and is not secret.',
+              '**sessionStorage** is good for “work inside this tab” — draft form, or seen popup keys.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '3. Real example: announcement popup “seen” keys',
+        blocks: [
+          { type: 'p', text: 'We do not want the popup to show again every time the user navigates. Where do we put the key? Answer: **sessionStorage**.' },
+          { type: 'p', text: 'Why? Because “this visit” means **this tab**. If the user closes the tab and comes back tomorrow, it is a new visit; they can see the notice again. If we used localStorage, the same notice would stay hidden forever until an admin edits it.' },
+          {
+            type: 'pre',
+            lines: `// when the popup opens
+sessionStorage.setItem("notice_shown_keys", JSON.stringify([
+  "n_maintenance_2026-09-01T10:00:00Z"
+]))
+
+// Home → Settings in the same tab: still there, no second popup
+// Close tab → key is gone → next visit can show the popup again`,
+          },
+          { type: 'p', text: '**Key trick:** key = `id + updatedAt`. If the admin edits an old notice (same `id`), `updatedAt` becomes a new timestamp → new key → popup shows again. If you only store `id`, an edited notice would never re-appear.' },
+          {
+            type: 'callout',
+            lines: [
+              '**Socket delivers the list.** Storage remembers the seeing. Do not mix the two jobs.',
+              '**Logout clears the drawer.** A different user should not inherit “already seen.”',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '4. Cookie flags — for tokens in cookies',
+        blocks: [
+          { type: 'p', text: 'When putting an auth token in a cookie (for example a session id), keep these in mind:' },
+          {
+            type: 'ul',
+            items: [
+              '**HttpOnly** — `document.cookie` cannot read it. protects against XSS stealing the token.',
+              '**Secure** — HTTPS only.',
+              '**SameSite=Lax/Strict** — protects against CSRF by not sending the cookie on cross-site requests.',
+              '**Size** — cookie ~4KB; localStorage ~5MB. Do not dump a JSON cart into a cookie.',
+            ],
+          },
+          { type: 'p', text: 'In the app this studio simulates (the SPA), JWT is kept in **localStorage** and sent as `Authorization: Bearer`. That is not the safest pattern, but it is a common SPA trade. For production I would prefer HttpOnly cookie + refresh rotation.' },
+        ],
+      },
+      {
+        heading: '5. Interview Q&A',
+        blocks: [
+          {
+            type: 'h3',
+            text: 'Q1: Cookie vs localStorage vs sessionStorage?',
+          },
+          {
+            type: 'p',
+            text: 'A: Cookie rides every HTTP request automatically, ~4KB, can be HttpOnly/Secure. localStorage survives tab close, ~5MB, JS-readable. sessionStorage is tab-only, gone on close.',
+          },
+          {
+            type: 'h3',
+            text: 'Q2: Where should a JWT live?',
+          },
+          {
+            type: 'p',
+            text: 'A: Ideally in an HttpOnly Secure cookie or short-lived memory. localStorage is convenient for SPAs but XSS can steal it. We accept that trade only when the app stamps Bearer itself.',
+          },
+          {
+            type: 'h3',
+            text: 'Q3: Why use sessionStorage for “already seen” popup?',
+          },
+          {
+            type: 'p',
+            text: 'A: Because “seen this visit” means this tab. sessionStorage dies on close, so the next visit can show the notice again. localStorage would hide it forever until an edit.',
+          },
+          {
+            type: 'h3',
+            text: 'Q4: Why key = id + updatedAt?',
+          },
+          {
+            type: 'p',
+            text: 'A: Same id with a new updatedAt means the admin edited the notice. We want that edited version to pop again, so the key must include the timestamp.',
+          },
+        ],
+      },
+      {
+        heading: '6. 30-second summary',
+        blocks: [
+          {
+            type: 'callout',
+            lines: [
+              'Storage is about lifetime. Cookie = HTTP + server. localStorage = origin + tomorrow. sessionStorage = tab + now.',
+              'The popup “seen” key lives in sessionStorage because it is a per-tab, per-visit decision.',
+              'Key shape `id_updatedAt` lets an edited notice pop again.',
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'websocket',
+    n: 26,
+    title: 'WebSocket: Phone Call, Not Letter',
+    label: 'WebSocket',
+    cluster: 'wire',
+    x: 400,
+    y: 780,
+    gist: 'HTTP is a letter: you send, they reply, done. WebSocket is a phone call: the line stays open, either side can speak. Use it when waiting for the next poll would feel broken — live notice, chat, ticker.',
+    studio: 'notice',
+    remember: [
+      'HTTP = request → response → done. WebSocket = connect → many frames both ways → close.',
+      'Socket.IO adds event names, JSON, reconnect, namespaces. The body is still WebSocket frames.',
+      'Auth the handshake. No token → disconnect. `client.emit` answers one tab; `server.emit` broadcasts.',
+    ],
+    sections: [
+      {
+        heading: '1. Letter vs phone call',
+        blocks: [
+          { type: 'p', text: 'Think about asking the server for information:' },
+          {
+            type: 'ul',
+            items: [
+              '**HTTP (fetch)** = you knock, they hand you a note, they close the door. To get a new notice you must knock again.',
+              '**WebSocket** = they leave the walkie-talkie on. Either side can press the button anytime.',
+            ],
+          },
+          {
+            type: 'table',
+            columns: ['', 'HTTP', 'WebSocket'],
+            rows: [
+              ['Shape', 'Request → response → done', 'Connect → many messages → close'],
+              ['Who speaks first', 'Client every time', 'Either side after connect'],
+              ['Best for', 'Load page, submit form, REST', 'Chat, live notice, price ticker'],
+              ['New data', 'Poll or refresh', 'Push from server instantly'],
+            ],
+          },
+          { type: 'p', text: 'Why not poll? Polling every 2 seconds wastes battery, wastes server CPU, and you are still up to 2 seconds late. WebSocket pushes the instant the admin clicks publish.' },
+        ],
+      },
+      {
+        heading: '2. Real example: admin publishes → every tab pops',
+        blocks: [
+          { type: 'p', text: 'The story behind this studio:' },
+          {
+            type: 'ol',
+            items: [
+              'Admin writes a new notice and clicks Save.',
+              'Server writes to database, then calls `noticeGateway.broadcastList()`.',
+              'Gateway does `server.emit("notice:list", { data })` on namespace `/event`.',
+              'Every connected tab receives the event and updates the store.',
+              'The tab checks sessionStorage: is this `id_updatedAt` already seen? If not, show the popup.',
+            ],
+          },
+          {
+            type: 'pre',
+            lines: `// Frontend: subscribe once
+socket.on("notice:list", ({ data }) => {
+  store.setNotices(data)
+  // popup policy lives in Storage (25), not the socket
+})
+
+// Backend: broadcast after write
+async broadcastList() {
+  const rows = await notices.findActive()
+  this.server.emit("notice:list", { data: rows })
+}`,
+          },
+          { type: 'p', text: 'Remember: socket delivers the list; sessionStorage decides whether to show the popup. Two jobs, two places.' },
+        ],
+      },
+      {
+        heading: '3. Socket.IO = clothes on the pipe',
+        blocks: [
+          { type: 'p', text: 'We can use raw `new WebSocket(url)`, but Socket.IO gives us event names, auto-reconnect, namespaces, and JSON parsing. Namespace `/event` is like a path on the same server.' },
+          {
+            type: 'pre',
+            lines: `const socket = io(apiBase + "/event", {
+  transports: ["websocket"],
+  reconnection: true,
+  auth: { token: accessToken },
+})
+
+socket.on("connect", () => { /* pipe is up */ })
+socket.emit("notice:list")              // ask for current list
+socket.on("notice:list", ({ data }) => { // listen for updates
+  store.setNotices(data)
+})`,
+          },
+          { type: 'p', text: 'For a cold load (first paint), we still call `GET /notices` over HTTP. WebSocket is for later — when the admin publishes next.' },
+        ],
+      },
+      {
+        heading: '4. Backend: open the pipe, check the token',
+        blocks: [
+          { type: 'p', text: 'Opening a WebSocket is also an AuthN door. No token → emit error → disconnect.' },
+          {
+            type: 'pre',
+            lines: `@WebSocketGateway({ namespace: "/event" })
+export class InitGateway implements OnGatewayConnection {
+  async handleConnection(client: Socket) {
+    const token = client.handshake.auth?.token
+    if (!token) {
+      client.emit("connection_error", { code: "TOKEN_REQUIRED" })
+      client.disconnect(true)
+      return
+    }
+    const payload = await tokenService.verify(token)
+    if (!payload) {
+      client.disconnect(true)
+      return
+    }
+    client.data.userId = payload.sub
+  }
+}`,
+          },
+          { type: 'p', text: 'CORS / cookie flags do not protect WebSocket. It is another door. You must still authenticate on connect and authorize on every emit.' },
+        ],
+      },
+      {
+        heading: '5. Backend: client.emit vs server.emit',
+        blocks: [
+          { type: 'p', text: 'These two words are easy to confuse:' },
+          {
+            type: 'ul',
+            items: [
+              '**`client.emit(event, payload)`** — reply to **this** socket only. Use when a tab asks `notice:list` to refresh its own copy.',
+              '**`server.emit(event, payload)`** — broadcast to **every** socket on the namespace. Use when admin writes, deletes, or edits a notice.',
+            ],
+          },
+          { type: 'p', text: 'Do both: snapshot on ask, megaphone on write. If you only broadcast, a tab that connects late sees nothing until the next edit. If you only reply on ask, other tabs stay stale when admin writes.' },
+          {
+            type: 'kid',
+            items: [
+              'One kid asks “what is on the board?” — show that kid only.',
+              'The teacher changes the board — shout to the whole class.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '6. What NOT to put on WebSocket',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Form submission** — POST already works. Do not invent `form:submit` on the socket unless you want two APIs for one write.',
+              '**Private messages** — a namespace broadcast goes to everyone. Send to a specific user socket or a room after AuthZ.',
+              '**Big payloads** — images/videos stay as URLs. The pipe is not a CDN.',
+              '**The only source of truth** — the database is truth. The socket emit is just a hint to refresh.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: '7. Interview Q&A',
+        blocks: [
+          {
+            type: 'h3',
+            text: 'Q1: HTTP vs WebSocket?',
+          },
+          {
+            type: 'p',
+            text: 'A: HTTP is request/response, stateless. WebSocket is a persistent duplex connection; either side can push messages after one handshake.',
+          },
+          {
+            type: 'h3',
+            text: 'Q2: When do you use WebSocket?',
+          },
+          {
+            type: 'p',
+            text: 'A: When waiting for the next poll would make the product feel dead: live notices, chat, price tickers, presence.',
+          },
+          {
+            type: 'h3',
+            text: 'Q3: How do you authenticate WebSocket?',
+          },
+          {
+            type: 'p',
+            text: 'A: On the handshake — token in `auth` or cookie. No token → disconnect. Never let an anonymous socket sit on a namespace that later broadcasts user data.',
+          },
+          {
+            type: 'h3',
+            text: 'Q4: client.emit vs server.emit?',
+          },
+          {
+            type: 'p',
+            text: 'A: `client.emit` answers the asking socket. `server.emit` broadcasts to all sockets on the namespace. Use both: snapshot on ask, broadcast on write.',
+          },
+        ],
+      },
+      {
+        heading: '8. 30-second summary',
+        blocks: [
+          {
+            type: 'callout',
+            lines: [
+              'HTTP = letter. WebSocket = phone call. Use the phone when waiting feels broken.',
+              'Auth the handshake. Snapshot on ask. Broadcast on write.',
+              'Socket delivers the list; Storage decides whether to show the popup.',
+            ],
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const graphEdges: GraphEdge[] = [
@@ -1361,6 +1714,11 @@ export const graphEdges: GraphEdge[] = [
   { from: 'bundles', to: 'perf' },
   { from: 'testing', to: 'state' },
   { from: 'testing', to: 'security' },
+  { from: 'state', to: 'storage' },
+  { from: 'storage', to: 'tokens' },
+  { from: 'storage', to: 'websocket' },
+  { from: 'fetch', to: 'websocket' },
+  { from: 'websocket', to: 'state' },
 ];
 
 export function topicById(id: string) {
