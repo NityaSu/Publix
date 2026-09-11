@@ -14,10 +14,25 @@ export interface Project {
   images: string[];
   github?: string;
   demo?: string;
-  cover?: 'autowallet';
+  cover?: 'autowallet' | 'supersynapse';
 }
 
 export const projects: Project[] = [
+  {
+    id: 'supersynapse',
+    title: 'Supersynapse',
+    tagline: 'Your second brain',
+    category: 'AI / Memory',
+    description:
+      'Save notes by space, search them with keyword plus semantic match, and ask questions over what you stored. Documents get chunked, embedded, and dreamed into a graph. Hosted on Vercel, Supabase, and Gemini.',
+    year: '2026',
+    status: 'shipped',
+    stack: ['Next.js', 'Supabase', 'Gemini', 'pgvector'],
+    images: [],
+    github: 'https://github.com/NityaSu/supersynapse',
+    demo: 'https://supersynapse.vercel.app',
+    cover: 'supersynapse',
+  },
   {
     id: 'autowallet',
     title: 'AutoWallet',
