@@ -16,6 +16,15 @@ export interface BuildNote {
  */
 export const buildNotes: BuildNote[] = [
   {
+    slug: 'git-move',
+    title: 'How moving code from X to Y works',
+    summary:
+      'Each environment runs a git branch. Pick a move, see every command at once, and watch the merge travel from develop to staging to main.',
+    tag: 'Personal Learning',
+    date: '2026-09-09',
+    stack: ['Git', 'Branches', 'Deploy'],
+  },
+  {
     slug: 'frontend-from-first-principle',
     title: 'Frontend From First Principle',
     summary:
