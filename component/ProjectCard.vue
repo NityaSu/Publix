@@ -30,7 +30,7 @@ const closeLightbox = () => {
 
 const coverClass = computed(() =>
   props.project.cover === 'supersynapse'
-    ? 'aspect-video flex items-center justify-center px-3 py-3 bg-[radial-gradient(700px_220px_at_80%_-10%,rgba(255,102,0,0.22),transparent_50%),linear-gradient(165deg,#1c1612_0%,#0c0a09_70%)]'
+    ? 'aspect-video w-full overflow-hidden bg-[#fafaf8]'
     : 'aspect-video flex items-center justify-center px-[18px] py-4 bg-[radial-gradient(700px_220px_at_80%_-10%,rgba(252,98,3,0.28),transparent_50%),linear-gradient(165deg,#2a1a10_0%,#140e0a_70%)]',
 );
 
