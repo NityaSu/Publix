@@ -25,10 +25,6 @@ const grain =
       :style="{ backgroundImage: grain }"
       aria-hidden="true"
     />
-    <div class="absolute -top-[9px] left-[18px] z-10 size-[18px] rounded-full bg-[#140e0a]" aria-hidden="true" />
-    <div class="absolute -top-[9px] right-[18px] z-10 size-[18px] rounded-full bg-[#140e0a]" aria-hidden="true" />
-    <div class="absolute -bottom-[9px] left-[18px] z-10 size-[18px] rounded-full bg-[#140e0a]" aria-hidden="true" />
-    <div class="absolute -bottom-[9px] right-[18px] z-10 size-[18px] rounded-full bg-[#140e0a]" aria-hidden="true" />
     <div
       class="pointer-events-none absolute bottom-4 right-[52px] top-4 z-[4] border-l-[1.5px] border-dashed border-[rgba(45,24,14,0.08)]"
       aria-hidden="true"
