@@ -83,7 +83,7 @@ export const projects: Project[] = [
       mediaUrl('images/projects/od3.jpg'),
       mediaUrl('images/projects/od4.jpg'),
     ],
-    github: 'https://github.com/nityasuon/semi-supervised-object-detection',
+    github: 'https://github.com/NityaSu/nitya-vision',
   },
   {
     id: 'movie-recommendation',
