@@ -1,6 +1,57 @@
 <script setup lang="ts">
 const grain =
   "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+
+function finder(ox: number, oy: number): Array<[number, number]> {
+  const cells: Array<[number, number]> = [];
+  for (let y = 0; y < 7; y += 1) {
+    for (let x = 0; x < 7; x += 1) {
+      const edge = x === 0 || y === 0 || x === 6 || y === 6;
+      const core = x >= 2 && x <= 4 && y >= 2 && y <= 4;
+      if (edge || core) cells.push([ox + x, oy + y]);
+    }
+  }
+  return cells;
+}
+
+const qrModules: Array<[number, number]> = [
+  ...finder(0, 0),
+  ...finder(14, 0),
+  ...finder(0, 14),
+  ...([8, 10, 12, 16, 18] as const).flatMap((x) => [[x, 6]] as Array<[number, number]>),
+  ...([8, 10, 12, 16, 18] as const).flatMap((y) => [[6, y]] as Array<[number, number]>),
+  [9, 9],
+  [10, 9],
+  [11, 9],
+  [9, 11],
+  [11, 11],
+  [10, 12],
+  [8, 10],
+  [12, 10],
+  [9, 7],
+  [11, 7],
+  [16, 9],
+  [18, 10],
+  [15, 11],
+  [17, 12],
+  [19, 13],
+  [9, 16],
+  [10, 18],
+  [12, 15],
+  [12, 17],
+  [13, 19],
+  [8, 4],
+  [10, 2],
+  [12, 3],
+  [4, 8],
+  [2, 10],
+  [3, 12],
+  [14, 9],
+  [16, 16],
+  [18, 18],
+  [15, 19],
+  [19, 15],
+];
 </script>
 
 <template>
@@ -51,10 +102,16 @@ const grain =
           </svg>
           <span class="text-[8px] font-extrabold uppercase tracking-[2.4px] opacity-60">AutoWallet</span>
         </div>
-        <div class="flex items-center gap-[5px] rounded-[20px] border border-[rgba(45,24,14,0.12)] bg-[rgba(45,24,14,0.06)] px-2 py-[3px]">
-          <span class="size-[5px] rounded-full bg-[#3cb371] shadow-[0_0_5px_rgba(60,179,113,0.5)]" />
-          <span class="text-[8px] font-bold uppercase not-italic tracking-[0.8px] opacity-75">Active</span>
-        </div>
+        <svg
+          class="size-7 shrink-0 rounded-[2px] bg-[rgba(255,248,238,0.55)] p-[2px]"
+          viewBox="0 0 21 21"
+          aria-label="QR code"
+        >
+          <rect width="21" height="21" fill="rgba(255,248,238,0.2)" />
+          <g fill="#2d1810">
+            <rect v-for="m in qrModules" :key="`${m[0]}-${m[1]}`" :x="m[0]" :y="m[1]" width="1" height="1" />
+          </g>
+        </svg>
       </div>
 
       <div>
@@ -63,9 +120,9 @@ const grain =
           Nitya<br />Suon
         </h2>
         <p class="mt-1 flex items-center gap-1.5 text-[10px]">
-          <b class="font-bold opacity-70">Research Agent</b>
+          <b class="font-bold opacity-70">Booking Agent</b>
           <span class="opacity-35">·</span>
-          <code class="font-mono text-[9px] opacity-45">research-agent.pay</code>
+          <code class="font-mono text-[9px] opacity-45">booking-agent.pay</code>
         </p>
       </div>
 
