@@ -48,7 +48,6 @@ const navLinks: NavLink[] = [
     ],
   },
   { label: 'Projects', type: 'route', to: '/projects' },
-  { label: 'Thesis', type: 'route', to: '/thesis' },
   { label: 'Contact', type: 'route', to: '/contact' },
 ];
 

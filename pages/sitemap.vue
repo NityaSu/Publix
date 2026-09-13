@@ -9,7 +9,6 @@ const links = [
   { label: 'Insights', to: '/insights' },
   { label: 'Build Notes', to: '/insights/notes' },
   { label: 'Projects', to: '/projects' },
-  { label: 'Thesis', to: '/thesis' },
   { label: 'Contact', to: '/contact' },
   { label: 'Legal', to: '/legal' },
   { label: 'Privacy Policy', to: '/privacy' },
