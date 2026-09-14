@@ -7,11 +7,14 @@ interface Props {
   mode?: 'normal' | 'sleepy';
   /** 'v1' = blue, 'v2' = coral-red */
   version?: 'v1' | 'v2';
+  /** 'sm' sits in a page header; 'md' is the original full size. */
+  size?: 'sm' | 'md';
 }
 
 const props = withDefaults(defineProps<Props>(), {
   mode: 'normal',
   version: 'v1',
+  size: 'md',
 });
 
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -24,6 +27,13 @@ const isV2 = computed(() => props.version === 'v2');
 </script>
 
 <template>
+  <div
+    class="project-bot-frame"
+    :class="{
+      'is-sm': props.size === 'sm',
+      'is-reduced': isReduced,
+    }"
+  >
   <div
     class="project-bot"
     :class="{
@@ -61,9 +71,30 @@ const isV2 = computed(() => props.version === 'v2');
       <div class="leg leg-right" />
     </div>
   </div>
+  </div>
 </template>
 
 <style scoped>
+.project-bot-frame {
+  width: 110px;
+  height: 100px;
+  flex-shrink: 0;
+}
+
+.project-bot-frame.is-sm {
+  width: 66px;
+  height: 60px;
+}
+
+.project-bot-frame.is-sm .project-bot {
+  transform-origin: top left;
+  transform: scale(0.6);
+}
+
+.project-bot-frame:not(.is-reduced) {
+  animation: botFloat 4s ease-in-out infinite;
+}
+
 .project-bot {
   position: relative;
   width: 110px;
@@ -72,11 +103,6 @@ const isV2 = computed(() => props.version === 'v2');
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-/* Gentle float on normal mode */
-.project-bot:not(.is-reduced) {
-  animation: botFloat 4s ease-in-out infinite;
 }
 
 @keyframes botFloat {
@@ -329,6 +355,7 @@ const isV2 = computed(() => props.version === 'v2');
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .project-bot-frame,
   .project-bot {
     animation: none;
   }
