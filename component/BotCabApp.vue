@@ -291,7 +291,7 @@ onUnmounted(() => {
             <rect x="230" y="280" width="80" height="45" rx="6" />
           </g>
           <rect x="480" y="140" width="100" height="130" rx="10" fill="color-mix(in srgb, var(--bc-pos) 9%, transparent)" />
-          <text x="530" y="210" text-anchor="middle" font-size="11" fill="var(--bc-ter)">Wat Phnom</text>
+          <text x="530" y="210" text-anchor="middle" font-size="11" font-weight="700" fill="var(--bc-ter)">Wat Phnom</text>
           <path
             ref="routeEl"
             d="M140 320 C 200 320, 210 260, 260 250 S 330 230, 350 190 S 420 150, 470 110"
@@ -312,7 +312,7 @@ onUnmounted(() => {
           </g>
           <g :opacity="showDrop ? 1 : 0">
             <circle cx="470" cy="110" r="11" fill="var(--bc-pri)" />
-            <text x="470" y="115" text-anchor="middle" font-size="12" fill="var(--bc-ink)" font-weight="500">B</text>
+            <text x="470" y="115" text-anchor="middle" font-size="12" fill="var(--bc-ink)" font-weight="700">B</text>
           </g>
           <g ref="carEl" :opacity="carVisible ? 1 : 0">
             <rect x="-14" y="-9" width="28" height="18" rx="6" fill="var(--bc-pri)" />
@@ -488,7 +488,7 @@ onUnmounted(() => {
               <div class="bc-request-top">
                 <span class="bc-product-name">New request</span>
                 <div class="bc-right">
-                  <div class="bc-product-price" style="font-size: 16px; font-weight: 500">៛9,600</div>
+                  <div class="bc-product-price" style="font-size: 16px; font-weight: 700">៛9,600</div>
                   <div class="bc-meta">$2.40</div>
                 </div>
               </div>
@@ -524,7 +524,7 @@ onUnmounted(() => {
   max-width: 960px;
   color: var(--bc-pri);
   font-family: var(--bc-font);
-  font-weight: 400;
+  font-weight: 700;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -566,6 +566,7 @@ onUnmounted(() => {
 .bc-chip-muted {
   background: color-mix(in srgb, var(--bc-q) 15%, transparent);
   color: var(--bc-sec);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -594,7 +595,7 @@ onUnmounted(() => {
   color: var(--bc-sec);
   font: inherit;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -630,6 +631,7 @@ onUnmounted(() => {
   left: 10px;
   background: color-mix(in srgb, var(--bc-q) 18%, transparent);
   color: var(--bc-sec);
+  font-weight: 700;
 }
 
 .bc-dot,
@@ -661,6 +663,7 @@ onUnmounted(() => {
   border-radius: 6px;
   font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
   font-size: 11px;
+  font-weight: 700;
   color: var(--bc-ter);
   background: color-mix(in srgb, var(--bc-q) 15%, transparent);
 }
@@ -680,17 +683,18 @@ onUnmounted(() => {
 .bc-hero {
   margin-bottom: 12px;
   font-size: 20px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .bc-title {
   margin-bottom: 2px;
   font-size: 17px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .bc-meta {
   font-size: 12px;
+  font-weight: 700;
   color: var(--bc-ter);
 }
 
@@ -736,7 +740,7 @@ onUnmounted(() => {
 .bc-row-title {
   display: block;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .bc-fare-row {
@@ -749,7 +753,7 @@ onUnmounted(() => {
 
 .bc-fare {
   font-size: 32px;
-  font-weight: 500;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -774,7 +778,7 @@ onUnmounted(() => {
 
 .bc-product-name {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .bc-right {
@@ -793,7 +797,7 @@ onUnmounted(() => {
   border-radius: 10px;
   font: inherit;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -823,7 +827,7 @@ onUnmounted(() => {
 }
 
 .bc-finding .bc-title {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .bc-find-meta {
@@ -848,7 +852,7 @@ onUnmounted(() => {
   border-radius: 999px;
   background: color-mix(in srgb, var(--bc-q) 18%, transparent);
   font-size: 17px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .bc-stars {
@@ -940,7 +944,7 @@ onUnmounted(() => {
   margin-top: 4px;
   padding-top: 8px;
   border-top: 1px dashed color-mix(in srgb, var(--bc-q) 35%, transparent);
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .bc-driver-head {
