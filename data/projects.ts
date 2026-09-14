@@ -1,6 +1,6 @@
 import { mediaUrl } from '~/utils/media';
 
-export type ProjectStatus = 'shipped' | 'lost' | 'placeholder';
+export type ProjectStatus = 'shipped' | 'in_progress' | 'lost' | 'placeholder';
 
 export interface Project {
   id: string;
@@ -14,10 +14,23 @@ export interface Project {
   images: string[];
   github?: string;
   demo?: string;
-  cover?: 'autowallet' | 'supersynapse';
+  cover?: 'autowallet' | 'supersynapse' | 'botcab';
 }
 
 export const projects: Project[] = [
+  {
+    id: 'botcab',
+    title: 'BotCab',
+    tagline: 'Ride hailing for Phnom Penh',
+    category: 'Mobility',
+    description:
+      'Rider and driver flow for a local cab app: live map, fare in riel, surge, and match states. Built as a UI prototype first.',
+    year: '2026',
+    status: 'in_progress',
+    stack: ['Vue', 'Nuxt', 'Redis', 'WebSocket'],
+    images: [],
+    cover: 'botcab',
+  },
   {
     id: 'supersynapse',
     title: 'Supersynapse',

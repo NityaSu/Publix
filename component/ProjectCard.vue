@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { Github, ExternalLink, AlertCircle, Clock } from 'lucide-vue-next';
+import { computed, onUnmounted, ref, watch } from 'vue';
+import { Github, ExternalLink, AlertCircle, Clock, LoaderCircle, Play } from 'lucide-vue-next';
 import type { Project } from '~/data/projects';
 import ImageCarousel from '~/component/ImageCarousel.vue';
 import AutoWalletTicketThumb from '~/component/AutoWalletTicketThumb.vue';
 import SuperSynapseThumb from '~/component/SuperSynapseThumb.vue';
+import BotCabThumb from '~/component/BotCabThumb.vue';
+import BotCabApp from '~/component/BotCabApp.vue';
 
 interface Props {
   project: Project;
@@ -15,8 +17,10 @@ const props = defineProps<Props>();
 const activeImage = ref(0);
 const showLightbox = ref(false);
 const lightboxIndex = ref(0);
+const showBotCab = ref(false);
 
 const isInternalDemo = computed(() => !!props.project.demo?.startsWith('/'));
+const isBotCab = computed(() => props.project.cover === 'botcab');
 
 const openLightbox = (index: number) => {
   if (props.project.images.length === 0) return;
@@ -28,14 +32,44 @@ const closeLightbox = () => {
   showLightbox.value = false;
 };
 
-const coverClass = computed(() =>
-  props.project.cover === 'supersynapse'
-    ? 'aspect-video w-full overflow-hidden bg-[#fafaf8]'
-    : 'relative aspect-video overflow-hidden bg-[#e9e6df]',
-);
+const openBotCab = () => {
+  showBotCab.value = true;
+};
+
+const closeBotCab = () => {
+  showBotCab.value = false;
+};
+
+const onEscape = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') closeBotCab();
+};
+
+watch(showBotCab, (open) => {
+  if (!import.meta.client) return;
+  document.body.style.overflow = open ? 'hidden' : '';
+  if (open) window.addEventListener('keydown', onEscape);
+  else window.removeEventListener('keydown', onEscape);
+});
+
+onUnmounted(() => {
+  if (!import.meta.client) return;
+  document.body.style.overflow = '';
+  window.removeEventListener('keydown', onEscape);
+});
+
+const coverClass = computed(() => {
+  if (props.project.cover === 'supersynapse') {
+    return 'aspect-video w-full overflow-hidden bg-[#fafaf8]';
+  }
+  if (props.project.cover === 'botcab') {
+    return 'relative aspect-video overflow-hidden bg-[#0c0e13]';
+  }
+  return 'relative aspect-video overflow-hidden bg-[#e9e6df]';
+});
 
 const statusLabel = () => {
   if (props.project.status === 'placeholder') return { text: 'Coming Soon', icon: Clock };
+  if (props.project.status === 'in_progress') return { text: 'In Progress', icon: LoaderCircle };
   if (props.project.status === 'lost') return { text: 'Code Unavailable', icon: AlertCircle };
   return { text: 'Shipped', icon: null };
 };
@@ -47,7 +81,12 @@ const statusLabel = () => {
   >
     <!-- Status badge -->
     <div class="absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[10px] uppercase tracking-wider text-white/80 backdrop-blur-sm">
-      <component :is="statusLabel().icon" v-if="statusLabel().icon" :size="12" />
+      <component
+        :is="statusLabel().icon"
+        v-if="statusLabel().icon"
+        :size="12"
+        :class="{ 'animate-spin': project.status === 'in_progress' }"
+      />
       <span>{{ statusLabel().text }}</span>
     </div>
 
@@ -64,6 +103,15 @@ const statusLabel = () => {
       image-class="h-full"
       @select="openLightbox"
     />
+    <button
+      v-else-if="isBotCab"
+      type="button"
+      :class="[coverClass, 'cursor-pointer text-left transition-[filter] duration-200 hover:brightness-[1.08]']"
+      aria-label="Open BotCab demo"
+      @click="openBotCab"
+    >
+      <BotCabThumb />
+    </button>
     <a
       v-else-if="project.cover && project.demo"
       :href="project.demo"
@@ -118,6 +166,15 @@ const statusLabel = () => {
 
       <!-- Links -->
       <div class="mt-5 flex flex-wrap items-center gap-3">
+        <button
+          v-if="isBotCab"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-white hover:bg-accent/20 hover:text-accent transition-colors"
+          @click="openBotCab"
+        >
+          <Play :size="14" />
+          Try demo
+        </button>
         <a
           v-if="project.github"
           :href="project.github"
@@ -148,6 +205,29 @@ const statusLabel = () => {
         </a>
       </div>
     </div>
+
+    <Teleport v-if="isBotCab" to="body">
+      <div
+        v-if="showBotCab"
+        class="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4 sm:p-6"
+        @click.self="closeBotCab"
+      >
+        <button
+          type="button"
+          class="absolute right-4 top-4 z-[90] h-11 w-11 rounded-full border border-white/20 bg-black/50 text-white flex items-center justify-center hover:bg-black/70 hover:border-accent/50 transition-colors"
+          aria-label="Close BotCab demo"
+          @click="closeBotCab"
+        >
+          ✕
+        </button>
+        <div
+          class="max-h-[90vh] w-full max-w-[960px] overflow-auto rounded-2xl border border-white/10 bg-[#0c0e13] p-4 sm:p-6"
+          @click.stop
+        >
+          <BotCabApp />
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Lightbox -->
     <Teleport to="body">
