@@ -169,9 +169,9 @@
 }
 
 .bc-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
   background: var(--bc-pos);
 }
 

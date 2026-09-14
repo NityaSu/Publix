@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 
+useHead({
+  link: [
+    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+    {
+      rel: 'stylesheet',
+      href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+    },
+  ],
+});
+
 type Mode = 'rider' | 'driver';
 type State =
   | 'IDLE'
@@ -249,7 +260,7 @@ onUnmounted(() => {
           <circle cx="16.5" cy="17" r="1.6" />
           <path d="M9.5 7.2l-1 3.3h7l-1-3.3" />
         </svg>
-        BotCab
+        Botcab
       </div>
       <div class="bc-spacer" />
       <div class="bc-chip bc-chip-muted">{{ pill }}</div>
@@ -366,10 +377,13 @@ onUnmounted(() => {
             <button type="button" class="bc-btn bc-btn-ghost" @click="go('IDLE')">Back</button>
           </div>
 
-          <div v-else-if="s === 'FINDING'" class="bc-fade bc-center">
-            <div class="bc-spin" />
+          <div v-else-if="s === 'FINDING'" class="bc-fade bc-center bc-finding">
+            <div class="bc-steer" aria-hidden="true" />
             <div class="bc-title">Finding your driver…</div>
-            <div class="bc-meta">GEOSEARCH radius expanding: 300 m → 500 m → 1 km</div>
+            <div class="bc-meta bc-find-meta">
+              GEOSEARCH radius expanding: 300 m → 500 m
+              <br />→ 1 km
+            </div>
           </div>
 
           <div v-else-if="s === 'MATCHED'" class="bc-fade">
@@ -496,7 +510,7 @@ onUnmounted(() => {
 
 <style scoped>
 .botcab {
-  --bc-font: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --bc-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --bc-pri: #e9ebf1;
   --bc-sec: #a3a9b8;
   --bc-ter: #6d7486;
@@ -510,6 +524,13 @@ onUnmounted(() => {
   max-width: 960px;
   color: var(--bc-pri);
   font-family: var(--bc-font);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+.botcab button,
+.botcab input {
+  font-family: inherit;
 }
 
 .bc-head {
@@ -525,7 +546,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 20px;
-  font-weight: 500;
+  font-weight: 900;
 }
 
 .bc-spacer {
@@ -621,9 +642,10 @@ onUnmounted(() => {
 }
 
 .bc-map-live .bc-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   margin: 0;
+  border-radius: 1px;
 }
 
 .bc-pin {
@@ -795,13 +817,24 @@ onUnmounted(() => {
   text-align: center;
 }
 
-.bc-spin {
-  width: 56px;
-  height: 56px;
+.bc-finding {
+  padding: 32px 16px;
+}
+
+.bc-finding .bc-title {
+  font-weight: 600;
+}
+
+.bc-find-meta {
+  line-height: 1.55;
+}
+
+.bc-steer {
+  width: 52px;
+  height: 52px;
   margin: 0 auto 16px;
-  border: 3px solid color-mix(in srgb, var(--bc-q) 30%, transparent);
-  border-top-color: var(--bc-pri);
-  border-radius: 999px;
+  border: 3.5px solid var(--bc-pri);
+  border-radius: 12px;
   animation: bc-spin 1s linear infinite;
 }
 
