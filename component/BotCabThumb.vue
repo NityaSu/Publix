@@ -9,6 +9,24 @@
       }"
     >
       <div class="bc">
+        <header class="bc-head">
+          <div class="bc-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 16v-2.5L6.2 8.5A2 2 0 0 1 8.1 7.2h7.8a2 2 0 0 1 1.9 1.3L20 13.5V16" />
+              <circle cx="7.5" cy="17" r="1.6" />
+              <circle cx="16.5" cy="17" r="1.6" />
+              <path d="M9.5 7.2l-1 3.3h7l-1-3.3" />
+            </svg>
+            BotCab
+          </div>
+          <div class="bc-spacer" />
+          <div class="bc-chip bc-chip-muted">REQUESTED</div>
+          <div class="bc-tabs">
+            <span class="bc-tab is-on">Rider</span>
+            <span class="bc-tab">Driver</span>
+          </div>
+        </header>
+
         <div class="bc-body">
           <div class="bc-map-wrap">
             <svg viewBox="0 0 600 400" class="bc-map">
@@ -109,12 +127,54 @@
   --bc-ink: #101216;
   width: 960px;
   height: 540px;
-  padding: 18px;
+  padding: 16px 18px 18px;
   color: var(--bc-pri);
   font-family: var(--bc-font);
   background: #0c0e13;
   transform: scale(calc(100cqw / 960px));
   transform-origin: top left;
+  display: flex;
+  flex-direction: column;
+}
+
+.bc-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.bc-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #06c167;
+}
+
+.bc-spacer {
+  flex: 1;
+}
+
+.bc-tabs {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--bc-q) 35%, transparent);
+  border-radius: 10px;
+}
+
+.bc-tab {
+  padding: 8px 14px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--bc-sec);
+}
+
+.bc-tab.is-on {
+  background: var(--bc-pri);
+  color: var(--bc-ink);
 }
 
 .bc-chip {
@@ -141,7 +201,8 @@
   display: flex;
   align-items: stretch;
   gap: 16px;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .bc-map-wrap {

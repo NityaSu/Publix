@@ -547,6 +547,7 @@ onUnmounted(() => {
   gap: 8px;
   font-size: 20px;
   font-weight: 900;
+  color: #06c167;
 }
 
 .bc-spacer {
