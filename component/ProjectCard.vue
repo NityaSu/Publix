@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
-import { Github, ExternalLink, AlertCircle, Clock, LoaderCircle, Play } from 'lucide-vue-next';
+import { Github, ExternalLink, Clock, Play } from 'lucide-vue-next';
 import type { Project } from '~/data/projects';
 import ImageCarousel from '~/component/ImageCarousel.vue';
 import AutoWalletTicketThumb from '~/component/AutoWalletTicketThumb.vue';
@@ -67,29 +67,18 @@ const coverClass = computed(() => {
   return 'relative aspect-video overflow-hidden bg-[#e9e6df]';
 });
 
-const statusLabel = () => {
-  if (props.project.status === 'placeholder') return { text: 'Coming Soon', icon: Clock };
-  if (props.project.status === 'in_progress') return { text: 'In Progress', icon: LoaderCircle };
-  if (props.project.status === 'lost') return { text: 'Code Unavailable', icon: AlertCircle };
-  return { text: 'Shipped', icon: null };
-};
+const statusLabel = computed(() => {
+  if (props.project.status === 'placeholder') return 'Coming Soon';
+  if (props.project.status === 'in_progress') return 'In Progress';
+  if (props.project.status === 'lost') return 'Code Unavailable';
+  return 'Shipped';
+});
 </script>
 
 <template>
   <div
     class="group relative flex flex-col rounded-2xl border border-white/10 bg-[#151515] overflow-hidden transition-all duration-300 hover:border-accent/40 hover:shadow-glow-sm"
   >
-    <!-- Status badge -->
-    <div class="absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[10px] uppercase tracking-wider text-white/80 backdrop-blur-sm">
-      <component
-        :is="statusLabel().icon"
-        v-if="statusLabel().icon"
-        :size="12"
-        :class="{ 'animate-spin': project.status === 'in_progress' }"
-      />
-      <span>{{ statusLabel().text }}</span>
-    </div>
-
     <!-- Image gallery / placeholder -->
     <ImageCarousel
       v-if="project.images.length > 0"
@@ -142,7 +131,9 @@ const statusLabel = () => {
     <div class="flex flex-1 flex-col p-5 md:p-6">
       <div class="flex items-center justify-between gap-3">
         <span class="text-[10px] uppercase tracking-[0.2em] text-accent">{{ project.category }}</span>
-        <span class="text-[10px] uppercase tracking-wider text-white/40">{{ project.year }}</span>
+        <span class="text-[10px] uppercase tracking-wider text-white/40">
+          {{ statusLabel }} · {{ project.year }}
+        </span>
       </div>
 
       <h3 class="mt-2 font-display font-bold text-lg md:text-xl text-white">
