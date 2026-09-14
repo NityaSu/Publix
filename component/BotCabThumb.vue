@@ -48,7 +48,7 @@
                 <rect x="230" y="280" width="80" height="45" rx="6" />
               </g>
               <rect x="480" y="140" width="100" height="130" rx="10" fill="color-mix(in srgb, var(--bc-pos) 9%, transparent)" />
-              <text x="530" y="210" text-anchor="middle" font-size="11" font-weight="600" fill="var(--bc-ter)">Wat Phnom</text>
+              <text x="530" y="210" text-anchor="middle" font-size="11" font-weight="700" fill="var(--bc-ter)">Wat Phnom</text>
               <path
                 d="M140 320 C 200 320, 210 260, 260 250 S 330 230, 350 190 S 420 150, 470 110"
                 fill="none"
@@ -68,7 +68,7 @@
               </g>
               <g>
                 <circle cx="470" cy="110" r="11" fill="var(--bc-pri)" />
-                <text x="470" y="115" text-anchor="middle" font-size="12" fill="var(--bc-ink)" font-weight="500">B</text>
+                <text x="470" y="115" text-anchor="middle" font-size="12" fill="var(--bc-ink)" font-weight="700">B</text>
               </g>
               <g transform="translate(188 292)">
                 <rect x="-14" y="-9" width="28" height="18" rx="6" fill="var(--bc-pri)" />
@@ -130,6 +130,7 @@
   padding: 16px 18px 18px;
   color: var(--bc-pri);
   font-family: var(--bc-font);
+  font-weight: 700;
   background: #0c0e13;
   transform: scale(calc(100cqw / 960px));
   transform-origin: top left;
@@ -150,7 +151,7 @@
   align-items: center;
   gap: 8px;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 900;
   color: #06c167;
 }
 
@@ -168,7 +169,7 @@
 .bc-tab {
   padding: 8px 14px;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--bc-sec);
 }
 
@@ -189,7 +190,7 @@
 .bc-chip-muted {
   background: color-mix(in srgb, var(--bc-q) 15%, transparent);
   color: var(--bc-sec);
-  font-weight: 600;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -228,7 +229,7 @@
   left: 10px;
   background: color-mix(in srgb, var(--bc-q) 18%, transparent);
   color: var(--bc-sec);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .bc-dot {
@@ -246,7 +247,7 @@
   border-radius: 6px;
   font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--bc-ter);
   background: color-mix(in srgb, var(--bc-q) 15%, transparent);
 }
@@ -264,12 +265,12 @@
 .bc-title {
   margin-bottom: 2px;
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .bc-meta {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--bc-ter);
 }
 
@@ -291,7 +292,7 @@
 
 .bc-fare {
   font-size: 32px;
-  font-weight: 500;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -312,7 +313,7 @@
 
 .bc-product-name {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .bc-right {
@@ -329,7 +330,7 @@
   padding: 10px 16px;
   border-radius: 10px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
 }
 
