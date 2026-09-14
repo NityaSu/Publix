@@ -31,7 +31,7 @@ const closeLightbox = () => {
 const coverClass = computed(() =>
   props.project.cover === 'supersynapse'
     ? 'aspect-video w-full overflow-hidden bg-[#fafaf8]'
-    : 'aspect-video flex items-center justify-center px-[18px] py-4 bg-[radial-gradient(700px_220px_at_80%_-10%,rgba(252,98,3,0.28),transparent_50%),linear-gradient(165deg,#2a1a10_0%,#140e0a_70%)]',
+    : 'relative aspect-video overflow-hidden bg-[#e9e6df]',
 );
 
 const statusLabel = () => {
