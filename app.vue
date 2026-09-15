@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import NavbarHeader from '~/component/NavbarHeader.vue';
+import GuideBot from '~/component/GuideBot.vue';
 import { useInsightsImmersive } from '~/composables/useInsightsImmersive';
 
 const { immersive } = useInsightsImmersive();
@@ -12,5 +13,6 @@ const { immersive } = useInsightsImmersive();
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+    <GuideBot />
   </div>
 </template>

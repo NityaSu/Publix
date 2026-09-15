@@ -77,7 +77,8 @@ const statusLabel = computed(() => {
 
 <template>
   <div
-    class="group relative flex flex-col rounded-2xl border border-white/10 bg-[#151515] overflow-hidden transition-all duration-300 hover:border-accent/40 hover:shadow-glow-sm"
+    :id="project.id"
+    class="group relative flex flex-col scroll-mt-24 rounded-2xl border border-white/10 bg-[#151515] overflow-hidden transition-all duration-300 hover:border-accent/40 hover:shadow-glow-sm"
   >
     <!-- Image gallery / placeholder -->
     <ImageCarousel
