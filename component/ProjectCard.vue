@@ -7,6 +7,7 @@ import AutoWalletTicketThumb from '~/component/AutoWalletTicketThumb.vue';
 import SuperSynapseThumb from '~/component/SuperSynapseThumb.vue';
 import BotCabThumb from '~/component/BotCabThumb.vue';
 import BotCabApp from '~/component/BotCabApp.vue';
+import PodsumThumb from '~/component/PodsumThumb.vue';
 
 interface Props {
   project: Project;
@@ -61,7 +62,7 @@ const coverClass = computed(() => {
   if (props.project.cover === 'supersynapse') {
     return 'aspect-video w-full overflow-hidden bg-[#fafaf8]';
   }
-  if (props.project.cover === 'botcab') {
+  if (props.project.cover === 'botcab' || props.project.cover === 'podsum') {
     return 'relative aspect-video overflow-hidden bg-[#0c0e13]';
   }
   return 'relative aspect-video overflow-hidden bg-[#e9e6df]';
@@ -112,6 +113,19 @@ const statusLabel = computed(() => {
     >
       <AutoWalletTicketThumb v-if="project.cover === 'autowallet'" />
       <SuperSynapseThumb v-else-if="project.cover === 'supersynapse'" />
+      <PodsumThumb v-else-if="project.cover === 'podsum'" />
+    </a>
+    <a
+      v-else-if="project.cover && project.github"
+      :href="project.github"
+      target="_blank"
+      rel="noopener noreferrer"
+      :class="[coverClass, 'cursor-pointer transition-[filter] duration-200 hover:brightness-[1.08]']"
+      :aria-label="`Open ${project.title} on GitHub`"
+    >
+      <PodsumThumb v-if="project.cover === 'podsum'" />
+      <AutoWalletTicketThumb v-else-if="project.cover === 'autowallet'" />
+      <SuperSynapseThumb v-else-if="project.cover === 'supersynapse'" />
     </a>
     <div
       v-else-if="project.cover"
@@ -119,6 +133,7 @@ const statusLabel = computed(() => {
     >
       <AutoWalletTicketThumb v-if="project.cover === 'autowallet'" />
       <SuperSynapseThumb v-else-if="project.cover === 'supersynapse'" />
+      <PodsumThumb v-else-if="project.cover === 'podsum'" />
     </div>
     <div
       v-else

@@ -14,7 +14,7 @@ export interface Project {
   images: string[];
   github?: string;
   demo?: string;
-  cover?: 'autowallet' | 'supersynapse' | 'botcab';
+  cover?: 'autowallet' | 'supersynapse' | 'botcab' | 'podsum';
 }
 
 export const projects: Project[] = [
@@ -60,6 +60,20 @@ export const projects: Project[] = [
     github: 'https://github.com/NityaSu/autowallet',
     demo: 'https://autowallet-eight.vercel.app/',
     cover: 'autowallet',
+  },
+  {
+    id: 'podsum',
+    title: 'Podsum',
+    tagline: 'YouTube summarization for busy days',
+    category: 'NLP',
+    description:
+      'Life is busy, but a long YouTube podcast still has things worth knowing. This small summarization project writes a short recap with time links, so you can skip to the minutes that matter. I built it to learn how that works, and a small TinyGPT lives in the same repo.',
+    year: '2026',
+    status: 'shipped',
+    stack: ['Python', 'Ollama', 'SQLite'],
+    images: [],
+    github: 'https://github.com/NityaSu/Text-Summarizer-Project',
+    cover: 'podsum',
   },
   {
     id: 'ecommerce',
