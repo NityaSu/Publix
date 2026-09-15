@@ -5,10 +5,13 @@ import { useMediaQuery } from '@vueuse/core';
 interface Props {
   /** Navbar size; default is the larger face. */
   small?: boolean;
+  /** CLI-style rounded square instead of the round header face. */
+  square?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
   small: false,
+  square: false,
 });
 
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -43,6 +46,7 @@ onUnmounted(() => {
     class="kimi-logo"
     :class="{
       'is-small': small,
+      'is-square': square,
       'is-looking-down': isLookingDown,
       'is-surprised': isSurprised,
     }"
@@ -88,6 +92,22 @@ onUnmounted(() => {
   padding-top: 9px;
   padding-left: 2px;
   border-width: 1.5px;
+}
+
+.kimi-logo.is-square {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  padding-top: 12px;
+  gap: 7px;
+}
+
+.kimi-logo.is-small.is-square {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  padding-top: 11px;
+  gap: 6px;
 }
 
 .kimi-logo:hover {

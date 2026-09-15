@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
 import { X } from 'lucide-vue-next';
-import ProjectBot from '~/component/ProjectBot.vue';
+import KimiLogo from '~/component/KimiLogo.vue';
 import { projects } from '~/data/projects';
 import { noteBySlug, buildNotePath } from '~/data/buildNotes';
 
@@ -149,7 +149,7 @@ onUnmounted(() => {
       :aria-expanded="open"
       @click="toggle"
     >
-      <ProjectBot size="sm" version="v1" />
+      <KimiLogo small square />
     </button>
   </div>
 </template>
