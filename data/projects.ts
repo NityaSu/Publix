@@ -29,6 +29,7 @@ export const projects: Project[] = [
     status: 'in_progress',
     stack: ['Vue', 'Nuxt', 'Redis', 'WebSocket'],
     images: [],
+    demo: 'https://botcab.up.railway.app/',
     cover: 'botcab',
   },
   {
